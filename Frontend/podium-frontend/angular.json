@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "document-management-frontend": {
+    "podium-frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -60,10 +60,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "document-management-frontend:build:production"
+              "buildTarget": "podium-frontend:build:production"
             },
             "development": {
-              "buildTarget": "document-management-frontend:build:development"
+              "buildTarget": "podium-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"
