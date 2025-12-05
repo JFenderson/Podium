@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DocumentManagement.Core.Entities;
 
-namespace DocumentManagement.Core.Interfaces
+namespace DocumentManagement.Core.Interfaces;
+
+public interface IUnitOfWork : IDisposable
 {
-    internal interface IUnitOfWork
-    {
-    }
+    IRepository<Document> Documents { get; }
+    IRepository<DocumentTag> DocumentTags { get; }
+    IRepository<RefreshToken> RefreshTokens { get; }
+
+    Task<int> SaveChangesAsync();
+    Task BeginTransactionAsync();
+    Task CommitTransactionAsync();
+    Task RollbackTransactionAsync();
 }

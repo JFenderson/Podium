@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace DocumentManagement.Core.Entities;
 
-namespace DocumentManagement.Core.Entities
+public class DocumentTag : BaseEntity
 {
-    internal class DocumentTag
-    {
-    }
+    public int DocumentId { get; set; }
+    public string TagName { get; set; } = string.Empty;
+
+    // Navigation properties
+    public virtual Document? Document { get; set; } = null!;
 }

@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace DocumentManagement.Core.Interfaces;
 
-namespace DocumentManagement.Core.Interfaces
+public interface IStorageService
 {
-    internal interface IStorageService
-    {
-    }
+    Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType);
+    Task<Stream> DownloadFileAsync(string filePath);
+    Task DeleteFileAsync(string filePath);
+    Task<bool> FileExistsAsync(string filePath);
+    Task<string> GetFileUrlAsync(string filePath, int expirationMinutes = 60);
 }
