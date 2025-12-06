@@ -1,4 +1,4 @@
-﻿namespace DocumentManagement.Core.Entities;
+﻿namespace Podium.Core.Entities;
 
 public abstract class BaseEntity
 {

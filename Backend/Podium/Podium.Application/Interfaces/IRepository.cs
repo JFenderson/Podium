@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 
-namespace DocumentManagement.Core.Interfaces;
+namespace Podium.Core.Interfaces;
 
 public interface IRepository<T> where T : class
 {

@@ -1,0 +1,43 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Podium.Core.Entities
+{
+    public class AuditLog
+    {
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(450)]
+        public string ApplicationUserId { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(100)]
+        public string ActionType { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(500)]
+        public string Description { get; set; } = string.Empty;
+
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+        [MaxLength(50)]
+        public string? IpAddress { get; set; }
+
+        [MaxLength(500)]
+        public string? UserAgent { get; set; }
+
+        public bool IsSecurityEvent { get; set; } = false;
+
+        [MaxLength(20)]
+        public string? Severity { get; set; } // Low, Medium, High, Critical
+
+        [Column(TypeName = "nvarchar(max)")]
+        public string? MetadataJson { get; set; }
+    }
+}

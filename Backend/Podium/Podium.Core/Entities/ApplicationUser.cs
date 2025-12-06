@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace DocumentManagement.Core.Entities;
+namespace Podium.Core.Entities;
 
 public class ApplicationUser : IdentityUser
 {

@@ -1,4 +1,4 @@
-﻿namespace DocumentManagement.Application
+﻿namespace Podium.Application
 {
     public class Class1
     {

@@ -1,9 +1,9 @@
-﻿using DocumentManagement.Core.Entities;
-using DocumentManagement.Core.Interfaces;
-using DocumentManagement.Infrastructure.Data;
+﻿using Podium.Core.Entities;
+using Podium.Core.Interfaces;
+using Podium.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace DocumentManagement.Infrastructure.Repositories;
+namespace Podium.Infrastructure.Repositories;
 
 public class UnitOfWork : IUnitOfWork
 {

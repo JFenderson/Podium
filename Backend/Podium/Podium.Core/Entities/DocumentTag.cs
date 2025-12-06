@@ -1,4 +1,4 @@
-﻿namespace DocumentManagement.Core.Entities;
+﻿namespace Podium.Core.Entities;
 
 public class DocumentTag : BaseEntity
 {

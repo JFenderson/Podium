@@ -2,13 +2,13 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using DocumentManagement.Core.Entities;
-using DocumentManagement.Core.Interfaces;
+using Podium.Core.Entities;
+using Podium.Core.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace DocumentManagement.Infrastructure.Services;
+namespace Podium.Infrastructure.Services;
 
 public class AuthService : IAuthService
 {
@@ -112,7 +112,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var user = await _userManager.FindByIdAsync(storedToken.UserId);
+        var user = await _userManager.FindByIdAsync(storedToken.ApplicationUserId);
         if (user == null || !user.IsActive)
         {
             return new AuthResult
@@ -175,7 +175,7 @@ public class AuthService : IAuthService
         var refreshTokenEntity = new RefreshToken
         {
             Token = refreshToken,
-            UserId = user.Id,
+            ApplicationUserId = user.Id,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow
         };

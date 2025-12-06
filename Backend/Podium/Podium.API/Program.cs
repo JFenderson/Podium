@@ -1,22 +1,26 @@
-using DocumentManagement.Core.Entities;
-using DocumentManagement.Core.Interfaces;
-using DocumentManagement.Infrastructure.Data;
-using DocumentManagement.Infrastructure.Repositories;
-using DocumentManagement.Infrastructure.Services;
+using BandRecruitment.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore.SqlServer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Podium.Application.Authorization;
+using Podium.Core.Entities;
+using Podium.Core.Interfaces;
+using Podium.Infrastructure.Authorization;
+using Podium.Infrastructure.Data;
+using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
+// Add HttpContextAccessor
+builder.Services.AddHttpContextAccessor();
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
 {
@@ -112,6 +116,59 @@ builder.Services.AddCors(options =>
 // Register application services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Register Authorization Handlers
+builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, BandStaffPermissionHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, SelfAccessHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, GuardianStudentAccessHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, ScholarshipApprovalHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, StudentResourceAuthorizationHandler>();
+
+// Register Custom Authorization Service
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+
+// Add Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    // Role-based policies
+    options.AddPolicy("StudentOnly", policy => policy.RequireRole(Roles.Student));
+    options.AddPolicy("GuardianOnly", policy => policy.RequireRole(Roles.Guardian));
+    options.AddPolicy("RecruiterOnly", policy => policy.RequireRole(Roles.Recruiter));
+    options.AddPolicy("DirectorOnly", policy => policy.RequireRole(Roles.Director));
+    options.AddPolicy("BandStaffOnly", policy => policy.RequireRole(Roles.Recruiter, Roles.Director));
+
+    // Permission-based policies
+    options.AddPolicy("CanViewStudents", policy =>
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.ViewStudents)));
+
+    options.AddPolicy("CanRateStudents", policy =>
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.RateStudents)));
+
+    options.AddPolicy("CanSendOffers", policy =>
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.SendOffers)));
+
+    options.AddPolicy("CanManageEvents", policy =>
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.ManageEvents)));
+
+    options.AddPolicy("CanManageStaff", policy =>
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.ManageStaff)));
+
+    // Complex policies
+    options.AddPolicy("CanApproveScholarships", policy =>
+        policy.Requirements.Add(new ScholarshipApprovalRequirement()));
+
+    options.AddPolicy("CanCreateOffer", policy =>
+    {
+        policy.RequireRole(Roles.Recruiter, Roles.Director);
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.SendOffers));
+    });
+
+    options.AddPolicy("AdminAccess", policy =>
+    {
+        policy.RequireRole(Roles.Director);
+        policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.ManageStaff));
+    });
+});
 
 // Configure Storage Service (Azure Blob Storage)
 var storageConnectionString = builder.Configuration["AzureStorage:ConnectionString"];
@@ -174,3 +231,4 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+

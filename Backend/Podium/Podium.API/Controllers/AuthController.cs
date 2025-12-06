@@ -1,8 +1,8 @@
-﻿using DocumentManagement.Core.Interfaces;
+﻿using Podium.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentManagement.API.Controllers;
+namespace Podium.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

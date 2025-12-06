@@ -1,0 +1,22 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Podium.Application.DTOs.AuditLog
+{
+    public class AuditLogDto
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string ActionType { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public string? IpAddress { get; set; }
+        public string? UserAgent { get; set; }
+        public bool IsSecurityEvent { get; set; }
+        public string? Severity { get; set; }
+        public Dictionary<string, object>? Metadata { get; set; }
+    }
+}

@@ -1,9 +1,9 @@
-﻿namespace DocumentManagement.Core.Entities;
+﻿namespace Podium.Core.Entities;
 
 public class RefreshToken : BaseEntity
 {
     public string Token { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
+    public string ApplicationUserId { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
     public bool IsRevoked { get; set; } = false;
     public DateTime? RevokedAt { get; set; }

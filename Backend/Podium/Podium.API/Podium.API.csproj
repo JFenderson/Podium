@@ -13,7 +13,7 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\DocumentManagement.Application\DocumentManagement.Application.csproj" />
-		<ProjectReference Include="..\DocumentManagement.Infrastructure\DocumentManagement.Infrastructure.csproj" />
+		<ProjectReference Include="..\Podium.Application\Podium.Application.csproj" />
+		<ProjectReference Include="..\Podium.Infrastructure\Podium.Infrastructure.csproj" />
 	</ItemGroup>
 </Project>

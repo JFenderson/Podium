@@ -1,10 +1,11 @@
-﻿using DocumentManagement.Core.Entities;
+﻿using Podium.Core.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-namespace DocumentManagement.Infrastructure.Data;
+namespace Podium.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
@@ -16,6 +17,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Document> Documents { get; set; }
     public DbSet<DocumentTag> DocumentTags { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Student> Students { get; set; } = null!;
+    public DbSet<Guardian> Guardians { get; set; } = null!;
+    public DbSet<BandStaff> BandStaff { get; set; } = null!;
+    public DbSet<Offer> Offers { get; set; } = null!;
+    public DbSet<StudentRating> StudentRatings { get; set; } = null!;
+    public DbSet<StudentGuardian> StudentGuardians { get; set; }
+    public DbSet<GuardianNotificationPreferences> GuardianNotificationPreferences { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -61,15 +70,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Token).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.ApplicationUserId).IsRequired();
 
             entity.HasOne(e => e.User)
                   .WithMany(u => u.RefreshTokens)
-                  .HasForeignKey(e => e.UserId)
+                  .HasForeignKey(e => e.ApplicationUserId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => e.Token).IsUnique();
-            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ApplicationUserId);
         });
 
         // Configure ApplicationUser
@@ -78,5 +87,63 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
         });
+
+        
+
+        // Guardian-Student many-to-many relationship
+        builder.Entity<Guardian>()
+            .HasMany(g => g.Students)
+            .WithMany(s => s.Guardians)
+            .UsingEntity<Dictionary<string, object>>(
+                "GuardianStudent",
+                j => j.HasOne<Student>().WithMany().HasForeignKey("StudentId"),
+                j => j.HasOne<Guardian>().WithMany().HasForeignKey("GuardianId")
+            );
+
+        builder.Entity<Student>()
+       .HasOne(s => s.ApplicationUser)
+       .WithMany()
+       .HasForeignKey(s => s.ApplicationUserId)
+       .OnDelete(DeleteBehavior.Cascade);
+
+        // Guardian - ApplicationUser relationship
+        builder.Entity<Guardian>()
+            .HasOne(g => g.ApplicationUser)
+            .WithMany()
+            .HasForeignKey(g => g.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Guardian-Student many-to-many
+        builder.Entity<Guardian>()
+            .HasMany(g => g.Students)
+            .WithMany(s => s.Guardians);
+
+
+        // BandStaff default values
+        builder.Entity<BandStaff>()
+        .HasOne(bs => bs.ApplicationUser)
+        .WithMany()
+        .HasForeignKey(bs => bs.ApplicationUserId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanViewStudents)
+            .HasDefaultValue(false);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanRateStudents)
+            .HasDefaultValue(false);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanSendOffers)
+            .HasDefaultValue(false);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanManageEvents)
+            .HasDefaultValue(false);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanManageStaff)
+            .HasDefaultValue(false);
     }
 }

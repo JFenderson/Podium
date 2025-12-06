@@ -1,10 +1,10 @@
-﻿using DocumentManagement.Core.Interfaces;
-using DocumentManagement.Infrastructure.Data;
+﻿using Podium.Core.Interfaces;
+using Podium.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace DocumentManagement.Infrastructure.Repositories;
+namespace Podium.Infrastructure.Repositories;
 
 public class Repository<T> : IRepository<T> where T : class
 {

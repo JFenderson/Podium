@@ -1,4 +1,4 @@
-﻿namespace DocumentManagement.Core.Interfaces;
+﻿namespace Podium.Core.Interfaces;
 
 public interface IStorageService
 {

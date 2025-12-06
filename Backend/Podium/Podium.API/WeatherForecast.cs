@@ -1,4 +1,4 @@
-namespace DocumentManagement.API
+namespace Podium.API
 {
     public class WeatherForecast
     {

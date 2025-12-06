@@ -1,6 +1,6 @@
-﻿using DocumentManagement.Core.Entities;
+﻿using Podium.Core.Entities;
 
-namespace DocumentManagement.Core.Interfaces;
+namespace Podium.Core.Interfaces;
 
 public interface IAuthService
 {

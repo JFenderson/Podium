@@ -1,9 +1,9 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-using DocumentManagement.Core.Interfaces;
+using Podium.Core.Interfaces;
 
-namespace DocumentManagement.Infrastructure.Services;
+namespace Podium.Infrastructure.Services;
 
 public class AzureBlobStorageService : IStorageService
 {

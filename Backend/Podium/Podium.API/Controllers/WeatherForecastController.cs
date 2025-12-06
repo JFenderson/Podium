@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace DocumentManagement.API.Controllers
+namespace Podium.API.Controllers
 {
     [ApiController]
     [Route("[controller]")]
