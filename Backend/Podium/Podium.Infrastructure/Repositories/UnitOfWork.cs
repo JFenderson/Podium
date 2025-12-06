@@ -1,5 +1,5 @@
 ﻿using Podium.Core.Entities;
-using Podium.Core.Interfaces;
+using Podium.Interfaces;
 using Podium.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore.Storage;
 

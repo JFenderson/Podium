@@ -1,21 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Podium.Application.DTOs.BandStaff
 {
-    public class CreateStaffDto
+    public class CreateBandStaffDto
     {
-        public int UserId { get; set; }
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
+        [Required]
+        public int BandId { get; set; }
+
+        [Required]
+        [MaxLength(450)]
+        public string ApplicationUserId { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(50)]
         public string Role { get; set; } = string.Empty;
-        public bool CanViewStudents { get; set; }
-        public bool CanRateStudents { get; set; }
-        public bool CanSendOffers { get; set; }
-        public bool CanManageEvents { get; set; }
-        public bool CanManageStaff { get; set; }
+
+        public bool CanContact { get; set; } = true;
+        public bool CanMakeOffers { get; set; } = false;
+        public bool CanViewFinancials { get; set; } = false;
+        public bool CanViewStudents { get; set; } = true;
+        public bool CanRateStudents { get; set; } = false;
+        public bool CanSendOffers { get; set; } = false;
+        public bool CanManageEvents { get; set; } = false;
+        public bool CanManageStaff { get; set; } = false;
     }
 }

@@ -195,7 +195,7 @@ namespace Podium.Application.Authorization
         /// <summary>
         /// Get all permissions for the current BandStaff user
         /// </summary>
-        public async Task<UpdateBandStaffDto?> GetBandStaffPermissionsAsync()
+        public async Task<BandStaffPermissionsDto?> GetBandStaffPermissionsAsync()
         {
             var userId = await GetCurrentUserIdAsync();
             if (userId == null)
@@ -212,7 +212,7 @@ namespace Podium.Application.Authorization
                 return null;
             }
 
-            return new UpdateBandStaffDto
+            return new BandStaffPermissionsDto
             {
                 Role = bandStaff.Role,
                 CanViewStudents = bandStaff.CanViewStudents,

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
 {
@@ -18,5 +15,30 @@ namespace Podium.Core.Entities
         public int? ApprovedByUserId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ApprovedAt { get; set; }
+
+        public int BandId { get; set; }
+        public DateTime? ApprovedDate { get; set; }
+        public DateTime? ResponseDate { get; set; }
+        public DateTime ExpirationDate { get; set; }
+        public string? Terms { get; set; }
+        public string? Requirements { get; set; }
+        public bool RequiresGuardianApproval { get; set; } = true;
+        public string? RescindReason { get; set; }
+        public DateTime? ResponsedDate { get; set; }
+        public string? RescindedByUserId { get; set; }
+        public string? ResponseNotes { get; set; }
+        public string? RespondedByGuardianUserId { get; set; }
+        public int CreatedByStaffId { get; set; }
+        public string? Notes { get; set; }
+
+        // Navigation properties
+        [ForeignKey(nameof(BandId))]
+        public virtual Band? Band { get; set; }
+        
+        [ForeignKey(nameof(CreatedByStaffId))]
+        public virtual BandStaff? CreatedByStaff { get; set; }
+        
+        [ForeignKey(nameof(StudentId))]
+        public virtual Student? Student { get; set; } // ADD THIS
     }
 }

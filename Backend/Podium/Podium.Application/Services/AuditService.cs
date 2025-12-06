@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore; 
+using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.AuditLog;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
@@ -6,7 +7,6 @@ using Podium.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -30,70 +30,44 @@ namespace Podium.Application.Services
         /// </summary>
         public async Task LogActionAsync(string userId, string actionType, string description, object? metadata = null)
         {
-            try
+            var auditLog = new AuditLog
             {
-                var auditLog = new AuditLog
-                {
-                    UserId = userId,
-                    ActionType = actionType,
-                    Description = description,
-                    MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null,
-                    Timestamp = DateTime.UtcNow,
-                    IpAddress = null, // Would be populated from HttpContext in real implementation
-                    UserAgent = null  // Would be populated from HttpContext in real implementation
-                };
+                ApplicationUserId = userId,
+                ActionType = actionType,
+                Description = description,
+                Timestamp = DateTime.UtcNow,
+                MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
+            };
 
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
 
-                // Also log to application logger for real-time monitoring
-                _logger.LogInformation(
-                    "Audit: {ActionType} by {UserId} - {Description}",
-                    actionType, userId, description);
-            }
-            catch (Exception ex)
-            {
-                // Never let audit logging failure break the main operation
-                _logger.LogError(ex, "Failed to write audit log for action {ActionType}", actionType);
-            }
+            // Check for anomalous patterns
+            await CheckForSecurityAnomaliesAsync(userId);
         }
 
         /// <summary>
-        /// Log unauthorized access attempts for security monitoring.
-        /// High-priority logging that may trigger alerts.
+        /// Log security-related events with optional metadata.
         /// </summary>
-        public async Task LogUnauthorizedAccessAsync(string userId, string resourceType, int resourceId)
+        public async Task LogSecurityEventAsync(string userId, string actionType, string description, string severity = "Medium", object? metadata = null)
         {
-            try
+            var auditLog = new AuditLog
             {
-                var auditLog = new AuditLog
-                {
-                    UserId = userId,
-                    ActionType = "UnauthorizedAccess",
-                    Description = $"Attempted unauthorized access to {resourceType} {resourceId}",
-                    MetadataJson = JsonSerializer.Serialize(new { resourceType, resourceId }),
-                    Timestamp = DateTime.UtcNow,
-                    IpAddress = null,
-                    UserAgent = null,
-                    IsSecurityEvent = true,
-                    Severity = "High"
-                };
+                ApplicationUserId = userId,
+                ActionType = actionType,
+                Description = description,
+                Timestamp = DateTime.UtcNow,
+                IsSecurityEvent = true,
+                Severity = severity,
+                MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
+            };
 
-                _context.AuditLogs.Add(auditLog);
-                await _context.SaveChangesAsync();
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
 
-                // Log as warning for security monitoring
-                _logger.LogWarning(
-                    "SECURITY: Unauthorized access attempt by {UserId} to {ResourceType} {ResourceId}",
-                    userId, resourceType, resourceId);
-
-                // TODO: Trigger security alert if multiple attempts detected
-                await CheckForSecurityAnomaliesAsync(userId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to log unauthorized access attempt");
-            }
+            _logger.LogWarning(
+                "SECURITY EVENT: {ActionType} by {UserId} - {Description}",
+                actionType, userId, description);
         }
 
         /// <summary>
@@ -104,8 +78,10 @@ namespace Podium.Application.Services
         {
             var query = _context.AuditLogs.AsQueryable();
 
-            if (!string.IsNullOrEmpty(filters.UserId))
-                query = query.Where(al => al.UserId == filters.UserId);
+            // Support both UserId and ApplicationUserId for backwards compatibility
+            var userIdFilter = filters.ApplicationUserId ?? filters.UserId;
+            if (!string.IsNullOrEmpty(userIdFilter))
+                query = query.Where(al => al.ApplicationUserId == userIdFilter);
 
             if (!string.IsNullOrEmpty(filters.ActionType))
                 query = query.Where(al => al.ActionType == filters.ActionType);
@@ -119,14 +95,17 @@ namespace Podium.Application.Services
             if (filters.SecurityEventsOnly)
                 query = query.Where(al => al.IsSecurityEvent);
 
-            return await query
+            var totalCount = await query.CountAsync();
+
+            var logs = await query
                 .OrderByDescending(al => al.Timestamp)
                 .Skip((filters.Page - 1) * filters.PageSize)
                 .Take(filters.PageSize)
                 .Select(al => new AuditLogDto
                 {
-                    Id = al.Id,
-                    UserId = al.UserId,
+                    VideoId = al.AuditLogId,
+                    ApplicationUserId = al.ApplicationUserId,
+                    UserId = al.ApplicationUserId, // Alias
                     ActionType = al.ActionType,
                     Description = al.Description,
                     Timestamp = al.Timestamp,
@@ -139,6 +118,8 @@ namespace Podium.Application.Services
                         : null
                 })
                 .ToListAsync();
+
+            return logs;
         }
 
         /// <summary>
@@ -149,7 +130,7 @@ namespace Podium.Application.Services
         {
             var recentAttempts = await _context.AuditLogs
                 .Where(al =>
-                    al.UserId == userId &&
+                    al.ApplicationUserId == userId &&
                     al.ActionType == "UnauthorizedAccess" &&
                     al.Timestamp >= DateTime.UtcNow.AddMinutes(-5))
                 .CountAsync();

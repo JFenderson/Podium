@@ -9,16 +9,23 @@ namespace Podium.Application.DTOs.Offer
 {
     public class ScholarshipOverviewDto
     {
-        public List<ScholarshipOfferDto> Offers { get; set; } = new();
-        public int TotalCount { get; set; }
+        public int TotalOffers { get; set; }
         public decimal TotalAmount { get; set; }
-        public ScholarshipBudgetDto BudgetSummary { get; set; } = new();
+        public int PendingCount { get; set; }
+        public int ApprovedCount { get; set; }
+        public int AcceptedCount { get; set; }
+        public int DeclinedCount { get; set; }
+        public decimal AvailableBudget { get; set; }
+        
+        public List<ScholarshipOfferDto> Offers { get; set; } = new();
+        
+        // Pagination
+        public int CurrentPage { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
     }
 
-    public class ApproveScholarshipRequest
-    {
-        public string? Notes { get; set; }
-    }
+
 
     public class RescindScholarshipRequest
     {

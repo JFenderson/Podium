@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace Podium.Infrastructure.Data;
 
@@ -14,17 +13,27 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    public DbSet<Document> Documents { get; set; }
-    public DbSet<DocumentTag> DocumentTags { get; set; }
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Band> Bands { get; set; } = null!;
+    public DbSet<Video> Videos { get; set; } = null!;
+    public DbSet<StudentInterest> StudentInterests { get; set; } = null!;
+    public DbSet<ContactRequest> ContactRequests { get; set; } = null!;
+    public DbSet<BandEvent> BandEvents { get; set; } = null!;
+    public DbSet<EventRegistration> EventRegistrations { get; set; } = null!;
+    public DbSet<ContactLog> ContactLogs { get; set; } = null!;
+    public DbSet<ProfileView> ProfileViews { get; set; } = null!;
+    public DbSet<GuardianNotification> GuardianNotifications { get; set; } = null!;
     public DbSet<Student> Students { get; set; } = null!;
     public DbSet<Guardian> Guardians { get; set; } = null!;
     public DbSet<BandStaff> BandStaff { get; set; } = null!;
     public DbSet<Offer> Offers { get; set; } = null!;
+    public DbSet<Offer> ScholarshipOffers { get; set; } = null!;
+    public DbSet<StudentGuardian> StudentGuardians { get; set; } = null!;
+    public DbSet<GuardianNotificationPreferences> GuardianNotificationPreferences { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<StudentRating> StudentRatings { get; set; } = null!;
-    public DbSet<StudentGuardian> StudentGuardians { get; set; }
-    public DbSet<GuardianNotificationPreferences> GuardianNotificationPreferences { get; set; }
-    public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<Document> Documents { get; set; } = null!;
+    public DbSet<DocumentTag> DocumentTags { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -88,23 +97,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
         });
 
-        
-
-        // Guardian-Student many-to-many relationship
-        builder.Entity<Guardian>()
-            .HasMany(g => g.Students)
-            .WithMany(s => s.Guardians)
-            .UsingEntity<Dictionary<string, object>>(
-                "GuardianStudent",
-                j => j.HasOne<Student>().WithMany().HasForeignKey("StudentId"),
-                j => j.HasOne<Guardian>().WithMany().HasForeignKey("GuardianId")
-            );
-
+        // Student - ApplicationUser relationship
         builder.Entity<Student>()
-       .HasOne(s => s.ApplicationUser)
-       .WithMany()
-       .HasForeignKey(s => s.ApplicationUserId)
-       .OnDelete(DeleteBehavior.Cascade);
+            .HasOne(s => s.ApplicationUser)
+            .WithMany()
+            .HasForeignKey(s => s.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Guardian - ApplicationUser relationship
         builder.Entity<Guardian>()
@@ -118,14 +116,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasMany(g => g.Students)
             .WithMany(s => s.Guardians);
 
+        // BandStaff - ApplicationUser relationship
+        builder.Entity<BandStaff>()
+            .HasOne(bs => bs.ApplicationUser)
+            .WithMany()
+            .HasForeignKey(bs => bs.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // BandStaff default values
-        builder.Entity<BandStaff>()
-        .HasOne(bs => bs.ApplicationUser)
-        .WithMany()
-        .HasForeignKey(bs => bs.ApplicationUserId)
-        .OnDelete(DeleteBehavior.Cascade);
-
         builder.Entity<BandStaff>()
             .Property(bs => bs.CanViewStudents)
             .HasDefaultValue(false);
@@ -145,5 +143,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<BandStaff>()
             .Property(bs => bs.CanManageStaff)
             .HasDefaultValue(false);
+
+        // StudentGuardian configuration
+        builder.Entity<StudentGuardian>(entity =>
+        {
+            entity.HasKey(sg => new { sg.StudentId, sg.GuardianUserId });
+
+            entity.HasOne(sg => sg.Student)
+                  .WithMany()
+                  .HasForeignKey(sg => sg.StudentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

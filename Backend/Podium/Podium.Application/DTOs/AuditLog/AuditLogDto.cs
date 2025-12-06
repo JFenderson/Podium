@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.AuditLog
 {
     public class AuditLogDto
     {
-        public int Id { get; set; }
-        public string UserId { get; set; } = string.Empty;
+        public int VideoId { get; set; }
+        public string ApplicationUserId { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty; // Alias for ApplicationUserId
         public string ActionType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }

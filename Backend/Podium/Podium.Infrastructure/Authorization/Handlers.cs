@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Podium.Core.Entities;
 using Podium.Infrastructure.Data;
@@ -134,7 +135,8 @@ namespace Podium.Infrastructure.Authorization
 
             // Try to get resource ID from route
             var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext?.Request.RouteValues.TryGetValue("id", out var routeId) == true)
+            var routeData = httpContext?.GetRouteData();
+            if (routeData?.Values.TryGetValue("id", out var routeId) == true)
             {
                 var resourceId = routeId?.ToString();
                 if (resourceId == user.Id) // String comparison
@@ -187,7 +189,8 @@ namespace Podium.Infrastructure.Authorization
 
             // Get the student ID from route
             var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext?.Request.RouteValues.TryGetValue("studentId", out var studentIdObj) != true)
+            var routeData = httpContext?.GetRouteData();
+            if (routeData?.Values.TryGetValue("studentId", out var studentIdObj) != true)
             {
                 return;
             }

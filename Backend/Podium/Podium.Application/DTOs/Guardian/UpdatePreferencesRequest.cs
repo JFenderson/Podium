@@ -1,11 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Podium.Core.Entities
+namespace Podium.Application.DTOs.Guardian
 {
+    /// <summary>
+    /// Request to update guardian notification preferences.
+    /// All fields are nullable to support partial updates.
+    /// </summary>
     public class UpdatePreferencesRequest
     {
         // Channel preferences

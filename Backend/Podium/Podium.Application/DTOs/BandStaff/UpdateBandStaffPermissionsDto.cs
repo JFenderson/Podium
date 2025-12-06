@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.BandStaff
 {
-  public class UpdatePermissionsDto
+  public class UpdateBandStaffPermissionsDto
 {
     public bool CanViewStudents { get; set; }
     public bool CanRateStudents { get; set; }

@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.Offer
 {
-    internal class ApproveScholarshipRequest
+    public class ApproveScholarshipRequest
     {
+        public string? Notes { get; set; }
     }
 }

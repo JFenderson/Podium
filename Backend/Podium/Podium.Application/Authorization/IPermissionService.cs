@@ -18,6 +18,6 @@ namespace Podium.Application.Authorization
         Task<bool> IsGuardianOfStudentAsync(int studentId);
         Task<bool> CanApproveScholarshipsAsync();
         Task<bool> CanSendOffersAsync();
-        Task<UpdateBandStaffDto?> GetBandStaffPermissionsAsync();
+        Task<BandStaffPermissionsDto?> GetBandStaffPermissionsAsync();
     }
 }

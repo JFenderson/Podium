@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.Band
 {
@@ -17,22 +14,24 @@ namespace Podium.Application.DTOs.Band
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
 
-        // Student Interest Trends
-        public InterestTrendsDto InterestTrends { get; set; } = new();
-
-        // Scholarship Analytics
-        public ScholarshipAnalyticsDto ScholarshipAnalytics { get; set; } = new();
-
-        // Conversion Metrics
-        public ConversionMetricsDto ConversionMetrics { get; set; } = new();
-
-        // Demographic Breakdown
-        public DemographicBreakdownDto Demographics { get; set; } = new();
-
-        // Engagement Metrics
-        public EngagementMetricsDto Engagement { get; set; } = new();
-
-        // Geographic Distribution
-        public List<GeographicDataDto> GeographicDistribution { get; set; } = new();
+        // Interest trends
+        public List<MonthlyTrendDto> InterestTrend { get; set; } = new();
+        
+        // Scholarship metrics
+        public decimal TotalScholarshipOffered { get; set; }
+        public decimal TotalScholarshipAccepted { get; set; }
+        public decimal AverageOfferAmount { get; set; }
+        public double OfferAcceptanceRate { get; set; }
+        
+        // Distribution analytics
+        public List<InstrumentDistributionDto> InstrumentDistribution { get; set; } = new();
+        public List<GeographicDistributionDto> GeographicDistribution { get; set; } = new();
+        
+        // Additional metrics
+        public InterestTrendsDto? InterestTrends { get; set; }
+        public ScholarshipAnalyticsDto? ScholarshipAnalytics { get; set; }
+        public EngagementMetricsDto? EngagementMetrics { get; set; }
+        public ConversionMetricsDto? ConversionMetrics { get; set; }
+        public DemographicBreakdownDto? Demographics { get; set; }
     }
 }

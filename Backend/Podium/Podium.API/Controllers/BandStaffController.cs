@@ -96,7 +96,7 @@ namespace Podium.API.Controllers
         /// </summary>
         [HttpPut("{id}/permissions")]
         [Authorize(Policy = "AdminAccess")]
-        public async Task<IActionResult> UpdatePermissions(int id, [FromBody] UpdateBandStaffDto dto)
+        public async Task<IActionResult> UpdatePermissions(int id, [FromBody] BandStaffPermissionsDto dto)
         {
             var staff = await _context.BandStaff.FindAsync(id);
             if (staff == null)
@@ -155,7 +155,7 @@ namespace Podium.API.Controllers
         /// </summary>
         [HttpPost]
         [Authorize(Policy = "AdminAccess")]
-        public async Task<ActionResult<BandStaffDto>> CreateStaff([FromBody] CreateStaffDto dto)
+        public async Task<ActionResult<BandStaffDto>> CreateStaff([FromBody] CreateBandStaffDto dto)
         {
             // Check if user already exists
             var existingUser = await _context.Users.FindAsync(dto.UserId);
@@ -210,7 +210,7 @@ namespace Podium.API.Controllers
         /// </summary>
         [HttpGet("my-permissions")]
         [Authorize(Policy = "BandStaffOnly")]
-        public async Task<ActionResult<UpdateBandStaffDto>> GetMyPermissions()
+        public async Task<ActionResult<BandStaffPermissionsDto>> GetMyPermissions()
         {
             var permissions = await _authService.GetBandStaffPermissionsAsync();
             if (permissions == null)

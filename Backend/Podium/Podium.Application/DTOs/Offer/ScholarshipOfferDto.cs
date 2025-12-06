@@ -16,18 +16,28 @@ namespace Podium.Application.DTOs.Offer
         public string StudentName { get; set; } = string.Empty;
         public int BandId { get; set; }
         public string BandName { get; set; } = string.Empty;
-        public string OfferType { get; set; } = string.Empty;
         public decimal? ScholarshipAmount { get; set; }
-        public string? Description { get; set; }
         public string Status { get; set; } = string.Empty;
-        public DateTime CreatedDate { get; set; }
+        public string OfferType { get; set; } = string.Empty;
+        
+        // Dates
+        public DateTime CreatedAt { get; set; }
         public DateTime? ApprovedDate { get; set; }
         public DateTime? ResponseDate { get; set; }
         public DateTime ExpirationDate { get; set; }
+        
+        // Additional info
+        public string? Terms { get; set; }
+        public string? Requirements { get; set; }
         public string? Notes { get; set; }
-        public string CreatedByName { get; set; } = string.Empty;
-        public string? ApprovedByName { get; set; }
-        public bool RequiresGuardianApproval { get; set; }
         public string? RescindReason { get; set; }
+        
+        // People involved
+        public string? CreatedByStaffName { get; set; }
+        public string? ApprovedByUserId { get; set; }
+        public string? RespondedByGuardianUserId { get; set; }
+        
+        // Flags
+        public bool RequiresGuardianApproval { get; set; }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Podium.Application.DTOs.Director
+﻿using Podium.Application.DTOs.Offer;
+
+namespace Podium.Application.DTOs.Director
 {
     public class ScholarshipSummaryDto
     {

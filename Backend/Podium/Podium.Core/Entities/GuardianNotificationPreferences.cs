@@ -20,7 +20,7 @@ namespace Podium.Core.Entities
     public class GuardianNotificationPreferences
     {
         [Key]
-        public int Id { get; set; }
+        public int GuardianNotificationPreferencesId { get; set; }
 
         /// <summary>
         /// The guardian user ID (from Identity system).

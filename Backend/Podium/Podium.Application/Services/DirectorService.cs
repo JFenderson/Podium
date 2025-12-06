@@ -12,10 +12,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Podium.Application.DTOs.BandStaff;
 
 namespace Podium.Application.Services
 {
-    public class DirectorService : Core.Interfaces.IDirectorService
+    public class DirectorService : IDirectorService
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<DirectorService> _logger;
@@ -35,12 +37,12 @@ namespace Podium.Application.Services
         {
             // First, get the director's band
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.DirectorUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return null;
 
-            var bandId = band.Id;
+            var bandId = band.BandId;
             var now = DateTime.UtcNow;
             var oneWeekAgo = now.AddDays(-7);
             var oneMonthAgo = now.AddMonths(-1);
@@ -61,7 +63,7 @@ namespace Podium.Application.Services
                     .FirstOrDefaultAsync();
 
                 // Scholarship summary - optimized aggregation
-                var scholarshipSummary = await _context.ScholarshipOffers
+                var scholarshipSummary = await _context.Offers
                     .Where(so => so.BandId == bandId)
                     .GroupBy(so => 1)
                     .Select(g => new ScholarshipSummaryDto
@@ -70,10 +72,10 @@ namespace Podium.Application.Services
                         PendingOffers = g.Count(so => so.Status == "Pending" || so.Status == "Approved"),
                         AcceptedOffers = g.Count(so => so.Status == "Accepted"),
                         DeclinedOffers = g.Count(so => so.Status == "Declined"),
-                        TotalCommittedAmount = g.Where(so => so.Status == "Accepted").Sum(so => so.Amount),
-                        AvailableBudget = band.ScholarshipBudget - g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => so.Amount),
+                        TotalCommittedAmount = g.Where(so => so.Status == "Accepted").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                        AvailableBudget = band.ScholarshipBudget - (g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m),
                         BudgetUtilizationPercentage = band.ScholarshipBudget > 0
-                            ? (g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => so.Amount) / band.ScholarshipBudget * 100)
+                            ? ((g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m) / band.ScholarshipBudget * 100)
                             : 0
                     })
                     .FirstOrDefaultAsync() ?? new ScholarshipSummaryDto();
@@ -85,7 +87,7 @@ namespace Podium.Application.Services
                     .Take(5)
                     .Select(e => new UpcomingEventDto
                     {
-                        EventId = e.Id,
+                        EventId = e.BandEventId,
                         EventName = e.EventName,
                         EventDate = e.EventDate,
                         EventType = e.EventType,
@@ -102,8 +104,8 @@ namespace Podium.Application.Services
                     .Take(5)
                     .Select(bs => new StaffActivitySummaryDto
                     {
-                        StaffId = bs.Id,
-                        StaffName = bs.UserId, // Would join with Identity user table in real app
+                        StaffId = bs.BandStaffId,
+                        StaffName = bs.ApplicationUserId, // Would join with Identity user table in real app
                         Role = bs.Role,
                         ContactsInitiated = bs.TotalContactsInitiated,
                         OffersCreated = bs.TotalOffersCreated,
@@ -128,9 +130,9 @@ namespace Podium.Application.Services
                     })
                     .ToListAsync();
 
-                var recentOffers = await _context.ScholarshipOffers
-                    .Where(so => so.BandId == bandId && so.CreatedDate >= oneWeekAgo)
-                    .OrderByDescending(so => so.CreatedDate)
+                var recentOffers = await _context.Offers
+                    .Where(so => so.BandId == bandId && so.CreatedAt >= oneWeekAgo)
+                    .OrderByDescending(so => so.CreatedAt)
                     .Take(5)
                     .Select(so => new RecentActivityDto
                     {
@@ -138,9 +140,9 @@ namespace Podium.Application.Services
                         Description = so.Status == "Accepted"
                             ? $"Scholarship offer accepted"
                             : $"Scholarship offer created",
-                        Timestamp = so.Status == "Accepted" ? so.ResponseDate ?? so.CreatedDate : so.CreatedDate,
+                        Timestamp = so.Status == "Accepted" ? so.ResponseDate ?? so.CreatedAt : so.CreatedAt,
                         StudentName = so.Student.FirstName + " " + so.Student.LastName,
-                        StaffName = so.CreatedByStaff.UserId
+                        StaffName = so.CreatedByStaff.ApplicationUserId
                     })
                     .ToListAsync();
 
@@ -183,635 +185,411 @@ namespace Podium.Application.Services
             return await dashboardTask;
         }
 
-        /// <summary>
-        /// Authorization check: Verify director manages the specified band.
-        /// CRITICAL for security - ensures directors can only access their own band data.
-        /// </summary>
         public async Task<bool> CanAccessBandAsync(string userId, int bandId)
         {
-            return await _context.Bands
-                .AnyAsync(b => b.Id == bandId && b.DirectorUserId == userId && b.IsActive);
+            var band = await _context.Bands
+                .FirstOrDefaultAsync(b => b.BandId == bandId && b.ApplicationUserId == userId && b.IsActive);
+
+            return band != null;
         }
 
-        /// <summary>
-        /// Complex analytics aggregation with trend data over time.
-        /// PERFORMANCE: Uses efficient grouping and projections to minimize data transfer.
-        /// BUSINESS LOGIC: Calculates conversion rates, demographic breakdowns, and geographic distribution.
-        /// </summary>
         public async Task<BandAnalyticsDto> GetBandAnalyticsAsync(int bandId, DateTime startDate, DateTime endDate)
         {
-            var band = await _context.Bands.FindAsync(bandId);
-            if (band == null)
-                throw new KeyNotFoundException($"Band {bandId} not found");
-
-            // PARALLEL EXECUTION: Run independent queries simultaneously
-            var interestTrendsTask = GetInterestTrendsAsync(bandId, startDate, endDate);
-            var scholarshipAnalyticsTask = GetScholarshipAnalyticsAsync(bandId, startDate, endDate);
-            var conversionMetricsTask = GetConversionMetricsAsync(bandId, startDate, endDate);
-            var demographicsTask = GetDemographicsAsync(bandId, startDate, endDate);
-            var engagementTask = GetEngagementMetricsAsync(bandId, startDate, endDate);
-            var geographicTask = GetGeographicDistributionAsync(bandId, startDate, endDate);
-
-            await Task.WhenAll(
-                interestTrendsTask,
-                scholarshipAnalyticsTask,
-                conversionMetricsTask,
-                demographicsTask,
-                engagementTask,
-                geographicTask
-            );
-
-            return new BandAnalyticsDto
-            {
-                BandId = bandId,
-                BandName = band.Name,
-                StartDate = startDate,
-                EndDate = endDate,
-                InterestTrends = await interestTrendsTask,
-                ScholarshipAnalytics = await scholarshipAnalyticsTask,
-                ConversionMetrics = await conversionMetricsTask,
-                Demographics = await demographicsTask,
-                Engagement = await engagementTask,
-                GeographicDistribution = await geographicTask
-            };
-        }
-
-        private async Task<InterestTrendsDto> GetInterestTrendsAsync(int bandId, DateTime startDate, DateTime endDate)
-        {
-            // Compare with previous period for percentage change calculation
-            var periodLength = (endDate - startDate).Days;
-            var previousPeriodStart = startDate.AddDays(-periodLength);
-
-            var currentCount = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .CountAsync();
-
-            var previousCount = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= previousPeriodStart && si.InterestedDate < startDate)
-                .CountAsync();
-
-            var percentageChange = previousCount > 0 ? ((currentCount - previousCount) / (decimal)previousCount * 100) : 0;
-
-            // Monthly breakdown with video counts
-            var monthlyData = await _context.StudentInterests
+            // Student interest trend over time period
+            var interestTrend = await _context.StudentInterests
                 .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
                 .GroupBy(si => new { si.InterestedDate.Year, si.InterestedDate.Month })
-                .Select(g => new MonthlyInterestDto
+                .Select(g => new MonthlyTrendDto
                 {
-                    Year = g.Key.Year,
                     Month = g.Key.Month,
-                    Count = g.Count(),
-                    VideosUploaded = g.Sum(si => si.Student.Videos.Count(v => v.UploadedDate.Year == g.Key.Year && v.UploadedDate.Month == g.Key.Month))
-                })
-                .OrderBy(m => m.Year).ThenBy(m => m.Month)
-                .ToListAsync();
-
-            // Breakdown by instrument and skill level
-            var byInstrument = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .GroupBy(si => si.Student.PrimaryInstrument)
-                .Select(g => new { Instrument = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Instrument, x => x.Count);
-
-            var bySkillLevel = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .GroupBy(si => si.Student.SkillLevel)
-                .Select(g => new { SkillLevel = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.SkillLevel, x => x.Count);
-
-            return new InterestTrendsDto
-            {
-                TotalInterested = currentCount,
-                PercentageChange = percentageChange,
-                MonthlyBreakdown = monthlyData,
-                InterestByInstrument = byInstrument,
-                InterestBySkillLevel = bySkillLevel
-            };
-        }
-
-        private async Task<ScholarshipAnalyticsDto> GetScholarshipAnalyticsAsync(int bandId, DateTime startDate, DateTime endDate)
-        {
-            var offers = await _context.ScholarshipOffers
-                .Where(so => so.BandId == bandId && so.CreatedDate >= startDate && so.CreatedDate <= endDate)
-                .ToListAsync();
-
-            var totalOffers = offers.Count;
-            var acceptedOffers = offers.Count(o => o.Status == "Accepted");
-            var acceptanceRate = totalOffers > 0 ? (acceptedOffers / (double)totalOffers * 100) : 0;
-
-            var amounts = offers.Select(o => o.Amount).OrderBy(a => a).ToList();
-            var median = amounts.Count > 0
-                ? (amounts.Count % 2 == 0
-                    ? (amounts[amounts.Count / 2 - 1] + amounts[amounts.Count / 2]) / 2
-                    : amounts[amounts.Count / 2])
-                : 0;
-
-            var monthlyTrends = await _context.ScholarshipOffers
-                .Where(so => so.BandId == bandId && so.CreatedDate >= startDate && so.CreatedDate <= endDate)
-                .GroupBy(so => new { so.CreatedDate.Year, so.CreatedDate.Month })
-                .Select(g => new ScholarshipTrendDto
-                {
                     Year = g.Key.Year,
-                    Month = g.Key.Month,
-                    OffersCreated = g.Count(),
-                    OffersAccepted = g.Count(so => so.Status == "Accepted"),
-                    TotalAmount = g.Sum(so => so.Amount)
+                    Count = g.Count()
                 })
-                .OrderBy(t => t.Year).ThenBy(t => t.Month)
+                .OrderBy(mt => mt.Year)
+                .ThenBy(mt => mt.Month)
                 .ToListAsync();
 
-            var band = await _context.Bands.FindAsync(bandId);
-
-            return new ScholarshipAnalyticsDto
-            {
-                TotalBudget = band?.ScholarshipBudget ?? 0,
-                AllocatedAmount = offers.Where(o => o.Status != "Declined" && o.Status != "Rescinded").Sum(o => o.Amount),
-                AcceptedAmount = offers.Where(o => o.Status == "Accepted").Sum(o => o.Amount),
-                AvailableAmount = (band?.ScholarshipBudget ?? 0) - offers.Where(o => o.Status == "Accepted" || o.Status == "Pending" || o.Status == "Approved").Sum(o => o.Amount),
-                AverageOfferAmount = totalOffers > 0 ? offers.Average(o => o.Amount) : 0,
-                MedianOfferAmount = median,
-                TotalOffers = totalOffers,
-                AcceptanceRate = acceptanceRate,
-                MonthlyTrends = monthlyTrends
-            };
-        }
-
-        private async Task<ConversionMetricsDto> GetConversionMetricsAsync(int bandId, DateTime startDate, DateTime endDate)
-        {
-            // Funnel metrics: Interest -> Contact -> Offer -> Acceptance
-            var interestedStudents = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .Select(si => si.StudentId)
-                .Distinct()
-                .ToListAsync();
-
-            var contactedStudents = await _context.ContactLogs
-                .Where(cl => cl.BandId == bandId && interestedStudents.Contains(cl.StudentId))
-                .Select(cl => cl.StudentId)
-                .Distinct()
-                .CountAsync();
-
-            var offeredStudents = await _context.ScholarshipOffers
-                .Where(so => so.BandId == bandId && interestedStudents.Contains(so.StudentId))
-                .Select(so => so.StudentId)
-                .Distinct()
-                .CountAsync();
-
-            var acceptedStudents = await _context.ScholarshipOffers
-                .Where(so => so.BandId == bandId && so.Status == "Accepted" && interestedStudents.Contains(so.StudentId))
-                .Select(so => so.StudentId)
-                .Distinct()
-                .CountAsync();
-
-            var totalInterested = interestedStudents.Count;
-
-            // Calculate average time between stages
-            var timingData = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .Select(si => new
-                {
-                    si.StudentId,
-                    si.InterestedDate,
-                    FirstContact = _context.ContactLogs
-                        .Where(cl => cl.StudentId == si.StudentId && cl.BandId == bandId)
-                        .OrderBy(cl => cl.ContactDate)
-                        .Select(cl => cl.ContactDate)
-                        .FirstOrDefault(),
-                    FirstOffer = _context.ScholarshipOffers
-                        .Where(so => so.StudentId == si.StudentId && so.BandId == bandId)
-                        .OrderBy(so => so.CreatedDate)
-                        .Select(so => so.CreatedDate)
-                        .FirstOrDefault(),
-                    Acceptance = _context.ScholarshipOffers
-                        .Where(so => so.StudentId == si.StudentId && so.BandId == bandId && so.Status == "Accepted")
-                        .OrderBy(so => so.ResponseDate)
-                        .Select(so => so.ResponseDate)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
-
-            var avgTimeToContact = timingData
-                .Where(t => t.FirstContact != default)
-                .Average(t => (t.FirstContact - t.InterestedDate).TotalDays);
-
-            var avgTimeToOffer = timingData
-                .Where(t => t.FirstOffer != default)
-                .Average(t => (t.FirstOffer - t.InterestedDate).TotalDays);
-
-            var avgTimeToAcceptance = timingData
-                .Where(t => t.Acceptance != null)
-                .Average(t => ((DateTime)t.Acceptance! - t.InterestedDate).TotalDays);
-
-            return new ConversionMetricsDto
-            {
-                StudentsInterested = totalInterested,
-                StudentsContacted = contactedStudents,
-                StudentsOffered = offeredStudents,
-                StudentsAccepted = acceptedStudents,
-                InterestToContactRate = totalInterested > 0 ? (contactedStudents / (double)totalInterested * 100) : 0,
-                ContactToOfferRate = contactedStudents > 0 ? (offeredStudents / (double)contactedStudents * 100) : 0,
-                OfferToAcceptanceRate = offeredStudents > 0 ? (acceptedStudents / (double)offeredStudents * 100) : 0,
-                OverallConversionRate = totalInterested > 0 ? (acceptedStudents / (double)totalInterested * 100) : 0,
-                AverageTimeToContact = avgTimeToContact,
-                AverageTimeToOffer = avgTimeToOffer,
-                AverageTimeToAcceptance = avgTimeToAcceptance
-            };
-        }
-
-        private async Task<DemographicBreakdownDto> GetDemographicsAsync(int bandId, DateTime startDate, DateTime endDate)
-        {
-            var studentIds = await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .Select(si => si.StudentId)
-                .ToListAsync();
-
-            var students = await _context.Students
-                .Where(s => studentIds.Contains(s.Id))
-                .ToListAsync();
-
-            return new DemographicBreakdownDto
-            {
-                ByGraduationYear = students.GroupBy(s => s.GraduationYear).ToDictionary(g => g.Key, g => g.Count()),
-                ByInstrument = students.GroupBy(s => s.PrimaryInstrument).ToDictionary(g => g.Key, g => g.Count()),
-                BySkillLevel = students.GroupBy(s => s.SkillLevel).ToDictionary(g => g.Key, g => g.Count()),
-                ByState = students.GroupBy(s => s.State).ToDictionary(g => g.Key, g => g.Count()),
-                BySchoolType = students.GroupBy(s => s.SchoolType ?? "Unknown").ToDictionary(g => g.Key, g => g.Count())
-            };
-        }
-
-        private async Task<EngagementMetricsDto> GetEngagementMetricsAsync(int bandId, DateTime startDate, DateTime endDate)
-        {
-            var studentIds = await _context.StudentInterests
-                .Where(si => si.BandId == bandId)
-                .Select(si => si.StudentId)
-                .ToListAsync();
-
-            var totalVideos = await _context.Videos
-                .Where(v => studentIds.Contains(v.StudentId))
-                .CountAsync();
-
-            var avgVideosPerStudent = studentIds.Count > 0 ? totalVideos / (double)studentIds.Count : 0;
-
-            var eventStats = await _context.EventRegistrations
-                .Where(er => er.Event.BandId == bandId)
-                .GroupBy(er => 1)
+            // Scholarship metrics
+            var scholarshipMetrics = await _context.Offers
+                .Where(so => so.BandId == bandId && so.CreatedAt >= startDate && so.CreatedAt <= endDate)
+                .GroupBy(so => 1)
                 .Select(g => new
                 {
-                    Registrations = g.Count(),
-                    Attendances = g.Count(er => er.DidAttend)
+                    TotalOffered = g.Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                    TotalAccepted = g.Where(so => so.Status == "Accepted").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                    AverageOfferAmount = g.Average(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                    AcceptanceRate = g.Count() > 0 ? (double)g.Count(so => so.Status == "Accepted") / g.Count() * 100 : 0
                 })
                 .FirstOrDefaultAsync();
 
-            var profileViews = await _context.ProfileViews
-                .Where(pv => pv.BandId == bandId && pv.ViewedDate >= startDate && pv.ViewedDate <= endDate)
-                .CountAsync();
+            // Instrument distribution
+            var instrumentDistribution = await _context.StudentInterests
+                .Where(si => si.BandId == bandId)
+                .GroupBy(si => si.Student.PrimaryInstrument)
+                .Select(g => new InstrumentDistributionDto
+                {
+                    Instrument = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(id => id.Count)
+                .ToListAsync();
 
-            var avgResponseTime = await _context.ContactRequests
-                .Where(cr => cr.BandId == bandId && cr.Status != "Pending" && cr.ResponseDate != null)
-                .AverageAsync(cr => EF.Functions.DateDiffHour(cr.RequestedDate, cr.ResponseDate!.Value));
+            // Geographic distribution
+            var geoDistribution = await _context.StudentInterests
+                .Where(si => si.BandId == bandId)
+                .GroupBy(si => si.Student.State)
+                .Select(g => new GeographicDistributionDto
+                {
+                    State = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(gd => gd.Count)
+                .ToListAsync();
 
-            return new EngagementMetricsDto
+            return new BandAnalyticsDto
             {
-                TotalVideosUploaded = totalVideos,
-                AverageVideosPerStudent = avgVideosPerStudent,
-                EventRegistrations = eventStats?.Registrations ?? 0,
-                EventAttendances = eventStats?.Attendances ?? 0,
-                EventAttendanceRate = eventStats?.Registrations > 0 ? (eventStats.Attendances / (double)eventStats.Registrations * 100) : 0,
-                ProfileViews = profileViews,
-                AverageResponseTimeHours = avgResponseTime ?? 0
+                StartDate = startDate,
+                EndDate = endDate,
+                InterestTrend = interestTrend,
+                TotalScholarshipOffered = scholarshipMetrics?.TotalOffered ?? 0m,
+                TotalScholarshipAccepted = scholarshipMetrics?.TotalAccepted ?? 0m,
+                AverageOfferAmount = scholarshipMetrics?.AverageOfferAmount ?? 0m,
+                OfferAcceptanceRate = scholarshipMetrics?.AcceptanceRate ?? 0,
+                InstrumentDistribution = instrumentDistribution,
+                GeographicDistribution = geoDistribution
             };
         }
 
-        private async Task<List<GeographicDataDto>> GetGeographicDistributionAsync(int bandId, DateTime startDate, DateTime endDate)
+        public async Task<BandStaffDto> AddStaffMemberAsync(string directorUserId, CreateBandStaffDto request)
         {
-            return await _context.StudentInterests
-                .Where(si => si.BandId == bandId && si.InterestedDate >= startDate && si.InterestedDate <= endDate)
-                .GroupBy(si => si.Student.State)
-                .Select(g => new GeographicDataDto
-                {
-                    State = g.Key,
-                    StudentCount = g.Count(),
-                    OffersExtended = g.Sum(si => si.Student.ScholarshipOffers.Count(so => so.BandId == bandId)),
-                    OffersAccepted = g.Sum(si => si.Student.ScholarshipOffers.Count(so => so.BandId == bandId && so.Status == "Accepted"))
-                })
-                .OrderByDescending(g => g.StudentCount)
-                .ToListAsync();
-        }
+            // Verify director owns the band
+            var band = await _context.Bands
+                .FirstOrDefaultAsync(b => b.BandId == request.BandId && b.ApplicationUserId == directorUserId && b.IsActive);
 
-        // Continue in next file due to length...
-        public async Task<StaffMemberDto> AddStaffMemberAsync(string directorUserId, AddStaffRequest request)
-        {
-            // Verify director manages the band
-            if (!await CanAccessBandAsync(directorUserId, request.BandId))
+            if (band == null)
                 throw new UnauthorizedAccessException("You do not have permission to add staff to this band");
 
             // Check if staff member already exists
-            var existing = await _context.BandStaff
-                .FirstOrDefaultAsync(bs => bs.BandId == request.BandId && bs.UserId == request.RecruiterUserId);
+            var existingStaff = await _context.BandStaff
+                .FirstOrDefaultAsync(bs => bs.BandId == request.BandId && bs.ApplicationUserId == request.ApplicationUserId);
 
-            if (existing != null)
-            {
-                if (existing.IsActive)
-                    throw new InvalidOperationException("This user is already a staff member of this band");
+            if (existingStaff != null && existingStaff.IsActive)
+                throw new InvalidOperationException("This user is already a staff member of this band");
 
-                // Reactivate if was previously deactivated
-                existing.IsActive = true;
-                existing.Role = request.Role;
-                existing.CanContact = request.Permissions.CanContact;
-                existing.CanMakeOffers = request.Permissions.CanMakeOffers;
-                existing.CanViewFinancials = request.Permissions.CanViewFinancials;
-                existing.CanManageEvents = request.Permissions.CanManageEvents;
-                existing.ModifiedBy = directorUserId;
-                existing.ModifiedDate = DateTime.UtcNow;
-            }
-            else
+            // If exists but inactive, reactivate
+            if (existingStaff != null && !existingStaff.IsActive)
             {
-                existing = new BandStaff
+                existingStaff.IsActive = true;
+                existingStaff.Role = request.Role;
+                existingStaff.CanContact = request.CanContact;
+                existingStaff.CanMakeOffers = request.CanMakeOffers;
+                existingStaff.CanViewFinancials = request.CanViewFinancials;
+                await _context.SaveChangesAsync();
+
+                return new BandStaffDto
                 {
-                    BandId = request.BandId,
-                    UserId = request.RecruiterUserId,
-                    Role = request.Role,
-                    IsActive = true,
-                    JoinedDate = DateTime.UtcNow,
-                    CanContact = request.Permissions.CanContact,
-                    CanMakeOffers = request.Permissions.CanMakeOffers,
-                    CanViewFinancials = request.Permissions.CanViewFinancials,
-                    CanManageEvents = request.Permissions.CanManageEvents,
-                    CreatedBy = directorUserId,
-                    CreatedDate = DateTime.UtcNow
+                    BandStaffId = existingStaff.BandStaffId,
+                    BandId = existingStaff.BandId,
+                    ApplicationUserId = existingStaff.ApplicationUserId,
+                    Role = existingStaff.Role,
+                    CanContact = existingStaff.CanContact,
+                    CanMakeOffers = existingStaff.CanMakeOffers,
+                    CanViewFinancials = existingStaff.CanViewFinancials,
+                    IsActive = existingStaff.IsActive,
+                    JoinedDate = existingStaff.CreatedAt,
+                    TotalContactsInitiated = existingStaff.TotalContactsInitiated,
+                    TotalOffersCreated = existingStaff.TotalOffersCreated,
+                    LastActivityDate = existingStaff.LastActivityDate
                 };
-
-                _context.BandStaff.Add(existing);
             }
 
+            // Create new staff member
+            var newStaff = new BandStaff
+            {
+                BandId = request.BandId,
+                ApplicationUserId = request.ApplicationUserId,
+                Role = request.Role,
+                CanContact = request.CanContact,
+                CanMakeOffers = request.CanMakeOffers,
+                CanViewFinancials = request.CanViewFinancials,
+                IsActive = true,
+                TotalContactsInitiated = 0,
+                TotalOffersCreated = 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.BandStaff.Add(newStaff);
             await _context.SaveChangesAsync();
 
-            return new StaffMemberDto
+            return new BandStaffDto
             {
-                Id = existing.Id,
-                UserId = existing.UserId,
-                Name = existing.UserId, // Would lookup from Identity
-                Email = "", // Would lookup from Identity
-                Role = existing.Role,
-                IsActive = existing.IsActive,
-                JoinedDate = existing.JoinedDate,
-                CanContact = existing.CanContact,
-                CanMakeOffers = existing.CanMakeOffers,
-                CanViewFinancials = existing.CanViewFinancials,
-                CanManageEvents = existing.CanManageEvents,
-                TotalContacts = existing.TotalContactsInitiated,
-                TotalOffersCreated = existing.TotalOffersCreated,
-                SuccessfulPlacements = existing.SuccessfulPlacements,
-                LastActivityDate = existing.LastActivityDate
+                BandStaffId = newStaff.BandStaffId,
+                BandId = newStaff.BandId,
+                ApplicationUserId = newStaff.ApplicationUserId,
+                Role = newStaff.Role,
+                CanContact = newStaff.CanContact,
+                CanMakeOffers = newStaff.CanMakeOffers,
+                CanViewFinancials = newStaff.CanViewFinancials,
+                IsActive = newStaff.IsActive,
+                JoinedDate = newStaff.CreatedAt,
+                TotalContactsInitiated = newStaff.TotalContactsInitiated,
+                TotalOffersCreated = newStaff.TotalOffersCreated,
+                LastActivityDate = newStaff.LastActivityDate
             };
         }
 
         public async Task<bool> CanManageStaffAsync(string userId, int staffId)
         {
-            var staff = await _context.BandStaff
+            var staffMember = await _context.BandStaff
                 .Include(bs => bs.Band)
-                .FirstOrDefaultAsync(bs => bs.Id == staffId);
+                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
 
-            return staff != null && staff.Band.DirectorUserId == userId;
+            if (staffMember == null)
+                return false;
+
+            return staffMember.Band.ApplicationUserId == userId;
         }
 
-        public async Task<StaffMemberDto> UpdateStaffMemberAsync(int staffId, UpdateStaffRequest request)
+        public async Task<BandStaffDto> UpdateStaffMemberAsync(int staffId, UpdateBandStaffDto request)
         {
-            var staff = await _context.BandStaff.FindAsync(staffId);
-            if (staff == null)
+            var staffMember = await _context.BandStaff
+                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
+
+            if (staffMember == null)
                 throw new KeyNotFoundException($"Staff member {staffId} not found");
 
-            if (request.Role != null)
-                staff.Role = request.Role;
+            staffMember.Role = request.Role;
+            staffMember.CanContact = request.CanContact;
+            staffMember.CanMakeOffers = request.CanMakeOffers;
+            staffMember.CanViewFinancials = request.CanViewFinancials;
+            staffMember.IsActive = request.IsActive;
+            staffMember.UpdatedAt = DateTime.UtcNow;
 
-            if (request.IsActive.HasValue)
-            {
-                staff.IsActive = request.IsActive.Value;
-                if (!request.IsActive.Value)
-                    staff.DeactivatedDate = DateTime.UtcNow;
-            }
-
-            if (request.Permissions != null)
-            {
-                staff.CanContact = request.Permissions.CanContact;
-                staff.CanMakeOffers = request.Permissions.CanMakeOffers;
-                staff.CanViewFinancials = request.Permissions.CanViewFinancials;
-                staff.CanManageEvents = request.Permissions.CanManageEvents;
-            }
-
-            staff.ModifiedDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return new StaffMemberDto
+            return new BandStaffDto
             {
-                Id = staff.Id,
-                UserId = staff.UserId,
-                Name = staff.UserId,
-                Email = "",
-                Role = staff.Role,
-                IsActive = staff.IsActive,
-                JoinedDate = staff.JoinedDate,
-                CanContact = staff.CanContact,
-                CanMakeOffers = staff.CanMakeOffers,
-                CanViewFinancials = staff.CanViewFinancials,
-                CanManageEvents = staff.CanManageEvents,
-                TotalContacts = staff.TotalContactsInitiated,
-                TotalOffersCreated = staff.TotalOffersCreated,
-                SuccessfulPlacements = staff.SuccessfulPlacements,
-                LastActivityDate = staff.LastActivityDate
+                BandStaffId = staffMember.BandStaffId,
+                BandId = staffMember.BandId,
+                ApplicationUserId = staffMember.ApplicationUserId,
+                Role = staffMember.Role,
+                CanContact = staffMember.CanContact,
+                CanMakeOffers = staffMember.CanMakeOffers,
+                CanViewFinancials = staffMember.CanViewFinancials,
+                IsActive = staffMember.IsActive,
+                JoinedDate = staffMember.CreatedAt,
+                TotalContactsInitiated = staffMember.TotalContactsInitiated,
+                TotalOffersCreated = staffMember.TotalOffersCreated,
+                LastActivityDate = staffMember.LastActivityDate
             };
         }
 
         public async Task RemoveStaffMemberAsync(int staffId)
         {
-            var staff = await _context.BandStaff.FindAsync(staffId);
-            if (staff == null)
+            var staffMember = await _context.BandStaff
+                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
+
+            if (staffMember == null)
                 throw new KeyNotFoundException($"Staff member {staffId} not found");
 
-            // Soft delete
-            staff.IsActive = false;
-            staff.DeactivatedDate = DateTime.UtcNow;
+            staffMember.IsActive = false;
+            staffMember.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<StaffMemberDto>> GetStaffMembersAsync(string userId, bool? isActive, string? sortBy)
+        public async Task<List<BandStaffDto>> GetStaffMembersAsync(string userId, bool? isActive, string? sortBy)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.DirectorUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
 
             if (band == null)
-                return new List<StaffMemberDto>();
+                return new List<BandStaffDto>();
 
             var query = _context.BandStaff
-                .Where(bs => bs.BandId == band.Id);
+                .Where(bs => bs.BandId == band.BandId);
 
             if (isActive.HasValue)
                 query = query.Where(bs => bs.IsActive == isActive.Value);
 
+            // Apply sorting
             query = sortBy?.ToLower() switch
             {
-                "activity" => query.OrderByDescending(bs => bs.LastActivityDate),
-                "contacts" => query.OrderByDescending(bs => bs.TotalContactsInitiated),
-                "offers" => query.OrderByDescending(bs => bs.TotalOffersCreated),
-                "name" => query.OrderBy(bs => bs.UserId),
-                _ => query.OrderBy(bs => bs.Role).ThenBy(bs => bs.UserId)
+                "name" => query.OrderBy(bs => bs.ApplicationUserId),
+                "role" => query.OrderBy(bs => bs.Role),
+                "joineddate" => query.OrderBy(bs => bs.CreatedAt),
+                "lastactivity" => query.OrderByDescending(bs => bs.LastActivityDate),
+                _ => query.OrderByDescending(bs => bs.CreatedAt)
             };
 
             return await query
-                .Select(bs => new StaffMemberDto
+                .Select(bs => new BandStaffDto
                 {
-                    Id = bs.Id,
-                    UserId = bs.UserId,
-                    Name = bs.UserId,
-                    Email = "",
+                    BandStaffId = bs.BandStaffId,
+                    BandId = bs.BandId,
+                    ApplicationUserId = bs.ApplicationUserId,
                     Role = bs.Role,
-                    IsActive = bs.IsActive,
-                    JoinedDate = bs.JoinedDate,
                     CanContact = bs.CanContact,
                     CanMakeOffers = bs.CanMakeOffers,
                     CanViewFinancials = bs.CanViewFinancials,
-                    CanManageEvents = bs.CanManageEvents,
-                    TotalContacts = bs.TotalContactsInitiated,
+                    IsActive = bs.IsActive,
+                    JoinedDate = bs.CreatedAt,
+                    TotalContactsInitiated = bs.TotalContactsInitiated,
                     TotalOffersCreated = bs.TotalOffersCreated,
-                    SuccessfulPlacements = bs.SuccessfulPlacements,
                     LastActivityDate = bs.LastActivityDate
                 })
                 .ToListAsync();
         }
 
-        // Remaining methods continued in next part...
         public async Task<ScholarshipOverviewDto> GetScholarshipsAsync(string userId, ScholarshipFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.DirectorUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
 
             if (band == null)
-                return new ScholarshipOverviewDto();
+                throw new KeyNotFoundException("Band not found for this director");
 
-            var query = _context.ScholarshipOffers
-                .Where(so => so.BandId == band.Id);
+            var query = _context.Offers
+                .Where(so => so.BandId == band.BandId)
+                .AsQueryable();
 
+            // Apply filters
             if (!string.IsNullOrEmpty(filters.Status))
                 query = query.Where(so => so.Status == filters.Status);
 
-            if (filters.StudentId.HasValue)
-                query = query.Where(so => so.StudentId == filters.StudentId.Value);
-
-            if (filters.StartDate.HasValue)
-                query = query.Where(so => so.CreatedDate >= filters.StartDate.Value);
-
-            if (filters.EndDate.HasValue)
-                query = query.Where(so => so.CreatedDate <= filters.EndDate.Value);
-
             if (filters.MinAmount.HasValue)
-                query = query.Where(so => so.Amount >= filters.MinAmount.Value);
+                query = query.Where(so => so.ScholarshipAmount >= filters.MinAmount.Value);
 
             if (filters.MaxAmount.HasValue)
-                query = query.Where(so => so.Amount <= filters.MaxAmount.Value);
+                query = query.Where(so => so.ScholarshipAmount <= filters.MaxAmount.Value);
 
+            if (filters.CreatedAfter.HasValue)
+                query = query.Where(so => so.CreatedAt >= filters.CreatedAfter.Value);
+
+            if (filters.CreatedBefore.HasValue)
+                query = query.Where(so => so.CreatedAt <= filters.CreatedBefore.Value);
+
+            // Get summary statistics
+            var summary = await query
+                .GroupBy(so => 1)
+                .Select(g => new
+                {
+                    TotalCount = g.Count(),
+                    TotalAmount = g.Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                    PendingCount = g.Count(so => so.Status == "Pending"),
+                    ApprovedCount = g.Count(so => so.Status == "Approved"),
+                    AcceptedCount = g.Count(so => so.Status == "Accepted"),
+                    DeclinedCount = g.Count(so => so.Status == "Declined")
+                })
+                .FirstOrDefaultAsync();
+
+            // Get paginated offers
             var offers = await query
                 .Include(so => so.Student)
+                .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .OrderByDescending(so => so.CreatedDate)
+                .OrderByDescending(so => so.CreatedAt)
+                .Skip((filters.Page - 1) * filters.PageSize)
+                .Take(filters.PageSize)
                 .Select(so => new ScholarshipOfferDto
                 {
-                    Id = so.Id,
+                    OfferId = so.OfferId,
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,
                     BandName = so.Band.Name,
-                    Amount = so.Amount,
+                    ScholarshipAmount = so.ScholarshipAmount,
                     Status = so.Status,
                     OfferType = so.OfferType,
-                    CreatedDate = so.CreatedDate,
+                    CreatedAt = so.CreatedAt,
                     ApprovedDate = so.ApprovedDate,
                     ResponseDate = so.ResponseDate,
                     ExpirationDate = so.ExpirationDate,
                     Notes = so.Notes,
-                    CreatedByName = so.CreatedByStaff.UserId,
-                    ApprovedByName = so.ApprovedByUserId,
-                    RequiresGuardianApproval = so.RequiresGuardianApproval,
-                    RescindReason = so.RescindReason
+                    CreatedByStaffName = so.CreatedByStaff.ApplicationUserId,
+                    ApprovedByUserId = so.ApprovedByUserId,
+                    RequiresGuardianApproval = so.RequiresGuardianApproval
                 })
                 .ToListAsync();
 
-            var totalAmount = offers.Sum(o => o.Amount);
-
             return new ScholarshipOverviewDto
             {
+                TotalOffers = summary?.TotalCount ?? 0,
+                TotalAmount = summary?.TotalAmount ?? 0m,
+                PendingCount = summary?.PendingCount ?? 0,
+                ApprovedCount = summary?.ApprovedCount ?? 0,
+                AcceptedCount = summary?.AcceptedCount ?? 0,
+                DeclinedCount = summary?.DeclinedCount ?? 0,
+                AvailableBudget = band.ScholarshipBudget - (summary?.TotalAmount ?? 0m),
                 Offers = offers,
-                TotalCount = offers.Count,
-                TotalAmount = totalAmount,
-                BudgetSummary = new ScholarshipBudgetDto
-                {
-                    TotalBudget = band.ScholarshipBudget,
-                    AllocatedAmount = offers.Where(o => o.Status != "Declined" && o.Status != "Rescinded").Sum(o => o.Amount),
-                    CommittedAmount = offers.Where(o => o.Status == "Accepted").Sum(o => o.Amount),
-                    AvailableAmount = band.ScholarshipBudget - offers.Where(o => o.Status == "Accepted" || o.Status == "Pending" || o.Status == "Approved").Sum(o => o.Amount),
-                    PendingAmount = offers.Where(o => o.Status == "Pending" || o.Status == "Approved").Sum(o => o.Amount)
-                }
+                CurrentPage = filters.Page,
+                PageSize = filters.PageSize
             };
         }
 
         public async Task<bool> CanManageScholarshipAsync(string userId, int offerId)
         {
-            var offer = await _context.ScholarshipOffers
+            var offer = await _context.Offers
                 .Include(so => so.Band)
-                .FirstOrDefaultAsync(so => so.Id == offerId);
+                .FirstOrDefaultAsync(so => so.OfferId == offerId);
 
-            return offer != null && offer.Band.DirectorUserId == userId;
+            if (offer == null)
+                return false;
+
+            return offer.Band.ApplicationUserId == userId;
         }
 
         public async Task<ScholarshipOfferDto> ApproveScholarshipAsync(int offerId, string userId, string? notes)
         {
-            var offer = await _context.ScholarshipOffers
+            var offer = await _context.Offers
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .FirstOrDefaultAsync(so => so.Id == offerId);
+                .FirstOrDefaultAsync(so => so.OfferId == offerId);
 
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
 
             if (offer.Status != "Pending")
-                throw new InvalidOperationException($"Cannot approve offer in status {offer.Status}");
+                throw new InvalidOperationException($"Offer is not in Pending status (current: {offer.Status})");
 
             offer.Status = "Approved";
             offer.ApprovedDate = DateTime.UtcNow;
             offer.ApprovedByUserId = userId;
             if (!string.IsNullOrEmpty(notes))
-                offer.Notes = (offer.Notes ?? "") + $"\n[Approval] {notes}";
+                offer.Notes += $"\n[Director Approval] {notes}";
 
             await _context.SaveChangesAsync();
 
             return new ScholarshipOfferDto
             {
-                Id = offer.Id,
+                OfferId = offer.OfferId,
                 StudentId = offer.StudentId,
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                 BandId = offer.BandId,
                 BandName = offer.Band.Name,
-                Amount = offer.Amount,
+                ScholarshipAmount = offer.ScholarshipAmount,
                 Status = offer.Status,
                 OfferType = offer.OfferType,
-                CreatedDate = offer.CreatedDate,
+                CreatedAt = offer.CreatedAt,
                 ApprovedDate = offer.ApprovedDate,
                 ResponseDate = offer.ResponseDate,
                 ExpirationDate = offer.ExpirationDate,
                 Notes = offer.Notes,
-                CreatedByName = offer.CreatedByStaff.UserId,
-                ApprovedByName = offer.ApprovedByUserId,
+                CreatedByStaffName = offer.CreatedByStaff.ApplicationUserId,
+                ApprovedByUserId = offer.ApprovedByUserId,
                 RequiresGuardianApproval = offer.RequiresGuardianApproval
             };
         }
 
         public async Task<ScholarshipOfferDto> RescindScholarshipAsync(int offerId, string userId, string reason)
         {
-            var offer = await _context.ScholarshipOffers
+            var offer = await _context.Offers
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .FirstOrDefaultAsync(so => so.Id == offerId);
+                .FirstOrDefaultAsync(so => so.OfferId == offerId);
 
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
@@ -828,21 +606,21 @@ namespace Podium.Application.Services
 
             return new ScholarshipOfferDto
             {
-                Id = offer.Id,
+                OfferId = offer.OfferId,
                 StudentId = offer.StudentId,
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                 BandId = offer.BandId,
                 BandName = offer.Band.Name,
-                Amount = offer.Amount,
+                ScholarshipAmount = offer.ScholarshipAmount,
                 Status = offer.Status,
                 OfferType = offer.OfferType,
-                CreatedDate = offer.CreatedDate,
+                CreatedAt = offer.CreatedAt,
                 ApprovedDate = offer.ApprovedDate,
                 ResponseDate = offer.ResponseDate,
                 ExpirationDate = offer.ExpirationDate,
                 Notes = offer.Notes,
-                CreatedByName = offer.CreatedByStaff.UserId,
-                ApprovedByName = offer.ApprovedByUserId,
+                CreatedByStaffName = offer.CreatedByStaff.ApplicationUserId,
+                ApprovedByUserId = offer.ApprovedByUserId,
                 RequiresGuardianApproval = offer.RequiresGuardianApproval,
                 RescindReason = offer.RescindReason
             };
@@ -851,13 +629,13 @@ namespace Podium.Application.Services
         public async Task<List<InterestedStudentDto>> GetInterestedStudentsAsync(string userId, InterestedStudentFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.DirectorUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return new List<InterestedStudentDto>();
 
             var query = _context.StudentInterests
-                .Where(si => si.BandId == band.Id)
+                .Where(si => si.BandId == band.BandId)
                 .Include(si => si.Student)
                 .AsQueryable();
 
@@ -882,7 +660,7 @@ namespace Podium.Application.Services
                     StudentId = si.StudentId,
                     Name = si.Student.FirstName + " " + si.Student.LastName,
                     Email = si.Student.Email,
-                    Phone = si.Student.PhoneNumber,
+                    Phone = si.Student.ContactPhone,
                     PrimaryInstrument = si.Student.PrimaryInstrument,
                     SkillLevel = si.Student.SkillLevel,
                     GraduationYear = si.Student.GraduationYear,
@@ -891,11 +669,11 @@ namespace Podium.Application.Services
                     InterestedDate = si.InterestedDate,
                     VideosUploaded = si.Student.Videos.Count,
                     EventsAttended = si.Student.EventRegistrations.Count(er => er.DidAttend),
-                    HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.Id),
-                    LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.Id).Max(cl => (DateTime?)cl.ContactDate),
-                    HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.Id),
-                    OfferStatus = si.Student.ScholarshipOffers.Where(so => so.BandId == band.Id).OrderByDescending(so => so.CreatedDate).Select(so => so.Status).FirstOrDefault(),
-                    HasGuardianLinked = si.Student.StudentGuardians.Any(sg => sg.IsActive),
+                    HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.BandId),
+                    LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.BandId).Max(cl => (DateTime?)cl.ContactDate),
+                    HasOffer = si.Student.Offers.Any(so => so.BandId == band.BandId),
+                    OfferStatus = si.Student.Offers.Where(so => so.BandId == band.BandId).OrderByDescending(so => so.CreatedAt).Select(so => so.Status).FirstOrDefault(),
+                    HasGuardianLinked = si.Student.Guardians.Any(sg => sg.IsActive),
                     RequiresGuardianApproval = si.Student.RequiresGuardianApproval
                 })
                 .ToListAsync();
@@ -906,13 +684,13 @@ namespace Podium.Application.Services
         public async Task<List<BandEventDto>> GetEventsAsync(string userId, EventFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.DirectorUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return new List<BandEventDto>();
 
             var query = _context.BandEvents
-                .Where(e => e.BandId == band.Id);
+                .Where(e => e.BandId == band.BandId);
 
             if (!filters.IncludeArchived)
                 query = query.Where(e => !e.IsArchived);
@@ -930,7 +708,7 @@ namespace Podium.Application.Services
                 .OrderBy(e => e.EventDate)
                 .Select(e => new BandEventDto
                 {
-                    EventId = e.Id,
+                    EventId = e.BandEventId,
                     EventName = e.EventName,
                     Description = e.Description,
                     EventType = e.EventType,
@@ -944,10 +722,9 @@ namespace Podium.Application.Services
                     RegistrationDeadline = e.RegistrationDeadline,
                     IsVirtual = e.IsVirtual,
                     MeetingLink = e.MeetingLink,
-                    CreatedDate = e.CreatedDate
+                    CreatedDate = e.CreatedAt
                 })
                 .ToListAsync();
         }
     }
-}
 }

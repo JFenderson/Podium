@@ -10,7 +10,7 @@ namespace Podium.Core.Entities
 {
     public class AuditLog
     {
-        public int Id { get; set; }
+        public int AuditLogId { get; set; }
 
         [Required]
         [MaxLength(450)]
