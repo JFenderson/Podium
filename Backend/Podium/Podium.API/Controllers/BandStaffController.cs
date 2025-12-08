@@ -8,6 +8,7 @@ using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.BandStaff;
 using Podium.Application.DTOs.Rating;
 using Podium.Core.Entities;
+using Podium.Application.Authorization;
 
 namespace Podium.API.Controllers
 {
@@ -18,14 +19,14 @@ namespace Podium.API.Controllers
     public class BandStaffController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IAuthorizationService _authService;
+        private readonly IPermissionService _permissionService;
 
         public BandStaffController(
             ApplicationDbContext context,
-            IAuthorizationService authService)
+            IPermissionService permissionService)
         {
             _context = context;
-            _authService = authService;
+            _permissionService = permissionService;
         }
 
         /// <summary>
@@ -36,11 +37,11 @@ namespace Podium.API.Controllers
         public async Task<ActionResult<IEnumerable<BandStaffDto>>> GetAllStaff()
         {
             var staff = await _context.BandStaff
-                .Include(bs => bs.User)
+                .Include(bs => bs.ApplicationUser)
                 .Select(bs => new BandStaffDto
                 {
                     BandStaffId = bs.BandStaffId,
-                    UserId = bs.UserId,
+                    ApplicationUserId = bs.ApplicationUserId,
                     FirstName = bs.FirstName,
                     LastName = bs.LastName,
                     Role = bs.Role,
@@ -62,14 +63,14 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "BandStaffOnly")]
         public async Task<ActionResult<BandStaffDto>> GetMyInfo()
         {
-            var userId = await _authService.GetCurrentUserIdAsync();
+            var userId = await _permissionService.GetCurrentUserIdAsync();
             if (userId == null)
             {
                 return Unauthorized();
             }
 
             var staff = await _context.BandStaff
-                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId.Value);
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
             if (staff == null)
             {
@@ -79,7 +80,7 @@ namespace Podium.API.Controllers
             return Ok(new BandStaffDto
             {
                 BandStaffId = staff.BandStaffId,
-                UserId = staff.UserId,
+                ApplicationUserId = staff.ApplicationUserId,
                 FirstName = staff.FirstName,
                 LastName = staff.LastName,
                 Role = staff.Role,
@@ -105,7 +106,7 @@ namespace Podium.API.Controllers
             }
 
             // Prevent Directors from removing their own ManageStaff permission
-            var currentUserId = await _authService.GetCurrentUserIdAsync();
+            var currentUserId = await _permissionService.GetCurrentUserIdAsync();
             if (staff.ApplicationUserId == currentUserId && !dto.CanManageStaff)
             {
                 return BadRequest("You cannot remove your own ManageStaff permission");
@@ -158,7 +159,7 @@ namespace Podium.API.Controllers
         public async Task<ActionResult<BandStaffDto>> CreateStaff([FromBody] CreateBandStaffDto dto)
         {
             // Check if user already exists
-            var existingUser = await _context.Users.FindAsync(dto.UserId);
+            var existingUser = await _context.Users.FindAsync(dto.ApplicationUserId);
             if (existingUser == null)
             {
                 return BadRequest("User not found");
@@ -166,7 +167,7 @@ namespace Podium.API.Controllers
 
             // Check if staff profile already exists
             var existingStaff = await _context.BandStaff
-                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == dto.UserId);
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == dto.ApplicationUserId);
             if (existingStaff != null)
             {
                 return BadRequest("Staff profile already exists for this user");
@@ -174,7 +175,7 @@ namespace Podium.API.Controllers
 
             var staff = new BandStaff
             {
-                UserId = dto.UserId,
+                ApplicationUserId = dto.ApplicationUserId,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Role = dto.Role,
@@ -193,7 +194,7 @@ namespace Podium.API.Controllers
                 new BandStaffDto
                 {
                     BandStaffId = staff.BandStaffId,
-                    UserId = staff.UserId,
+                    ApplicationUserId = staff.ApplicationUserId,
                     FirstName = staff.FirstName,
                     LastName = staff.LastName,
                     Role = staff.Role,
@@ -212,7 +213,7 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "BandStaffOnly")]
         public async Task<ActionResult<BandStaffPermissionsDto>> GetMyPermissions()
         {
-            var permissions = await _authService.GetBandStaffPermissionsAsync();
+            var permissions = await _permissionService.GetBandStaffPermissionsAsync();
             if (permissions == null)
             {
                 return NotFound("Staff profile not found");
@@ -235,7 +236,7 @@ namespace Podium.API.Controllers
             }
 
             // Prevent Directors from removing themselves
-            var currentUserId = await _authService.GetCurrentUserIdAsync();
+            var currentUserId = await _permissionService.GetCurrentUserIdAsync();
             if (staff.ApplicationUserId == currentUserId)
             {
                 return BadRequest("You cannot remove yourself");

@@ -1,8 +1,9 @@
-﻿using Podium.Core.Entities;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Podium.Core.Entities;
 using System;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 
 namespace Podium.Infrastructure.Data;
 
@@ -13,66 +14,37 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    public DbSet<Band> Bands { get; set; } = null!;
-    public DbSet<Video> Videos { get; set; } = null!;
-    public DbSet<StudentInterest> StudentInterests { get; set; } = null!;
-    public DbSet<ContactRequest> ContactRequests { get; set; } = null!;
-    public DbSet<BandEvent> BandEvents { get; set; } = null!;
-    public DbSet<EventRegistration> EventRegistrations { get; set; } = null!;
-    public DbSet<ContactLog> ContactLogs { get; set; } = null!;
-    public DbSet<ProfileView> ProfileViews { get; set; } = null!;
-    public DbSet<GuardianNotification> GuardianNotifications { get; set; } = null!;
+    // DbSets
     public DbSet<Student> Students { get; set; } = null!;
     public DbSet<Guardian> Guardians { get; set; } = null!;
-    public DbSet<BandStaff> BandStaff { get; set; } = null!;
-    public DbSet<Offer> Offers { get; set; } = null!;
-    public DbSet<Offer> ScholarshipOffers { get; set; } = null!;
     public DbSet<StudentGuardian> StudentGuardians { get; set; } = null!;
+    public DbSet<Band> Bands { get; set; } = null!;
+    public DbSet<BandStaff> BandStaff { get; set; } = null!;
+    public DbSet<Video> Videos { get; set; } = null!;
+    public DbSet<StudentInterest> StudentInterests { get; set; } = null!;
+    public DbSet<Offer> Offers { get; set; } = null!;
+    public DbSet<ContactRequest> ContactRequests { get; set; } = null!;
+    public DbSet<ContactLog> ContactLogs { get; set; } = null!;
+    public DbSet<BandEvent> BandEvents { get; set; } = null!;
+    public DbSet<EventRegistration> EventRegistrations { get; set; } = null!;
+    public DbSet<GuardianNotification> GuardianNotifications { get; set; } = null!;
     public DbSet<GuardianNotificationPreferences> GuardianNotificationPreferences { get; set; } = null!;
-    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+    public DbSet<ProfileView> ProfileViews { get; set; } = null!;
     public DbSet<StudentRating> StudentRatings { get; set; } = null!;
-    public DbSet<Document> Documents { get; set; } = null!;
-    public DbSet<DocumentTag> DocumentTags { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        // Configure Document entity
-        builder.Entity<Document>(entity =>
+        // ===== ApplicationUser Configuration =====
+        builder.Entity<ApplicationUser>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.FileName).IsRequired().HasMaxLength(500);
-            entity.Property(e => e.FileExtension).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(1000);
-            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.UploadedBy).IsRequired();
-
-            entity.HasOne(e => e.User)
-                  .WithMany(u => u.Documents)
-                  .HasForeignKey(e => e.UploadedBy)
-                  .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasQueryFilter(e => !e.IsDeleted);
-            entity.HasIndex(e => e.UploadedBy);
-            entity.HasIndex(e => e.CreatedAt);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
         });
 
-        // Configure DocumentTag entity
-        builder.Entity<DocumentTag>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.TagName).IsRequired().HasMaxLength(100);
-
-            entity.HasOne(e => e.Document)
-                  .WithMany(d => d.Tags)
-                  .HasForeignKey(e => e.DocumentId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasIndex(e => e.TagName);
-        });
 
         // Configure RefreshToken entity
         builder.Entity<RefreshToken>(entity =>
@@ -81,8 +53,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Token).IsRequired().HasMaxLength(500);
             entity.Property(e => e.ApplicationUserId).IsRequired();
 
-            entity.HasOne(e => e.User)
-                  .WithMany(u => u.RefreshTokens)
+            entity.HasOne(e => e.ApplicationUser)
+                  .WithMany()
                   .HasForeignKey(e => e.ApplicationUserId)
                   .OnDelete(DeleteBehavior.Cascade);
 
@@ -90,47 +62,103 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.ApplicationUserId);
         });
 
-        // Configure ApplicationUser
-        builder.Entity<ApplicationUser>(entity =>
-        {
-            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
-        });
+        
+        // ===== Decimal Precision =====
+        builder.Entity<Band>()
+            .Property(b => b.ScholarshipBudget)
+            .HasColumnType("decimal(18,2)");
 
-        // Student - ApplicationUser relationship
+        builder.Entity<Offer>()
+            .Property(o => o.ScholarshipAmount)
+            .HasColumnType("decimal(18,2)");
+
+        // ===== Student Configuration =====
         builder.Entity<Student>()
             .HasOne(s => s.ApplicationUser)
             .WithMany()
             .HasForeignKey(s => s.ApplicationUserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Student>()
+            .Property(s => s.GPA)
+            .HasColumnType("decimal(3,2)");
 
         // Guardian - ApplicationUser relationship
         builder.Entity<Guardian>()
             .HasOne(g => g.ApplicationUser)
             .WithMany()
             .HasForeignKey(g => g.ApplicationUserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        // Guardian-Student many-to-many
-        builder.Entity<Guardian>()
-            .HasMany(g => g.Students)
-            .WithMany(s => s.Guardians);
+        // ===== Guardian-Student Many-to-Many with Junction =====
+        builder.Entity<StudentGuardian>(entity =>
+        {
+            entity.HasKey(sg => sg.Id);
+
+            entity.HasOne(sg => sg.Student)
+                  .WithMany()
+                  .HasForeignKey(sg => sg.StudentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(sg => sg.Guardian)
+                  .WithMany()
+                  .HasForeignKey(sg => sg.GuardianId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(sg => new { sg.StudentId, sg.GuardianId }).IsUnique();
+        });
+
+        // ===== Guardian-Student Many-to-Many Relationship =====
+        builder.Entity<Student>()
+            .HasMany(s => s.Guardians)
+            .WithMany(g => g.Students)
+            .UsingEntity<StudentGuardian>(
+                // Configure Student → StudentGuardian
+                j => j.HasOne(sg => sg.Guardian)
+                      .WithMany()
+                      .HasForeignKey(sg => sg.GuardianId)
+                      .OnDelete(DeleteBehavior.Cascade),
+                // Configure Guardian → StudentGuardian
+                j => j.HasOne(sg => sg.Student)
+                      .WithMany()
+                      .HasForeignKey(sg => sg.StudentId)
+                      .OnDelete(DeleteBehavior.Cascade),
+                // Configure StudentGuardian itself
+                j =>
+                {
+                    j.HasKey(sg => sg.Id);
+                    j.ToTable("StudentGuardians");
+                    j.HasIndex(sg => new { sg.StudentId, sg.GuardianId })
+                     .IsUnique()
+                     .HasDatabaseName("IX_StudentGuardian_Student_Guardian");
+                });
 
         // BandStaff - ApplicationUser relationship
         builder.Entity<BandStaff>()
             .HasOne(bs => bs.ApplicationUser)
             .WithMany()
             .HasForeignKey(bs => bs.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<BandStaff>()
+            .HasOne(bs => bs.Band)
+            .WithMany(b => b.Staff)
+            .HasForeignKey(bs => bs.BandId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // BandStaff default values
+        // ===== Band Staff Values =====
+        // BandStaff default permission values
         builder.Entity<BandStaff>()
             .Property(bs => bs.CanViewStudents)
-            .HasDefaultValue(false);
+            .HasDefaultValue(true);
+
+        builder.Entity<BandStaff>()
+            .Property(bs => bs.CanContact)
+            .HasDefaultValue(true);
 
         builder.Entity<BandStaff>()
             .Property(bs => bs.CanRateStudents)
-            .HasDefaultValue(false);
+            .HasDefaultValue(true);
 
         builder.Entity<BandStaff>()
             .Property(bs => bs.CanSendOffers)
@@ -144,15 +172,71 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .Property(bs => bs.CanManageStaff)
             .HasDefaultValue(false);
 
+        // ===== Band Configuration =====
+        builder.Entity<Band>()
+            .HasOne(b => b.Director)
+            .WithMany()
+            .HasForeignKey(b => b.DirectorApplicationUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // StudentGuardian configuration
         builder.Entity<StudentGuardian>(entity =>
         {
-            entity.HasKey(sg => new { sg.StudentId, sg.GuardianUserId });
+            entity.HasKey(sg => new { sg.StudentId, sg.GuardianId });
 
             entity.HasOne(sg => sg.Student)
                   .WithMany()
                   .HasForeignKey(sg => sg.StudentId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // ===== Offer Configuration =====
+        builder.Entity<Offer>()
+            .HasOne(o => o.Band)
+            .WithMany(b => b.Offers)
+            .HasForeignKey(o => o.BandId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Offer>()
+            .HasOne(o => o.Student)
+            .WithMany(s => s.ScholarshipOffers)
+            .HasForeignKey(o => o.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Offer>()
+            .HasOne(o => o.CreatedByStaff)
+            .WithMany(bs => bs.OffersCreated)
+            .HasForeignKey(o => o.CreatedByStaffId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ===== Video Configuration =====
+        builder.Entity<Video>()
+            .HasOne(v => v.Student)
+            .WithMany(s => s.Videos)
+            .HasForeignKey(v => v.StudentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ===== AuditLog Configuration =====
+        builder.Entity<AuditLog>()
+            .HasIndex(a => a.ApplicationUserId);
+
+        builder.Entity<AuditLog>()
+            .HasIndex(a => a.Timestamp);
+
+        // ===== Indexes for Performance =====
+        builder.Entity<Student>()
+            .HasIndex(s => s.ApplicationUserId);
+
+        builder.Entity<Guardian>()
+            .HasIndex(g => g.ApplicationUserId);
+
+        builder.Entity<BandStaff>()
+            .HasIndex(bs => bs.ApplicationUserId);
+
+        builder.Entity<BandStaff>()
+            .HasIndex(bs => new { bs.BandId, bs.ApplicationUserId })
+            .IsUnique();
+
+
     }
 }

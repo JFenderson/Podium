@@ -1,17 +1,16 @@
-﻿using BandRecruitment.Data;
-using BandRecruitment.DTOs.Guardian;
-using BandRecruitment.Models;
+﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.Guardian;
 using Podium.Core.Entities;
-using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Podium.Application.Interfaces;
+
 
 namespace Podium.Application.Services
 {
@@ -26,10 +25,27 @@ namespace Podium.Application.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Helper method to get Guardian entity ID from ApplicationUser ID
+        /// </summary>
+        private async Task<int?> GetGuardianIdAsync(string guardianUserId)
+        {
+            var guardian = await _context.Guardians
+                .Where(g => g.ApplicationUserId == guardianUserId)
+                .Select(g => g.GuardianId)
+                .FirstOrDefaultAsync();
+
+            return guardian == 0 ? null : guardian;
+        }
+
         public async Task<List<LinkedStudentDto>> GetLinkedStudentsAsync(string guardianUserId)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return new List<LinkedStudentDto>();
+
             return await _context.StudentGuardians
-                .Where(sg => sg.GuardianUserId == guardianUserId && sg.IsActive)
+                .Where(sg => sg.GuardianId == guardianId.Value && sg.IsActive)
                 .Include(sg => sg.Student)
                 .Select(sg => new LinkedStudentDto
                 {
@@ -54,9 +70,13 @@ namespace Podium.Application.Services
 
         public async Task<bool> CanAccessStudentAsync(string guardianUserId, int studentId)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return false;
+
             return await _context.StudentGuardians
                 .AnyAsync(sg =>
-                    sg.GuardianUserId == guardianUserId &&
+                    sg.GuardianId == guardianId.Value &&
                     sg.StudentId == studentId &&
                     sg.IsActive);
         }
@@ -85,35 +105,25 @@ namespace Podium.Application.Services
                 .ToListAsync();
 
             var interestsTask = _context.StudentInterests
-                .Where(si => si.StudentId == studentId && si.InterestedDate >= startDate)
-                .Include(si => si.Band)
-                .OrderByDescending(si => si.InterestedDate)
-                .Select(si => new InterestActivityDto
-                {
-                    BandId = si.BandId,
-                    BandName = si.Band.Name,
-                    University = si.Band.UniversityName,
-                    InterestDate = si.InterestedDate,
-                    HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == si.BandId),
-                    ContactDate = si.Student.ContactLogs
-                        .Where(cl => cl.BandId == si.BandId)
-                        .OrderBy(cl => cl.ContactDate)
-                        .Select(cl => (DateTime?)cl.ContactDate)
-                        .FirstOrDefault()
-                })
-                .ToListAsync();
+        .Where(si => si.StudentId == studentId && si.InterestedDate >= startDate)
+        .Include(si => si.Band)
+        .Include(si => si.Student)
+            .ThenInclude(s => s.ContactLogs)
+        .OrderByDescending(si => si.InterestedDate)
+        .ToListAsync();
 
-            var offersTask = _context.ScholarshipOffers
-                .Where(so => so.StudentId == studentId && so.CreatedDate >= startDate)
+
+            var offersTask = _context.Offers
+                .Where(so => so.StudentId == studentId && so.CreatedAt >= startDate)
                 .Include(so => so.Band)
-                .OrderByDescending(so => so.CreatedDate)
+                .OrderByDescending(so => so.CreatedAt)
                 .Select(so => new OfferActivityDto
                 {
                     OfferId = so.OfferId, // Changed from Id
                     BandName = so.Band.Name,
-                    Amount = so.Amount,
+                    Amount = so.ScholarshipAmount,
                     Status = so.Status,
-                    OfferDate = so.CreatedDate,
+                    OfferDate = so.CreatedAt,
                     ExpirationDate = so.ExpirationDate,
                     RequiresGuardianApproval = so.RequiresGuardianApproval
                 })
@@ -153,6 +163,21 @@ namespace Podium.Application.Services
 
             await Task.WhenAll(videosTask, interestsTask, offersTask, eventsTask, contactsTask);
 
+            // Map interests to DTOs in memory (after data is loaded)
+            var interests = (await interestsTask).Select(si => new InterestActivityDto
+            {
+                BandId = si.BandId,
+                BandName = si.Band.Name,
+                University = si.Band.UniversityName,
+                InterestDate = si.InterestedDate,
+                HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == si.BandId),
+                ContactDate = si.Student.ContactLogs
+                    .Where(cl => cl.BandId == si.BandId)
+                    .OrderBy(cl => cl.ContactDate)
+                    .Select(cl => (DateTime?)cl.ContactDate)
+                    .FirstOrDefault()
+            }).ToList();
+
             return new StudentActivityDto
             {
                 StudentId = studentId,
@@ -160,12 +185,12 @@ namespace Podium.Application.Services
                 StartDate = startDate,
                 EndDate = DateTime.UtcNow,
                 VideosUploaded = await videosTask,
-                InterestShown = await interestsTask,
+                InterestShown = interests,
                 OffersReceived = await offersTask,
                 EventsAttended = await eventsTask,
                 ContactsMade = await contactsTask,
                 TotalVideos = (await videosTask).Count,
-                TotalInterests = (await interestsTask).Count,
+                TotalInterests = interests.Count,
                 TotalOffers = (await offersTask).Count,
                 TotalEvents = (await eventsTask).Count,
                 TotalContacts = (await contactsTask).Count
@@ -234,8 +259,12 @@ namespace Podium.Application.Services
 
         public async Task<List<ContactRequestDto>> GetContactRequestsAsync(string guardianUserId, int? studentId, string? status)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return new List<ContactRequestDto>();
+
             var accessibleStudentIds = await _context.StudentGuardians
-                .Where(sg => sg.GuardianUserId == guardianUserId && sg.IsActive && sg.CanApproveContacts)
+                .Where(sg => sg.GuardianId == guardianId.Value && sg.IsActive && sg.CanApproveContacts)
                 .Select(sg => sg.StudentId)
                 .ToListAsync();
 
@@ -281,6 +310,10 @@ namespace Podium.Application.Services
 
         public async Task<bool> CanManageContactRequestAsync(string guardianUserId, int requestId)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return false;
+
             var request = await _context.ContactRequests
                 .Include(cr => cr.Student)
                 .FirstOrDefaultAsync(cr => cr.ContactRequestId == requestId); // Changed from Id
@@ -289,7 +322,7 @@ namespace Podium.Application.Services
                 return false;
 
             return await _context.StudentGuardians.AnyAsync(sg =>
-                sg.GuardianUserId == guardianUserId &&
+                sg.GuardianId == guardianId.Value &&
                 sg.StudentId == request.StudentId &&
                 sg.IsActive &&
                 sg.CanApproveContacts);
@@ -384,15 +417,19 @@ namespace Podium.Application.Services
         /// </summary>
         public async Task<List<GuardianScholarshipDto>> GetScholarshipsAsync(string guardianUserId, int? studentId, string? status)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return new List<GuardianScholarshipDto>();
+
             var accessibleStudentIds = await _context.StudentGuardians
-                .Where(sg => sg.GuardianUserId == guardianUserId && sg.IsActive)
+                .Where(sg => sg.GuardianId == guardianId.Value && sg.IsActive)
                 .Select(sg => sg.StudentId)
                 .ToListAsync();
 
             if (!accessibleStudentIds.Any())
                 return new List<GuardianScholarshipDto>();
 
-            var query = _context.ScholarshipOffers
+            var query = _context.Offers
                 .Where(so => accessibleStudentIds.Contains(so.StudentId));
 
             if (studentId.HasValue)
@@ -407,7 +444,7 @@ namespace Podium.Application.Services
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .OrderByDescending(so => so.CreatedDate)
+                .OrderByDescending(so => so.CreatedAt)
                 .ToListAsync();
 
             // Check guardian permissions for each offer
@@ -416,7 +453,7 @@ namespace Podium.Application.Services
             {
                 var guardianLink = await _context.StudentGuardians
                     .FirstOrDefaultAsync(sg =>
-                        sg.GuardianUserId == guardianUserId &&
+                        sg.GuardianId == guardianId.Value &&
                         sg.StudentId == offer.StudentId &&
                         sg.IsActive);
 
@@ -429,10 +466,10 @@ namespace Podium.Application.Services
                     StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                     BandName = offer.Band.Name,
                     University = offer.Band.UniversityName,
-                    Amount = offer.Amount,
+                    Amount = offer.ScholarshipAmount,
                     OfferType = offer.OfferType,
                     Status = offer.Status,
-                    OfferDate = offer.CreatedDate,
+                    OfferDate = offer.CreatedAt,
                     ExpirationDate = offer.ExpirationDate,
                     DaysUntilExpiration = (int)(offer.ExpirationDate - now).TotalDays,
                     Terms = offer.Terms,
@@ -452,7 +489,11 @@ namespace Podium.Application.Services
 
         public async Task<bool> CanRespondToScholarshipAsync(string guardianUserId, int offerId)
         {
-            var offer = await _context.ScholarshipOffers
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return false;
+
+                        var offer = await _context.Offers
                 .Include(so => so.Student)
                 .FirstOrDefaultAsync(so => so.OfferId == offerId); // Changed from Id
 
@@ -460,7 +501,7 @@ namespace Podium.Application.Services
                 return false;
 
             return await _context.StudentGuardians.AnyAsync(sg =>
-                sg.GuardianUserId == guardianUserId &&
+                sg.GuardianId == guardianId.Value &&
                 sg.StudentId == offer.StudentId &&
                 sg.IsActive &&
                 sg.CanRespondToOffers);
@@ -468,10 +509,14 @@ namespace Podium.Application.Services
 
         public async Task<GuardianScholarshipDto> RespondToScholarshipAsync(int offerId, string guardianUserId, string response, string? notes)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return new GuardianScholarshipDto();
+
             if (response != "Accepted" && response != "Declined")
                 throw new ArgumentException("Response must be 'Accepted' or 'Declined'");
 
-            var offer = await _context.ScholarshipOffers
+            var offer = await _context.Offers
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
@@ -490,7 +535,7 @@ namespace Podium.Application.Services
             // Verify guardian has permission
             var guardianLink = await _context.StudentGuardians
                 .FirstOrDefaultAsync(sg =>
-                    sg.GuardianUserId == guardianUserId &&
+                    sg.GuardianId == guardianId.Value &&
                     sg.StudentId == offer.StudentId &&
                     sg.IsActive);
 
@@ -513,10 +558,10 @@ namespace Podium.Application.Services
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                 BandName = offer.Band.Name,
                 University = offer.Band.UniversityName,
-                Amount = offer.Amount,
+                Amount = offer.ScholarshipAmount,
                 OfferType = offer.OfferType,
                 Status = offer.Status,
-                OfferDate = offer.CreatedDate,
+                OfferDate = offer.CreatedAt,
                 ExpirationDate = offer.ExpirationDate,
                 DaysUntilExpiration = (int)(offer.ExpirationDate - now).TotalDays,
                 Terms = offer.Terms,
@@ -548,29 +593,32 @@ namespace Podium.Application.Services
             var totalCount = await query.CountAsync();
             var unreadCount = await query.CountAsync(n => !n.IsRead);
 
-            var notifications = await query
-                .OrderByDescending(n => n.CreatedDate)
-                .Skip((filters.Page - 1) * filters.PageSize)
-                .Take(filters.PageSize)
-                .Select(n => new NotificationDto
-                {
-                    NotificationId = n.GuardianNotificationId, // Changed from Id
-                    Type = n.Type,
-                    Title = n.Title,
-                    Message = n.Message,
-                    CreatedDate = n.CreatedDate,
-                    IsRead = n.IsRead,
-                    IsUrgent = n.IsUrgent,
-                    StudentId = n.StudentId,
-                    StudentName = n.StudentId.HasValue
-                        ? n.Student!.FirstName + " " + n.Student.LastName
-                        : null,
-                    ActionUrl = n.ActionUrl,
-                    Metadata = n.MetadataJson != null
-                        ? JsonSerializer.Deserialize<Dictionary<string, string>>(n.MetadataJson)
-                        : null
-                })
-                .ToListAsync();
+            var notificationsRaw = await query
+              .OrderByDescending(n => n.CreatedDate)
+              .Skip((filters.Page - 1) * filters.PageSize)
+              .Take(filters.PageSize)
+              .Include(n => n.Student)  // Include Student for navigation
+              .ToListAsync();
+
+            // Map to DTOs in memory (after loading from database)
+            var notifications = notificationsRaw.Select(n => new NotificationDto
+            {
+                NotificationId = n.GuardianNotificationId,
+                Type = n.Type,
+                Title = n.Title,
+                Message = n.Message,
+                CreatedDate = n.CreatedDate,
+                IsRead = n.IsRead,
+                IsUrgent = n.IsUrgent,
+                StudentId = n.StudentId,
+                StudentName = n.StudentId.HasValue && n.Student != null
+                    ? n.Student.FirstName + " " + n.Student.LastName
+                    : null,
+                ActionUrl = n.ActionUrl,
+                Metadata = n.MetadataJson != null
+                    ? JsonSerializer.Deserialize<Dictionary<string, string>>(n.MetadataJson)
+                    : null
+            }).ToList();
 
             return new NotificationListDto
             {
@@ -651,8 +699,12 @@ namespace Podium.Application.Services
 
         public async Task<GuardianDashboardDto> GetDashboardAsync(string guardianUserId)
         {
+            var guardianId = await GetGuardianIdAsync(guardianUserId);
+            if (guardianId == null)
+                return new GuardianDashboardDto();
+
             var studentIds = await _context.StudentGuardians
-                .Where(sg => sg.GuardianUserId == guardianUserId && sg.IsActive)
+                .Where(sg => sg.GuardianId == guardianId.Value && sg.IsActive)
                 .Select(sg => sg.StudentId)
                 .ToListAsync();
 
@@ -686,7 +738,7 @@ namespace Podium.Application.Services
                 .Where(cr => studentIds.Contains(cr.StudentId) && cr.Status == "Pending")
                 .CountAsync();
 
-            var activeOffersTask = _context.ScholarshipOffers
+            var activeOffersTask = _context.Offers
                 .Where(so => studentIds.Contains(so.StudentId) &&
                     (so.Status == "Approved" || so.Status == "Pending"))
                 .CountAsync();
@@ -696,7 +748,7 @@ namespace Podium.Application.Services
                 .CountAsync();
 
             // Priority alerts
-            var expiringOffersTask = _context.ScholarshipOffers
+            var expiringOffersTask = _context.Offers
                 .Where(so => studentIds.Contains(so.StudentId) &&
                     (so.Status == "Approved" || so.Status == "Pending") &&
                     so.ExpirationDate <= expiringThreshold)
@@ -757,9 +809,9 @@ namespace Podium.Application.Services
             };
         }
 
-        private async Task<List<RecentActivityDto>> GetRecentActivitiesAcrossStudentsAsync(List<int> studentIds)
+        private async Task<List<GuardianRecentActivityDto>> GetRecentActivitiesAcrossStudentsAsync(List<int> studentIds)
         {
-            var activities = new List<RecentActivityDto>();
+            var activities = new List<GuardianRecentActivityDto>();
 
             // Recent interests
             var interests = await _context.StudentInterests
@@ -768,7 +820,7 @@ namespace Podium.Application.Services
                 .Take(5)
                 .Include(si => si.Student)
                 .Include(si => si.Band)
-                .Select(si => new RecentActivityDto
+                .Select(si => new GuardianRecentActivityDto
                 {
                     ActivityType = "Interest",
                     Description = $"Showed interest in {si.Band.Name}",
@@ -779,17 +831,17 @@ namespace Podium.Application.Services
                 .ToListAsync();
 
             // Recent offers
-            var offers = await _context.ScholarshipOffers
+            var offers = await _context.Offers
                 .Where(so => studentIds.Contains(so.StudentId))
-                .OrderByDescending(so => so.CreatedDate)
+                .OrderByDescending(so => so.CreatedAt)
                 .Take(5)
                 .Include(so => so.Student)
                 .Include(so => so.Band)
-                .Select(so => new RecentActivityDto
+                .Select(so => new GuardianRecentActivityDto
                 {
                     ActivityType = "Offer",
-                    Description = $"Received ${so.Amount} scholarship offer from {so.Band.Name}",
-                    Timestamp = so.CreatedDate,
+                    Description = $"Received ${so.ScholarshipAmount} scholarship offer from {so.Band.Name}",
+                    Timestamp = so.CreatedAt,
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName
                 })

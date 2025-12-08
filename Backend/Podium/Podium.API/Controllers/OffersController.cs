@@ -135,14 +135,14 @@ namespace Podium.API.Controllers
                 return BadRequest("Offer is already approved");
             }
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;  // ✅ Keep as string
+            if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();
             }
 
             offer.Status = "Approved";
-            offer.ApprovedByUserId = userId;
+            offer.ApprovedByUserId = userId;  // ✅ Assign string directly
             offer.ApprovedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

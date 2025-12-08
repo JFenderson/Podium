@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.Guardian
 {
-    public class RecentActivityDto
+    public class GuardianRecentActivityDto
     {
         public string ActivityType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

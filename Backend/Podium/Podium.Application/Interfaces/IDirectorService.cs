@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Podium.Core.Interfaces
+namespace Podium.Application.Interfaces
 {
     public interface IDirectorService
     {

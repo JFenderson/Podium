@@ -31,7 +31,7 @@ namespace Podium.Application.DTOs.Director
         public List<StaffActivitySummaryDto> StaffActivity { get; set; } = new();
 
         // Recent Activity Feed
-        public List<RecentActivityDto> RecentActivities { get; set; } = new();
+        public List<DirectorRecentActivityDto> RecentActivities { get; set; } = new();
 
         // Quick Stats
         public int TotalVideosSubmitted { get; set; }

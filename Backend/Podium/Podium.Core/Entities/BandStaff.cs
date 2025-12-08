@@ -111,6 +111,9 @@ namespace Podium.Core.Entities
 
         [MaxLength(500)]
         public string? Notes { get; set; }
+        // Role differentiation
+        public bool IsDirector { get; set; }
+        public string Title { get; set; } = string.Empty;
 
         // ============== NAVIGATION PROPERTIES ==============
 
@@ -122,5 +125,6 @@ namespace Podium.Core.Entities
 
         public virtual ICollection<ContactLog> ContactsInitiated { get; set; } = new List<ContactLog>();
         public virtual ICollection<Offer> OffersCreated { get; set; } = new List<Offer>();
+        public BandStaffPermissions Permissions { get; set; } = null!;
     }
 }

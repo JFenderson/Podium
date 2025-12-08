@@ -11,6 +11,5 @@ public class ApplicationUser : IdentityUser
     public bool IsActive { get; set; } = true;
 
     // Navigation properties
-    public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

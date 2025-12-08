@@ -2,8 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.AuditLog;
 using Podium.Core.Entities;
-using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
+using Podium.Application.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,29 +97,43 @@ namespace Podium.Application.Services
 
             var totalCount = await query.CountAsync();
 
-            var logs = await query
+            // Phase 1: Load raw data from database
+            var rawLogs = await query
                 .OrderByDescending(al => al.Timestamp)
                 .Skip((filters.Page - 1) * filters.PageSize)
                 .Take(filters.PageSize)
-                .Select(al => new AuditLogDto
-                {
-                    VideoId = al.AuditLogId,
-                    ApplicationUserId = al.ApplicationUserId,
-                    UserId = al.ApplicationUserId, // Alias
-                    ActionType = al.ActionType,
-                    Description = al.Description,
-                    Timestamp = al.Timestamp,
-                    IpAddress = al.IpAddress,
-                    UserAgent = al.UserAgent,
-                    IsSecurityEvent = al.IsSecurityEvent,
-                    Severity = al.Severity,
-                    Metadata = al.MetadataJson != null
-                        ? JsonSerializer.Deserialize<Dictionary<string, object>>(al.MetadataJson)
-                        : null
-                })
                 .ToListAsync();
 
+            // Phase 2: Map to DTOs in memory (where JsonSerializer works)
+            var logs = rawLogs.Select(al => new AuditLogDto
+            {
+                VideoId = al.AuditLogId,
+                ApplicationUserId = al.ApplicationUserId,
+                UserId = al.ApplicationUserId, // Alias
+                ActionType = al.ActionType,
+                Description = al.Description,
+                Timestamp = al.Timestamp,
+                IpAddress = al.IpAddress,
+                UserAgent = al.UserAgent,
+                IsSecurityEvent = al.IsSecurityEvent,
+                Severity = al.Severity,
+                Metadata = al.MetadataJson != null
+                    ? JsonSerializer.Deserialize<Dictionary<string, object>>(al.MetadataJson)
+                    : null
+            }).ToList();
+
             return logs;
+        }
+
+        public async Task LogUnauthorizedAccessAsync(string userId, string resource, int resourceId)
+        {
+            await LogSecurityEventAsync(
+                userId,
+                "UnauthorizedAccess",
+                $"Attempted unauthorized access to {resource} (ID: {resourceId})",
+                severity: "High",
+                metadata: new { Resource = resource, ResourceId = resourceId }
+            );
         }
 
         /// <summary>

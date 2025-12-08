@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.BandStaff
 {
-  public class UpdateBandStaffPermissionsDto
-{
-    public bool CanViewStudents { get; set; }
-    public bool CanRateStudents { get; set; }
-    public bool CanSendOffers { get; set; }
-    public bool CanManageEvents { get; set; }
-    public bool CanManageStaff { get; set; }
-}
+    public class UpdateBandStaffPermissionsDto
+    {
+        public string? Role { get; set; }
+        public bool CanViewStudents { get; set; }
+        public bool CanRateStudents { get; set; }
+        public bool CanSendOffers { get; set; }
+        public bool CanManageEvents { get; set; }
+        public bool CanManageStaff { get; set; }
+        public bool? IsActive { get; set; }
+    }
 }

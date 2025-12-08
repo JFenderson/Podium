@@ -6,5 +6,5 @@ public interface IStorageService
     Task<Stream> DownloadFileAsync(string filePath);
     Task DeleteFileAsync(string filePath);
     Task<bool> FileExistsAsync(string filePath);
-    Task<string> GetFileUrlAsync(string filePath, int expirationMinutes = 60);
+    Task<string> GenerateSasToken(string filePath, int expirationMinutes = 60);
 }

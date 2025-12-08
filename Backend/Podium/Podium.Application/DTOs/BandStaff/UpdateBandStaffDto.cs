@@ -17,5 +17,6 @@ namespace Podium.Application.DTOs.BandStaff
         public bool CanManageEvents { get; set; }
         public bool CanManageStaff { get; set; }
         public bool IsActive { get; set; } = true;
+        public UpdateBandStaffPermissionsDto? Permissions { get; set; }
     }
 }

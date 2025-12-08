@@ -5,7 +5,6 @@ using Podium.Application.DTOs.Director;
 using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Student;
 using Podium.Core.Entities;
-using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.DTOs.BandStaff;
+using Podium.Application.Interfaces;
+
 
 namespace Podium.Application.Services
 {
@@ -37,7 +38,7 @@ namespace Podium.Application.Services
         {
             // First, get the director's band
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return null;
@@ -114,14 +115,14 @@ namespace Podium.Application.Services
                     .ToListAsync();
 
                 // Recent activities - last 10 significant events
-                var recentActivities = new List<RecentActivityDto>();
+                var recentActivities = new List<DirectorRecentActivityDto>();
 
                 // Combine multiple activity sources
                 var recentInterests = await _context.StudentInterests
                     .Where(si => si.BandId == bandId)
                     .OrderByDescending(si => si.InterestedDate)
                     .Take(5)
-                    .Select(si => new RecentActivityDto
+                    .Select(si => new DirectorRecentActivityDto
                     {
                         ActivityType = "StudentInterest",
                         Description = $"New student interest",
@@ -134,7 +135,7 @@ namespace Podium.Application.Services
                     .Where(so => so.BandId == bandId && so.CreatedAt >= oneWeekAgo)
                     .OrderByDescending(so => so.CreatedAt)
                     .Take(5)
-                    .Select(so => new RecentActivityDto
+                    .Select(so => new DirectorRecentActivityDto
                     {
                         ActivityType = so.Status == "Accepted" ? "OfferAccepted" : "OfferCreated",
                         Description = so.Status == "Accepted"
@@ -188,7 +189,7 @@ namespace Podium.Application.Services
         public async Task<bool> CanAccessBandAsync(string userId, int bandId)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.BandId == bandId && b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.BandId == bandId && b.DirectorApplicationUserId == userId && b.IsActive);
 
             return band != null;
         }
@@ -264,7 +265,7 @@ namespace Podium.Application.Services
         {
             // Verify director owns the band
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.BandId == request.BandId && b.ApplicationUserId == directorUserId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.BandId == request.BandId && b.DirectorApplicationUserId == directorUserId && b.IsActive);
 
             if (band == null)
                 throw new UnauthorizedAccessException("You do not have permission to add staff to this band");
@@ -348,7 +349,7 @@ namespace Podium.Application.Services
             if (staffMember == null)
                 return false;
 
-            return staffMember.Band.ApplicationUserId == userId;
+            return staffMember.Band.DirectorApplicationUserId == userId;
         }
 
         public async Task<BandStaffDto> UpdateStaffMemberAsync(int staffId, UpdateBandStaffDto request)
@@ -402,7 +403,7 @@ namespace Podium.Application.Services
         public async Task<List<BandStaffDto>> GetStaffMembersAsync(string userId, bool? isActive, string? sortBy)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return new List<BandStaffDto>();
@@ -445,7 +446,7 @@ namespace Podium.Application.Services
         public async Task<ScholarshipOverviewDto> GetScholarshipsAsync(string userId, ScholarshipFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 throw new KeyNotFoundException("Band not found for this director");
@@ -537,7 +538,7 @@ namespace Podium.Application.Services
             if (offer == null)
                 return false;
 
-            return offer.Band.ApplicationUserId == userId;
+            return offer.Band.DirectorApplicationUserId == userId;
         }
 
         public async Task<ScholarshipOfferDto> ApproveScholarshipAsync(int offerId, string userId, string? notes)
@@ -629,7 +630,7 @@ namespace Podium.Application.Services
         public async Task<List<InterestedStudentDto>> GetInterestedStudentsAsync(string userId, InterestedStudentFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return new List<InterestedStudentDto>();
@@ -660,7 +661,7 @@ namespace Podium.Application.Services
                     StudentId = si.StudentId,
                     Name = si.Student.FirstName + " " + si.Student.LastName,
                     Email = si.Student.Email,
-                    Phone = si.Student.ContactPhone,
+                    Phone = si.Student.PhoneNumber,
                     PrimaryInstrument = si.Student.PrimaryInstrument,
                     SkillLevel = si.Student.SkillLevel,
                     GraduationYear = si.Student.GraduationYear,
@@ -671,9 +672,9 @@ namespace Podium.Application.Services
                     EventsAttended = si.Student.EventRegistrations.Count(er => er.DidAttend),
                     HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.BandId),
                     LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.BandId).Max(cl => (DateTime?)cl.ContactDate),
-                    HasOffer = si.Student.Offers.Any(so => so.BandId == band.BandId),
-                    OfferStatus = si.Student.Offers.Where(so => so.BandId == band.BandId).OrderByDescending(so => so.CreatedAt).Select(so => so.Status).FirstOrDefault(),
-                    HasGuardianLinked = si.Student.Guardians.Any(sg => sg.IsActive),
+                    HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.BandId),
+                    OfferStatus = si.Student.ScholarshipOffers.Where(so => so.BandId == band.BandId).OrderByDescending(so => so.CreatedAt).Select(so => so.Status).FirstOrDefault(),
+                    HasGuardianLinked = si.Student.Guardians.Any(),
                     RequiresGuardianApproval = si.Student.RequiresGuardianApproval
                 })
                 .ToListAsync();
@@ -684,7 +685,7 @@ namespace Podium.Application.Services
         public async Task<List<BandEventDto>> GetEventsAsync(string userId, EventFilterDto filters)
         {
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.ApplicationUserId == userId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 return new List<BandEventDto>();
@@ -722,7 +723,7 @@ namespace Podium.Application.Services
                     RegistrationDeadline = e.RegistrationDeadline,
                     IsVirtual = e.IsVirtual,
                     MeetingLink = e.MeetingLink,
-                    CreatedDate = e.CreatedAt
+                    CreatedDate = e.CreatedDate
                 })
                 .ToListAsync();
         }

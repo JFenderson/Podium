@@ -1,8 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BandRecruitment.DTOs.Director;
-using Podium.Application.Services;
 using System.Security.Claims;
+using Podium.Application.Interfaces;
+using Podium.Application.DTOs.Director;
+using Podium.Application.DTOs.Band;
+using Podium.Application.DTOs.BandStaff;
+using Podium.Application.DTOs.Offer;
+using Podium.Application.DTOs.Student;
+using Podium.Application.DTOs.BandEvent;
 
 namespace BandRecruitment.Controllers
 {
@@ -108,8 +113,8 @@ namespace BandRecruitment.Controllers
         /// Audit: Logs all staff additions for compliance.
         /// </summary>
         [HttpPost("staff")]
-        [ProducesResponseType(typeof(StaffMemberDto), 201)]
-        public async Task<ActionResult<StaffMemberDto>> AddStaff([FromBody] AddStaffRequest request)
+        [ProducesResponseType(typeof(BandStaffDto), 201)]
+        public async Task<ActionResult<BandStaffDto>> AddStaff([FromBody] CreateBandStaffDto request)
         {
             try
             {
@@ -133,12 +138,12 @@ namespace BandRecruitment.Controllers
                 await _auditService.LogActionAsync(
                     userId,
                     "StaffAdded",
-                    $"Added staff member {request.RecruiterUserId} to band {request.BandId}",
-                    new { request.BandId, request.RecruiterUserId, request.Permissions });
+                    $"Added staff member {request.ApplicationUserId} to band {request.BandId}",
+                    new { request.BandId, request.ApplicationUserId, request.Permissions });
 
                 return CreatedAtAction(
                     nameof(GetStaff),
-                    new { staffId = staffMember.Id },
+                    new { staffId = staffMember.BandStaffId },
                     staffMember);
             }
             catch (InvalidOperationException ex)
@@ -159,10 +164,10 @@ namespace BandRecruitment.Controllers
         /// Audit: Logs permission changes for security tracking.
         /// </summary>
         [HttpPut("staff/{staffId}")]
-        [ProducesResponseType(typeof(StaffMemberDto), 200)]
-        public async Task<ActionResult<StaffMemberDto>> UpdateStaff(
+        [ProducesResponseType(typeof(BandStaffDto), 200)]
+        public async Task<ActionResult<BandStaffDto>> UpdateStaff(
             int staffId,
-            [FromBody] UpdateStaffRequest request)
+            [FromBody] UpdateBandStaffDto request)
         {
             try
             {
@@ -250,8 +255,8 @@ namespace BandRecruitment.Controllers
         /// Performance: Uses efficient projections to avoid loading full entities.
         /// </summary>
         [HttpGet("staff")]
-        [ProducesResponseType(typeof(List<StaffMemberDto>), 200)]
-        public async Task<ActionResult<List<StaffMemberDto>>> GetStaff(
+        [ProducesResponseType(typeof(List<BandStaffDto>), 200)]
+        public async Task<ActionResult<List<BandStaffDto>>> GetStaff(
             [FromQuery] bool? isActive,
             [FromQuery] string? sortBy)
         {
@@ -345,7 +350,7 @@ namespace BandRecruitment.Controllers
                     userId,
                     "ScholarshipApproved",
                     $"Approved scholarship offer {id}",
-                    new { OfferId = id, Amount = approvedOffer.Amount, StudentId = approvedOffer.StudentId });
+                    new { OfferId = id, Amount = approvedOffer.ScholarshipAmount, StudentId = approvedOffer.StudentId });
 
                 return Ok(approvedOffer);
             }

@@ -2,7 +2,7 @@
 
 namespace Podium.Application.DTOs.Director
 {
-    public class RecentActivityDto
+    public class DirectorRecentActivityDto
     {
         public string ActivityType { get; set; } = string.Empty; // "StudentInterest", "VideoUpload", "OfferAccepted", etc.
         public string Description { get; set; } = string.Empty;

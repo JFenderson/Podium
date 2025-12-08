@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BandRecruitment.DTOs.Guardian;
-using Podium.Application.Services;
 using System.Security.Claims;
+using Podium.Application.Interfaces;
+using Podium.Application.DTOs.Guardian;
+using Podium.Core.Entities;
 
 namespace BandRecruitment.Controllers
 {

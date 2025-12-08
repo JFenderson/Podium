@@ -10,7 +10,8 @@ namespace Podium.Application.DTOs.BandStaff
         [Required]
         [MaxLength(450)]
         public string ApplicationUserId { get; set; } = string.Empty;
-
+        public string FirstName { get; set; } = string.Empty; 
+        public string LastName { get; set; } = string.Empty;
         [Required]
         [StringLength(50)]
         public string Role { get; set; } = string.Empty;
@@ -23,5 +24,6 @@ namespace Podium.Application.DTOs.BandStaff
         public bool CanSendOffers { get; set; } = false;
         public bool CanManageEvents { get; set; } = false;
         public bool CanManageStaff { get; set; } = false;
+        public BandStaffPermissionsDto? Permissions { get; set; }
     }
 }

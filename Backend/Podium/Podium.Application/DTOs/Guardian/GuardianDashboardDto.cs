@@ -24,6 +24,6 @@ namespace Podium.Application.DTOs.Guardian
         public List<PriorityAlertDto> PriorityAlerts { get; set; } = new();
 
         // Recent activity across all students
-        public List<RecentActivityDto> RecentActivities { get; set; } = new();
+        public List<GuardianRecentActivityDto> RecentActivities { get; set; } = new();
     }
 }

@@ -3,10 +3,12 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Podium.Core.Entities;
-using Podium.Core.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Podium.Application.Interfaces;
+using Podium.Application.DTOs;
+using Podium.Core.Interfaces;
 
 namespace Podium.Infrastructure.Services;
 
@@ -221,6 +223,37 @@ public class AuthService : IAuthService
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+
+    public async Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        return result.Succeeded;
+    }
+
+    public async Task<bool> ResetPasswordAsync(string email)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            // Return true anyway to prevent email enumeration attacks
+            return true;
+        }
+
+        // Generate password reset token
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // TODO: Send email with reset token
+        // For now, just log it or store it somewhere
+        // In production, you'd send this via email service
+
+        return true;
     }
 
     private string GenerateRefreshToken()

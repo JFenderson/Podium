@@ -1,6 +1,8 @@
-﻿using Podium.Core.Entities;
+﻿using Podium.Application.DTOs;
+using Podium.Core.Entities;
+using System.Threading.Tasks;
 
-namespace Podium.Core.Interfaces;
+namespace Podium.Application.Interfaces;
 
 public interface IAuthService
 {
@@ -8,16 +10,7 @@ public interface IAuthService
     Task<AuthResult> LoginAsync(string email, string password);
     Task<AuthResult> RefreshTokenAsync(string refreshToken);
     Task<bool> RevokeTokenAsync(string refreshToken);
+    Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
+    Task<bool> ResetPasswordAsync(string email);
     Task<ApplicationUser?> GetUserByIdAsync(string userId);
-}
-
-public class AuthResult
-{
-    public bool Success { get; set; }
-    public string? AccessToken { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? ExpiresAt { get; set; }
-    public string? UserId { get; set; }
-    public string? Email { get; set; }
-    public List<string> Errors { get; set; } = new();
 }

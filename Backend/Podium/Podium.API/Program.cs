@@ -1,18 +1,23 @@
-using BandRecruitment.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.SqlServer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Podium.Application.Authorization;
+using Podium.Application.Interfaces;
+using Podium.Application.Services;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
+using Podium.Infrastructure.Services;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Reflection;
 using System.Text;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +45,15 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT"
     });
+
+    options.CustomOperationIds(apiDesc =>
+    {
+        var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
+        var actionName = apiDesc.ActionDescriptor.RouteValues["action"];
+        return $"{controllerName}_{actionName}";
+    });
+
+    options.UseAllOfToExtendReferenceSchemas();
 
     // Replace the problematic OpenApiSecurityRequirement block with the correct usage
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -115,7 +129,11 @@ builder.Services.AddCors(options =>
 
 // Register application services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<Podium.Application.Interfaces.IAuthService, AuthService>();
+builder.Services.AddScoped<IAuthService, Podium.Infrastructure.Services.AuthService>();
+builder.Services.AddScoped<IStudentService, Podium.Application.Services.StudentService>();
+builder.Services.AddScoped<IStorageService, Podium.Infrastructure.Services.AzureBlobStorageService>();
+builder.Services.AddScoped<IAuditService, Podium.Application.Services.AuditService>();
 // Register Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, BandStaffPermissionHandler>();
@@ -126,7 +144,7 @@ builder.Services.AddScoped<IAuthorizationHandler, StudentResourceAuthorizationHa
 
 // Register Custom Authorization Service
 builder.Services.AddScoped<IPermissionService, PermissionService>();
-
+builder.Services.AddScoped<Podium.Core.Interfaces.IStorageService, AzureBlobStorageService>();
 // Add Authorization Policies
 builder.Services.AddAuthorization(options =>
 {
@@ -178,8 +196,7 @@ if (!string.IsNullOrEmpty(storageConnectionString))
 {
     try
     {
-        builder.Services.AddSingleton<IStorageService>(
-            new AzureBlobStorageService(storageConnectionString, storageContainerName));
+        builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
         Console.WriteLine("Azure Blob Storage configured successfully.");
     }
     catch (Exception ex)

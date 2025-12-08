@@ -9,13 +9,13 @@ namespace Podium.Core.Entities
         public int StudentId { get; set; }
         public int CreatedByUserId { get; set; }
         public string OfferType { get; set; } = string.Empty;
-        public decimal? ScholarshipAmount { get; set; }
+        public decimal ScholarshipAmount { get; set; }
         public string? Description { get; set; }
         public string Status { get; set; } = string.Empty;
-        public int? ApprovedByUserId { get; set; }
+        public string? ApprovedByUserId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ApprovedAt { get; set; }
-
+        public DateTime? RescindedDate { get; set; }
         public int BandId { get; set; }
         public DateTime? ApprovedDate { get; set; }
         public DateTime? ResponseDate { get; set; }
@@ -39,6 +39,14 @@ namespace Podium.Core.Entities
         public virtual BandStaff? CreatedByStaff { get; set; }
         
         [ForeignKey(nameof(StudentId))]
-        public virtual Student? Student { get; set; } // ADD THIS
+        public virtual Student? Student { get; set; } 
+        [ForeignKey(nameof(ApprovedByUserId))]
+        public virtual ApplicationUser? ApprovedByUser { get; set; }  
+
+        [ForeignKey(nameof(RescindedByUserId))]
+        public virtual ApplicationUser? RescindedByUser { get; set; }  
+
+        [ForeignKey(nameof(RespondedByGuardianUserId))]
+        public virtual ApplicationUser? RespondedByGuardian { get; set; }
     }
 }

@@ -15,8 +15,8 @@ namespace Podium.Core.Entities
     /// Stores permissions that control what guardians can see and do regarding the student's recruitment.
     /// </summary>
     [Table("StudentGuardians")]
-    [Index(nameof(StudentId), nameof(GuardianUserId), IsUnique = true, Name = "IX_StudentGuardian_Student_Guardian")]
-    [Index(nameof(GuardianUserId), Name = "IX_StudentGuardian_Guardian")]
+    [Index(nameof(StudentId), nameof(GuardianId), IsUnique = true, Name = "IX_StudentGuardian_Student_Guardian")]
+    [Index(nameof(GuardianId), Name = "IX_StudentGuardian_Guardian")]
     public class StudentGuardian
     {
         [Key]
@@ -35,8 +35,8 @@ namespace Podium.Core.Entities
         /// The user ID of the guardian (from Identity system).
         /// </summary>
         [Required]
-        [MaxLength(450)]
-        public string GuardianUserId { get; set; } = string.Empty;
+        public int GuardianId { get; set; }
+
 
         /// <summary>
         /// Type of relationship (e.g., "Parent", "Guardian", "Other").
@@ -75,48 +75,35 @@ namespace Podium.Core.Entities
         /// Permission to view student's activity (videos, interests, contacts).
         /// Basic monitoring permission.
         /// </summary>
-        public bool CanViewActivity { get; set; } = true;
+        public bool CanViewActivity { get; set; }
 
         /// <summary>
         /// Permission to approve/decline contact requests from recruiters.
         /// Required for students under 18 in many jurisdictions.
         /// </summary>
-        public bool CanApproveContacts { get; set; } = true;
+        public bool CanApproveContacts { get; set; }
 
         /// <summary>
         /// Permission to accept or decline scholarship offers on behalf of the student.
         /// Typically granted to parents/guardians who will be financially involved.
         /// </summary>
-        public bool CanRespondToOffers { get; set; } = false;
+        public bool CanRespondToOffers { get; set; }
 
         /// <summary>
         /// Permission to view the student's profile and personal information.
         /// </summary>
-        public bool CanViewProfile { get; set; } = true;
+        public bool CanViewProfile { get; set; }
 
         /// <summary>
         /// Permission to modify notification preferences for this student.
         /// </summary>
-        public bool CanManageNotifications { get; set; } = true;
+        public bool CanManageNotifications { get; set; }
 
         /// <summary>
         /// Whether guardian receives notifications about this student's activity.
         /// </summary>
-        public bool ReceivesNotifications { get; set; } = true;
+        public bool ReceivesNotifications { get; set; }
 
-        // ============== CONTACT INFORMATION ==============
-        // Stored here for communication purposes; may differ from user account
-
-        [MaxLength(100)]
-        public string? GuardianName { get; set; }
-
-        [MaxLength(255)]
-        [EmailAddress]
-        public string? GuardianEmail { get; set; }
-
-        [MaxLength(20)]
-        [Phone]
-        public string? GuardianPhone { get; set; }
 
         // ============== AUDIT FIELDS ==============
 
@@ -153,6 +140,12 @@ namespace Podium.Core.Entities
         /// </summary>
         [MaxLength(1000)]
         public string? VerificationMetadata { get; set; }
+
+        [Obsolete("Use GuardianId instead")]
+        public string? GuardianUserId { get; set; }
+
+        [ForeignKey(nameof(GuardianId))]
+        public virtual Guardian Guardian { get; set; } = null!;
     }
 
 }

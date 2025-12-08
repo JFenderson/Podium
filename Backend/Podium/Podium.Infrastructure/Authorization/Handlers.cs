@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Infrastructure.Data;
 
@@ -293,7 +294,7 @@ namespace Podium.Infrastructure.Authorization
 
             switch (requirement.Operation)
             {
-                case Operations.Read:
+                case Operations.ReadOperation:
                     // Students can read their own data - using string ApplicationUserId
                     if (role == Roles.Student)
                     {
@@ -333,7 +334,7 @@ namespace Podium.Infrastructure.Authorization
                     }
                     break;
 
-                case Operations.Update:
+                case Operations.UpdateOperation:
                     // Students can only update their own profile - using string ApplicationUserId
                     if (role == Roles.Student)
                     {
@@ -346,7 +347,7 @@ namespace Podium.Infrastructure.Authorization
                     }
                     break;
 
-                case Operations.Delete:
+                case Operations.DeleteOperation:
                     // Only Directors can delete student records - using string ApplicationUserId
                     if (role == Roles.Director)
                     {

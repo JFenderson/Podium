@@ -1,10 +1,10 @@
-﻿using BandRecruitment.Authorization;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
+using Podium.Core.Constants;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
 
@@ -61,7 +61,7 @@ namespace Podium.API.Controllers
             var authResult = await _policyAuthService.AuthorizeAsync(
                 User,
                 id,
-                new ResourceAccessRequirement(Operations.Read));
+                new ResourceAccessRequirement(Operations.ReadOperation));
 
             if (!authResult.Succeeded)
             {
@@ -96,7 +96,7 @@ namespace Podium.API.Controllers
             var authResult = await _policyAuthService.AuthorizeAsync(
                 User,
                 id,
-                new ResourceAccessRequirement(Operations.Update));
+                new ResourceAccessRequirement(Operations.UpdateOperation));
 
             if (!authResult.Succeeded)
             {
@@ -127,14 +127,14 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "StudentOnly")]
         public async Task<ActionResult<StudentDto>> GetMyProfile()
         {
-            var userId = await _permissionService.GetCurrentUserIdAsync(); // ✅ Using IPermissionService
-            if (userId == null)
+            var userId = await _permissionService.GetCurrentUserIdAsync();
+            if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();
             }
 
             var student = await _context.Students
-                .FirstOrDefaultAsync(s => s.ApplicationUserId == userId.Value);
+                .FirstOrDefaultAsync(s => s.ApplicationUserId == userId);
 
             if (student == null)
             {

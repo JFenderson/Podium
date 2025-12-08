@@ -68,39 +68,5 @@ namespace Podium.Infrastructure.Authorization
         }
     }
 
-    /// <summary>
-    /// Constants for authorization operations
-    /// </summary>
-    public static class Operations
-    {
-        public const string Create = "Create";
-        public const string Read = "Read";
-        public const string Update = "Update";
-        public const string Delete = "Delete";
-        public const string Approve = "Approve";
-    }
-
-    /// <summary>
-    /// Constants for permission types
-    /// </summary>
-    public static class Permissions
-    {
-        public const string ViewStudents = "ViewStudents";
-        public const string RateStudents = "RateStudents";
-        public const string SendOffers = "SendOffers";
-        public const string ManageEvents = "ManageEvents";
-        public const string ManageStaff = "ManageStaff";
-    }
-
-    /// <summary>
-    /// Constants for role names
-    /// </summary>
-    public static class Roles
-    {
-        public const string Student = "Student";
-        public const string Guardian = "Guardian";
-        public const string Recruiter = "Recruiter";
-        public const string Director = "Director";
-        public const string BandStaff = "BandStaff"; // Generic role for any staff
-    }
+   
 }

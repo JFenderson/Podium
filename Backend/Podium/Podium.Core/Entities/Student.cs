@@ -37,7 +37,9 @@ namespace Podium.Core.Entities
 
         [Column(TypeName = "decimal(3,2)")]
         public decimal? GPA { get; set; }
-
+        [Phone]
+        [StringLength(20)]
+        public string? PhoneNumber { get; set; }
         public bool RequiresGuardianApproval { get; set; } = true;  // For minors
         public DateTime? LastActivityDate { get; set; }
         public string? SecondaryInstruments { get; set; }  // JSON string
@@ -57,12 +59,12 @@ namespace Podium.Core.Entities
         public virtual ApplicationUser? ApplicationUser { get; set; }
 
         // Navigation property for guardian relationship
-        public virtual ICollection<Guardian>? Guardians { get; set; }
         public virtual ICollection<Video> Videos { get; set; } = new List<Video>();
         public virtual ICollection<StudentInterest> StudentInterests { get; set; } = new List<StudentInterest>();
         public virtual ICollection<ContactRequest> ContactRequests { get; set; } = new List<ContactRequest>();
         public virtual ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
         public virtual ICollection<Offer> ScholarshipOffers { get; set; } = new List<Offer>();
         public virtual ICollection<ContactLog> ContactLogs { get; set; } = new List<ContactLog>();
+        public virtual ICollection<Guardian> Guardians { get; set; } = new List<Guardian>();
     }
 }

@@ -33,11 +33,16 @@ namespace Podium.Core.Entities
         [StringLength(20)]
         public string? PhoneNumber { get; set; }
 
+        // Guardian-wide preferences
+        public bool EmailNotificationsEnabled { get; set; }
+        public bool SmsNotificationsEnabled { get; set; }
+
         // Navigation properties
         [ForeignKey(nameof(ApplicationUserId))]
         public virtual ApplicationUser? ApplicationUser { get; set; }
 
         // Many-to-many relationship with Students
-        public virtual ICollection<Student>? Students { get; set; }
+        public ICollection<StudentGuardian> StudentLinks { get; set; }
+        public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     }
 }

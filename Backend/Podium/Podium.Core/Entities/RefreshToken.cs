@@ -10,7 +10,7 @@ public class RefreshToken : BaseEntity
     public string? ReplacedByToken { get; set; }
 
     // Navigation properties
-    public virtual ApplicationUser User { get; set; } = null!;
+    public virtual ApplicationUser ApplicationUser { get; set; } = null!;
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsActive => !IsRevoked && !IsExpired;
