@@ -21,8 +21,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Band> Bands { get; set; } = null!;
     public DbSet<BandStaff> BandStaff { get; set; } = null!;
     public DbSet<Video> Videos { get; set; } = null!;
+    public DbSet<VideoRating> VideoRatings { get; set; } = null!;
     public DbSet<StudentInterest> StudentInterests { get; set; } = null!;
-    public DbSet<Offer> Offers { get; set; } = null!;
+    public DbSet<ScholarshipOffer> Offers { get; set; } = null!;
     public DbSet<ContactRequest> ContactRequests { get; set; } = null!;
     public DbSet<ContactLog> ContactLogs { get; set; } = null!;
     public DbSet<BandEvent> BandEvents { get; set; } = null!;
@@ -68,7 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .Property(b => b.ScholarshipBudget)
             .HasColumnType("decimal(18,2)");
 
-        builder.Entity<Offer>()
+        builder.Entity<ScholarshipOffer>()
             .Property(o => o.ScholarshipAmount)
             .HasColumnType("decimal(18,2)");
 
@@ -191,19 +192,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         });
 
         // ===== Offer Configuration =====
-        builder.Entity<Offer>()
+        builder.Entity<ScholarshipOffer>()
             .HasOne(o => o.Band)
             .WithMany(b => b.Offers)
             .HasForeignKey(o => o.BandId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Entity<Offer>()
+        builder.Entity<ScholarshipOffer>()
             .HasOne(o => o.Student)
             .WithMany(s => s.ScholarshipOffers)
             .HasForeignKey(o => o.StudentId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Entity<Offer>()
+        builder.Entity<ScholarshipOffer>()
             .HasOne(o => o.CreatedByStaff)
             .WithMany(bs => bs.OffersCreated)
             .HasForeignKey(o => o.CreatedByStaffId)
@@ -237,6 +238,79 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(bs => new { bs.BandId, bs.ApplicationUserId })
             .IsUnique();
 
+        // ===== Video Configuration =====
+        builder.Entity<Video>()
+            .HasOne(v => v.Student)
+            .WithMany(s => s.Videos)
+            .HasForeignKey(v => v.StudentId)
+            .OnDelete(DeleteBehavior.Cascade);
 
+        // ===== VideoRating Configuration (NEW) =====
+        builder.Entity<VideoRating>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+
+            // Relationship: Video -> Ratings
+            // If a video is deleted, delete all its ratings (Cascade)
+            entity.HasOne(r => r.Video)
+                  .WithMany() // You can add a collection to Video entity if you want: public virtual ICollection<VideoRating> Ratings { get; set; }
+                  .HasForeignKey(r => r.VideoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship: BandStaff (Recruiter) -> Ratings
+            // If a Staff member is deleted, do NOT auto-delete their historical ratings (Restrict)
+            // This is safer for data integrity and audit trails.
+            entity.HasOne(r => r.BandStaff)
+                  .WithMany()
+                  .HasForeignKey(r => r.BandStaffId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ===== ContactLog Configuration (Fix for Cycles) =====
+        builder.Entity<ContactLog>(entity =>
+        {
+            // Prevent cascade delete from Band -> ContactLog
+            // (Because Band -> BandStaff -> ContactLog already exists)
+            entity.HasOne(cl => cl.Band)
+                  .WithMany()
+                  .HasForeignKey(cl => cl.BandId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Prevent cascade delete from BandStaff -> ContactLog
+            // (To preserve history even if a recruiter account is deleted)
+            entity.HasOne(cl => cl.RecruiterStaff)
+                  .WithMany(bs => bs.ContactsInitiated)
+                  .HasForeignKey(cl => cl.RecruiterStaffId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<ContactRequest>(entity =>
+        {
+            entity.HasOne(cr => cr.Band)
+                  .WithMany()
+                  .HasForeignKey(cr => cr.BandId)
+                  .OnDelete(DeleteBehavior.Restrict); // Break Band -> ContactRequest path
+
+            entity.HasOne(cr => cr.RecruiterStaff)
+                  .WithMany() // Add ICollection to BandStaff if needed, or leave empty
+                  .HasForeignKey(cr => cr.RecruiterStaffId)
+                  .OnDelete(DeleteBehavior.Restrict); // Break Staff -> ContactRequest path
+        });
+
+        builder.Entity<ScholarshipOffer>(entity =>
+        {
+            entity.HasOne(o => o.Band)
+                  .WithMany(b => b.Offers)
+                  .HasForeignKey(o => o.BandId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(o => o.CreatedByStaff)
+                  .WithMany(bs => bs.OffersCreated)
+                  .HasForeignKey(o => o.CreatedByStaffId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // Optional: Keep Student cascade or restrict it depending on preference
+            // entity.HasOne(o => o.Student).WithMany(s => s.ScholarshipOffers).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

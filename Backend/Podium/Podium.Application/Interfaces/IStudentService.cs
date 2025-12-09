@@ -1,4 +1,5 @@
-﻿using Podium.Application.DTOs.Student;
+﻿using Podium.Application.DTOs.Offer;
+using Podium.Application.DTOs.Student;
 using Podium.Application.Services;
 using System;
 using System.Collections.Generic;
@@ -16,5 +17,6 @@ namespace Podium.Application.Interfaces
         Task<ServiceResult<StudentDetailsDto>> GetStudentDetailsAsync(int studentId);
         Task<ServiceResult<bool>> UpdateStudentProfileAsync(int studentId, UpdateStudentDto dto);
         Task<ServiceResult<IEnumerable<StudentDetailsDto>>> GetAccessibleStudentsAsync();
+        
     }
 }

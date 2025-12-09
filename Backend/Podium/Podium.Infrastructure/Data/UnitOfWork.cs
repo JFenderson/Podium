@@ -20,10 +20,11 @@ namespace Podium.Infrastructure.Data
         private IRepository<BandStaff>? _bandStaff;
         private IRepository<Band>? _bands;
         private IRepository<Video>? _videos;
-        private IRepository<Offer>? _scholarshipOffers;
+        private IRepository<ScholarshipOffer>? _scholarshipOffers;
         private IRepository<AuditLog>? _auditLogs;
         private IRepository<BandEvent>? _bandEvents;
         private IRepository<EventRegistration>? _eventRegistrations;
+        private IRepository<VideoRating>? _videoRatings;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -48,9 +49,11 @@ namespace Podium.Infrastructure.Data
 
         public IRepository<Video> Videos =>
             _videos ??= new Repository<Video>(_context);
+        public IRepository<VideoRating> VideoRatings =>
+            _videoRatings ??= new Repository<VideoRating>(_context);
 
-        public IRepository<Offer> ScholarshipOffers =>
-            _scholarshipOffers ??= new Repository<Offer>(_context);
+        public IRepository<ScholarshipOffer> ScholarshipOffers =>
+            _scholarshipOffers ??= new Repository<ScholarshipOffer>(_context);
 
         public IRepository<AuditLog> AuditLogs =>
             _auditLogs ??= new Repository<AuditLog>(_context);

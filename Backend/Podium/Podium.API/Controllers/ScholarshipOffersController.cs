@@ -1,9 +1,10 @@
-﻿using Podium.Core.Entities;
-using Podium.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.DTOs.Offer;
+using Podium.Application.Interfaces;
+using Podium.Core.Entities;
+using Podium.Infrastructure.Data;
 using System.Security.Claims;
 
 namespace Podium.API.Controllers
@@ -11,61 +12,47 @@ namespace Podium.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class OffersController : ControllerBase
+    public class ScholarshipOffersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IScholarshipService _service;
 
-        public OffersController(ApplicationDbContext context)
+        public ScholarshipOffersController(ApplicationDbContext context, IScholarshipService service)
         {
             _context = context;
+            _service = service;
         }
 
         /// <summary>
         /// Create an offer - Only Recruiters/Directors with CanSendOffers permission
         /// </summary>
         [HttpPost]
-        [Authorize(Policy = "CanCreateOffer")]
+        [Authorize(Policy = "CanCreateOffer")]// Recruiter or Director
         public async Task<ActionResult<ScholarshipOfferDto>> CreateOffer([FromBody] CreateOfferDto dto)
         {
-            // Verify student exists
-            var student = await _context.Students.FindAsync(dto.StudentId);
-            if (student == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isDirector = User.IsInRole("Director");
+
+            var result = await _service.CreateOfferAsync(dto, userId, isDirector);
+            return CreatedAtAction(nameof(GetOffer), new { id = result.OfferId }, result);
+        }
+
+        [HttpGet] // GET /api/scholarships
+        [Authorize(Policy = "DirectorOnly")] // or "CanViewScholarships"
+        public async Task<ActionResult<ScholarshipOverviewDto>> GetAll([FromQuery] ScholarshipFilterDto filters)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            try
             {
-                return NotFound("Student not found");
+                var result = await _service.GetScholarshipsAsync(userId, filters);
+                return Ok(result);
             }
-
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            catch (KeyNotFoundException ex)
             {
-                return Unauthorized();
+                return NotFound(ex.Message);
             }
-
-            var offer = new Offer
-            {
-                StudentId = dto.StudentId,
-                CreatedByUserId = userId,
-                OfferType = dto.OfferType,
-                ScholarshipAmount = dto.ScholarshipAmount,
-                Description = dto.Description,
-                Status = "Pending",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Offers.Add(offer);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(
-                nameof(GetOffer),
-                new { id = offer.OfferId },
-                new ScholarshipOfferDto
-                {
-                    OfferId = offer.OfferId,
-                    StudentId = offer.StudentId,
-                    OfferType = offer.OfferType,
-                    ScholarshipAmount = offer.ScholarshipAmount,
-                    Status = offer.Status,
-                    CreatedAt = offer.CreatedAt
-                });
         }
 
         /// <summary>
@@ -100,16 +87,7 @@ namespace Podium.API.Controllers
                 return Forbid();
             }
 
-            return Ok(new ScholarshipOfferDto
-            {
-                OfferId = offer.OfferId,
-                StudentId = offer.StudentId,
-                OfferType = offer.OfferType,
-                ScholarshipAmount = offer.ScholarshipAmount,
-                Status = offer.Status,
-                CreatedAt = offer.CreatedAt,
-                ApprovedDate = offer.ApprovedAt
-            });
+            return Ok();
         }
 
         /// <summary>
@@ -119,35 +97,60 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "CanApproveScholarships")]
         public async Task<IActionResult> ApproveScholarship(int id)
         {
-            var offer = await _context.Offers.FindAsync(id);
-            if (offer == null)
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            try
             {
-                return NotFound();
+                await _service.ApproveOfferAsync(id, userId);
+                return Ok(new { Message = "Offer Approved and Sent" });
             }
+            catch (Exception ex) { return BadRequest(ex.Message); }
+        }
 
-            if (offer.OfferType != "Scholarship")
+        [HttpPut("{id}/respond")]
+        public async Task<IActionResult> Respond(int id, [FromBody] RespondToOfferDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Check if user is Guardian or Student
+            // In a real app, you might check a Permission Service here
+            bool isGuardian = User.HasClaim(c => c.Type == "IsGuardian" && c.Value == "true");
+
+            try
             {
-                return BadRequest("Only scholarship offers can be approved through this endpoint");
+                await _service.RespondToOfferAsync(id, dto, userId, isGuardian);
+                return Ok(new { Message = $"Offer {(dto.Accept ? "Accepted" : "Declined")}" });
             }
-
-            if (offer.Status == "Approved")
+            catch (InvalidOperationException ex)
             {
-                return BadRequest("Offer is already approved");
+                return BadRequest(ex.Message); // "Expired" or "Wrong State"
             }
+        }
 
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;  // ✅ Keep as string
-            if (string.IsNullOrEmpty(userId))
+        [HttpPut("{id}/rescind")]
+        [Authorize(Policy = "CanApproveScholarships")]
+        public async Task<IActionResult> Rescind(int id, [FromBody] RescindScholarshipRequest dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            try
             {
-                return Unauthorized();
+                await _service.RescindOfferAsync(id, dto, userId);
+                return Ok(new { Message = "Offer Rescinded" });
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
 
-            offer.Status = "Approved";
-            offer.ApprovedByUserId = userId;  // ✅ Assign string directly
-            offer.ApprovedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { Message = "Scholarship offer approved successfully" });
+        [HttpGet("band/{bandId}/budget")]
+        [Authorize(Policy = "DirectorOnly")]
+        public async Task<ActionResult<ScholarshipBudgetDto>> GetBudget(int bandId)
+        {
+            var stats = await _service.GetBudgetStatsAsync(bandId);
+            return Ok(stats);
         }
 
         /// <summary>
@@ -181,7 +184,7 @@ namespace Podium.API.Controllers
                     ScholarshipAmount = o.ScholarshipAmount,
                     Status = o.Status,
                     CreatedAt = o.CreatedAt,
-                    ApprovedDate = o.ApprovedAt
+                    ApprovedAt = o.ApprovedDate
                 })
                 .ToListAsync();
 
@@ -196,7 +199,7 @@ namespace Podium.API.Controllers
         public async Task<ActionResult<IEnumerable<ScholarshipOfferDto>>> GetPendingScholarships()
         {
             var offers = await _context.Offers
-                .Where(o => o.OfferType == "Scholarship" && o.Status == "Pending")
+                .Where(o => o.OfferType == "Scholarship" && o.Status == ScholarshipStatus.PendingApproval)
                 .Select(o => new ScholarshipOfferDto
                 {
                     OfferId = o.OfferId,
@@ -205,7 +208,7 @@ namespace Podium.API.Controllers
                     ScholarshipAmount = o.ScholarshipAmount,
                     Status = o.Status,
                     Terms = o.Terms,
-                    Notes = o.Notes,
+                    Notes = o.Description,
                     CreatedAt = o.CreatedAt
                 })
                 .ToListAsync();
@@ -234,7 +237,7 @@ namespace Podium.API.Controllers
             }
 
             // Only the creator or a Director can update status
-            var isCreator = offer.CreatedByUserId == userId;
+            var isCreator = offer.CreatedByStaffId == userId;
             var isDirector = role == "Director";
 
             if (!isCreator && !isDirector)
@@ -248,7 +251,7 @@ namespace Podium.API.Controllers
                 return Forbid();
             }
 
-            offer.Status = dto.Status;
+            offer.Status = dto.ToScholarshipStatus();
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Offer status updated successfully" });

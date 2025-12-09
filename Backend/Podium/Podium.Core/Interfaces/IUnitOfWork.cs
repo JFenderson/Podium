@@ -16,7 +16,8 @@ namespace Podium.Core.Interfaces
         IRepository<BandStaff> BandStaff { get; }
         IRepository<Band> Bands { get; }
         IRepository<Video> Videos { get; }
-        IRepository<Offer> ScholarshipOffers { get; }
+        IRepository<VideoRating> VideoRatings { get; }
+        IRepository<ScholarshipOffer> ScholarshipOffers { get; }
         IRepository<AuditLog> AuditLogs { get; }
         IRepository<BandEvent> BandEvents { get; }
         IRepository<EventRegistration> EventRegistrations { get; }

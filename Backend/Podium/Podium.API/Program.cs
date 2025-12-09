@@ -18,6 +18,8 @@ using Podium.Infrastructure.Services;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 using System.Text;
+using Amazon.S3;
+using Amazon.S3.Model;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,7 @@ builder.Services.AddEndpointsApiExplorer();
 // Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 // Configure Swagger with JWT support
+#region
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -71,6 +74,8 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 });
+#endregion
+
 
 // Configure Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -127,6 +132,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+
+
 // Register application services
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<Podium.Application.Interfaces.IAuthService, AuthService>();
@@ -134,6 +141,7 @@ builder.Services.AddScoped<IAuthService, Podium.Infrastructure.Services.AuthServ
 builder.Services.AddScoped<IStudentService, Podium.Application.Services.StudentService>();
 builder.Services.AddScoped<IStorageService, Podium.Infrastructure.Services.AzureBlobStorageService>();
 builder.Services.AddScoped<IAuditService, Podium.Application.Services.AuditService>();
+builder.Services.AddScoped<IScholarshipService, ScholarshipService>();
 // Register Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, BandStaffPermissionHandler>();
@@ -187,6 +195,27 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.ManageStaff));
     });
 });
+
+// Video Storage Service Registration
+var storageProvider = builder.Configuration["StorageProvider"];
+
+if (storageProvider == "AWS")
+{
+    // Register AWS S3 Client
+    var awsOptions = builder.Configuration.GetAWSOptions();
+    builder.Services.AddDefaultAWSOptions(awsOptions);
+    builder.Services.AddAWSService<Amazon.S3.IAmazonS3>();
+
+    // Register AWS Implementation
+    builder.Services.AddScoped<IVideoStorageService, AwsVideoStorageService>();
+    Console.WriteLine("Using AWS S3 for video storage.");
+}
+else
+{
+    // Register Azure Implementation (Default)
+    builder.Services.AddScoped<IVideoStorageService, AzureVideoStorageService>();
+    Console.WriteLine("Using Azure Blob Storage for video storage.");
+}
 
 // Configure Storage Service (Azure Blob Storage)
 var storageConnectionString = builder.Configuration["AzureStorage:ConnectionString"];

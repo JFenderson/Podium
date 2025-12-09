@@ -12,8 +12,8 @@ using Podium.Infrastructure.Data;
 namespace Podium.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251208163635_AddMissingEntityProperties")]
-    partial class AddMissingEntityProperties
+    [Migration("20251208184505_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1367,14 +1367,42 @@ namespace Podium.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VideoId"));
 
+                    b.Property<decimal?>("AverageRating")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BlobStoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Instrument")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
@@ -1382,8 +1410,21 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("IsReviewed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("RatingCount")
+                        .HasColumnType("int");
+
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ThumbnailPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("ThumbnailUrl")
                         .HasMaxLength(500)
@@ -1393,6 +1434,19 @@ namespace Podium.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TranscodingError")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TranscodingStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("UploadedDate")
                         .HasColumnType("datetime2");
@@ -1410,6 +1464,48 @@ namespace Podium.Infrastructure.Migrations
                     b.HasIndex("StudentId");
 
                     b.ToTable("Videos");
+                });
+
+            modelBuilder.Entity("Podium.Core.Entities.VideoRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BandStaffId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VideoId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VideoId1")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BandStaffId");
+
+                    b.HasIndex("VideoId");
+
+                    b.HasIndex("VideoId1");
+
+                    b.ToTable("VideoRatings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1528,13 +1624,13 @@ namespace Podium.Infrastructure.Migrations
                     b.HasOne("Podium.Core.Entities.Band", "Band")
                         .WithMany()
                         .HasForeignKey("BandId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Podium.Core.Entities.BandStaff", "RecruiterStaff")
                         .WithMany("ContactsInitiated")
                         .HasForeignKey("RecruiterStaffId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Podium.Core.Entities.Student", "Student")
@@ -1555,13 +1651,13 @@ namespace Podium.Infrastructure.Migrations
                     b.HasOne("Podium.Core.Entities.Band", "Band")
                         .WithMany()
                         .HasForeignKey("BandId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Podium.Core.Entities.BandStaff", "RecruiterStaff")
                         .WithMany()
                         .HasForeignKey("RecruiterStaffId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Podium.Core.Entities.Student", "Student")
@@ -1759,6 +1855,29 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("Podium.Core.Entities.VideoRating", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.BandStaff", "BandStaff")
+                        .WithMany()
+                        .HasForeignKey("BandStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Podium.Core.Entities.Video", "Video")
+                        .WithMany()
+                        .HasForeignKey("VideoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Podium.Core.Entities.Video", null)
+                        .WithMany("Ratings")
+                        .HasForeignKey("VideoId1");
+
+                    b.Navigation("BandStaff");
+
+                    b.Navigation("Video");
+                });
+
             modelBuilder.Entity("Podium.Core.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("RefreshTokens");
@@ -1805,6 +1924,11 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("StudentInterests");
 
                     b.Navigation("Videos");
+                });
+
+            modelBuilder.Entity("Podium.Core.Entities.Video", b =>
+                {
+                    b.Navigation("Ratings");
                 });
 #pragma warning restore 612, 618
         }

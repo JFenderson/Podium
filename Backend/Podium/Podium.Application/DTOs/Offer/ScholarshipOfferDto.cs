@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Podium.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,12 +18,12 @@ namespace Podium.Application.DTOs.Offer
         public int BandId { get; set; }
         public string BandName { get; set; } = string.Empty;
         public decimal? ScholarshipAmount { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public ScholarshipStatus Status { get; set; }
         public string OfferType { get; set; } = string.Empty;
         
         // Dates
         public DateTime CreatedAt { get; set; }
-        public DateTime? ApprovedDate { get; set; }
+        public DateTime ApprovedAt { get; set; }
         public DateTime? ResponseDate { get; set; }
         public DateTime ExpirationDate { get; set; }
         

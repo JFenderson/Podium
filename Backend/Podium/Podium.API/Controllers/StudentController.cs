@@ -120,6 +120,7 @@ namespace Podium.API.Controllers
             return NoContent();
         }
 
+
         /// <summary>
         /// Get current student's profile - Uses custom permission service
         /// </summary>

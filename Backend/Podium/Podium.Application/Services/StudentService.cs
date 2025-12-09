@@ -1,11 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Student;
+using Podium.Application.Interfaces;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
-using Podium.Application.Interfaces;
-using Podium.Core.Constants;
 
 
 namespace Podium.Application.Services;
@@ -22,6 +23,8 @@ public class StudentService : IStudentService
         _context = context;
         _permissionService = permissionService;
     }
+
+    
 
     /// <summary>
     /// Get student details with authorization checks

@@ -70,13 +70,13 @@ namespace Podium.Application.Services
                     .Select(g => new ScholarshipSummaryDto
                     {
                         TotalOffersMade = g.Count(),
-                        PendingOffers = g.Count(so => so.Status == "Pending" || so.Status == "Approved"),
-                        AcceptedOffers = g.Count(so => so.Status == "Accepted"),
-                        DeclinedOffers = g.Count(so => so.Status == "Declined"),
-                        TotalCommittedAmount = g.Where(so => so.Status == "Accepted").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
-                        AvailableBudget = band.ScholarshipBudget - (g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m),
+                        PendingOffers = g.Count(so => so.Status == ScholarshipStatus.PendingApproval || so.Status == ScholarshipStatus.Accepted),
+                        AcceptedOffers = g.Count(so => so.Status == ScholarshipStatus.Accepted),
+                        DeclinedOffers = g.Count(so => so.Status == ScholarshipStatus.Declined),
+                        TotalCommittedAmount = g.Where(so => so.Status == ScholarshipStatus.Accepted).Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                        AvailableBudget = band.ScholarshipBudget - (g.Where(so => so.Status == ScholarshipStatus.Accepted || so.Status == ScholarshipStatus.PendingApproval || so.Status == ScholarshipStatus.PendingApproval).Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m),
                         BudgetUtilizationPercentage = band.ScholarshipBudget > 0
-                            ? ((g.Where(so => so.Status == "Accepted" || so.Status == "Pending" || so.Status == "Approved").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m) / band.ScholarshipBudget * 100)
+                            ? ((g.Where(so => so.Status == ScholarshipStatus.Accepted || so.Status == ScholarshipStatus.PendingApproval || so.Status == ScholarshipStatus.Sent).Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m) / band.ScholarshipBudget * 100)
                             : 0
                     })
                     .FirstOrDefaultAsync() ?? new ScholarshipSummaryDto();
@@ -137,11 +137,11 @@ namespace Podium.Application.Services
                     .Take(5)
                     .Select(so => new DirectorRecentActivityDto
                     {
-                        ActivityType = so.Status == "Accepted" ? "OfferAccepted" : "OfferCreated",
-                        Description = so.Status == "Accepted"
+                        ActivityType = so.Status == ScholarshipStatus.Accepted ? "OfferAccepted" : "OfferCreated",
+                        Description = so.Status == ScholarshipStatus.Accepted
                             ? $"Scholarship offer accepted"
                             : $"Scholarship offer created",
-                        Timestamp = so.Status == "Accepted" ? so.ResponseDate ?? so.CreatedAt : so.CreatedAt,
+                        Timestamp = so.Status == ScholarshipStatus.Accepted ? so.ResponseDate ?? so.CreatedAt : so.CreatedAt,
                         StudentName = so.Student.FirstName + " " + so.Student.LastName,
                         StaffName = so.CreatedByStaff.ApplicationUserId
                     })
@@ -217,9 +217,9 @@ namespace Podium.Application.Services
                 .Select(g => new
                 {
                     TotalOffered = g.Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
-                    TotalAccepted = g.Where(so => so.Status == "Accepted").Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
+                    TotalAccepted = g.Where(so => so.Status == ScholarshipStatus.Accepted).Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
                     AverageOfferAmount = g.Average(so => (decimal?)so.ScholarshipAmount) ?? 0m,
-                    AcceptanceRate = g.Count() > 0 ? (double)g.Count(so => so.Status == "Accepted") / g.Count() * 100 : 0
+                    AcceptanceRate = g.Count() > 0 ? (double)g.Count(so => so.Status == ScholarshipStatus.Accepted) / g.Count() * 100 : 0
                 })
                 .FirstOrDefaultAsync();
 
@@ -457,7 +457,12 @@ namespace Podium.Application.Services
 
             // Apply filters
             if (!string.IsNullOrEmpty(filters.Status))
-                query = query.Where(so => so.Status == filters.Status);
+            {
+                if (Enum.TryParse<ScholarshipStatus>(filters.Status, true, out var statusEnum))
+                {
+                    query = query.Where(so => so.Status == statusEnum);
+                }
+            }
 
             if (filters.MinAmount.HasValue)
                 query = query.Where(so => so.ScholarshipAmount >= filters.MinAmount.Value);
@@ -478,10 +483,10 @@ namespace Podium.Application.Services
                 {
                     TotalCount = g.Count(),
                     TotalAmount = g.Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
-                    PendingCount = g.Count(so => so.Status == "Pending"),
-                    ApprovedCount = g.Count(so => so.Status == "Approved"),
-                    AcceptedCount = g.Count(so => so.Status == "Accepted"),
-                    DeclinedCount = g.Count(so => so.Status == "Declined")
+                    PendingCount = g.Count(so => so.Status == ScholarshipStatus.PendingApproval),
+                    ApprovedCount = g.Count(so => so.Status == ScholarshipStatus.Accepted),
+                    AcceptedCount = g.Count(so => so.Status == ScholarshipStatus.Accepted),
+                    DeclinedCount = g.Count(so => so.Status == ScholarshipStatus.Declined)
                 })
                 .FirstOrDefaultAsync();
 
@@ -504,10 +509,10 @@ namespace Podium.Application.Services
                     Status = so.Status,
                     OfferType = so.OfferType,
                     CreatedAt = so.CreatedAt,
-                    ApprovedDate = so.ApprovedDate,
+                    ApprovedAt = so.ApprovedAt,
                     ResponseDate = so.ResponseDate,
                     ExpirationDate = so.ExpirationDate,
-                    Notes = so.Notes,
+                    Notes = so.Description,
                     CreatedByStaffName = so.CreatedByStaff.ApplicationUserId,
                     ApprovedByUserId = so.ApprovedByUserId,
                     RequiresGuardianApproval = so.RequiresGuardianApproval
@@ -552,14 +557,14 @@ namespace Podium.Application.Services
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
 
-            if (offer.Status != "Pending")
+            if (offer.Status != ScholarshipStatus.PendingApproval)
                 throw new InvalidOperationException($"Offer is not in Pending status (current: {offer.Status})");
 
-            offer.Status = "Approved";
+            offer.Status = ScholarshipStatus.Accepted;
             offer.ApprovedDate = DateTime.UtcNow;
             offer.ApprovedByUserId = userId;
             if (!string.IsNullOrEmpty(notes))
-                offer.Notes += $"\n[Director Approval] {notes}";
+                offer.Description += $"\n[Director Approval] {notes}";
 
             await _context.SaveChangesAsync();
 
@@ -574,10 +579,10 @@ namespace Podium.Application.Services
                 Status = offer.Status,
                 OfferType = offer.OfferType,
                 CreatedAt = offer.CreatedAt,
-                ApprovedDate = offer.ApprovedDate,
+                ApprovedAt = offer.ApprovedDate,
                 ResponseDate = offer.ResponseDate,
                 ExpirationDate = offer.ExpirationDate,
-                Notes = offer.Notes,
+                Notes = offer.Description,
                 CreatedByStaffName = offer.CreatedByStaff.ApplicationUserId,
                 ApprovedByUserId = offer.ApprovedByUserId,
                 RequiresGuardianApproval = offer.RequiresGuardianApproval
@@ -595,10 +600,10 @@ namespace Podium.Application.Services
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
 
-            if (offer.Status == "Declined" || offer.Status == "Rescinded")
+            if (offer.Status == ScholarshipStatus.Declined || offer.Status == ScholarshipStatus.Rescinded)
                 throw new InvalidOperationException($"Offer is already {offer.Status}");
 
-            offer.Status = "Rescinded";
+            offer.Status = ScholarshipStatus.Rescinded;
             offer.RescindReason = reason;
             offer.RescindedDate = DateTime.UtcNow;
             offer.RescindedByUserId = userId;
@@ -616,10 +621,10 @@ namespace Podium.Application.Services
                 Status = offer.Status,
                 OfferType = offer.OfferType,
                 CreatedAt = offer.CreatedAt,
-                ApprovedDate = offer.ApprovedDate,
+                ApprovedAt = offer.ApprovedDate,
                 ResponseDate = offer.ResponseDate,
                 ExpirationDate = offer.ExpirationDate,
-                Notes = offer.Notes,
+                Notes = offer.Description,
                 CreatedByStaffName = offer.CreatedByStaff.ApplicationUserId,
                 ApprovedByUserId = offer.ApprovedByUserId,
                 RequiresGuardianApproval = offer.RequiresGuardianApproval,
@@ -653,31 +658,37 @@ namespace Podium.Application.Services
                 query = query.Where(si => si.InterestedDate >= filters.InterestedAfter.Value);
 
             var students = await query
-                .OrderByDescending(si => si.InterestedDate)
-                .Skip((filters.Page - 1) * filters.PageSize)
-                .Take(filters.PageSize)
-                .Select(si => new InterestedStudentDto
-                {
-                    StudentId = si.StudentId,
-                    Name = si.Student.FirstName + " " + si.Student.LastName,
-                    Email = si.Student.Email,
-                    Phone = si.Student.PhoneNumber,
-                    PrimaryInstrument = si.Student.PrimaryInstrument,
-                    SkillLevel = si.Student.SkillLevel,
-                    GraduationYear = si.Student.GraduationYear,
-                    HighSchool = si.Student.HighSchool,
-                    State = si.Student.State,
-                    InterestedDate = si.InterestedDate,
-                    VideosUploaded = si.Student.Videos.Count,
-                    EventsAttended = si.Student.EventRegistrations.Count(er => er.DidAttend),
-                    HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.BandId),
-                    LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.BandId).Max(cl => (DateTime?)cl.ContactDate),
-                    HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.BandId),
-                    OfferStatus = si.Student.ScholarshipOffers.Where(so => so.BandId == band.BandId).OrderByDescending(so => so.CreatedAt).Select(so => so.Status).FirstOrDefault(),
-                    HasGuardianLinked = si.Student.Guardians.Any(),
-                    RequiresGuardianApproval = si.Student.RequiresGuardianApproval
-                })
-                .ToListAsync();
+        .OrderByDescending(si => si.InterestedDate)
+        .Skip((filters.Page - 1) * filters.PageSize)
+        .Take(filters.PageSize)
+        .Select(si => new InterestedStudentDto
+        {
+            StudentId = si.StudentId,
+            Name = si.Student.FirstName + " " + si.Student.LastName,
+            Email = si.Student.Email,
+            Phone = si.Student.PhoneNumber,
+            PrimaryInstrument = si.Student.PrimaryInstrument,
+            SkillLevel = si.Student.SkillLevel,
+            GraduationYear = si.Student.GraduationYear,
+            HighSchool = si.Student.HighSchool,
+            State = si.Student.State,
+            InterestedDate = si.InterestedDate,
+            VideosUploaded = si.Student.Videos.Count,
+            EventsAttended = si.Student.EventRegistrations.Count(er => er.DidAttend),
+            HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.BandId),
+            LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.BandId).Max(cl => (DateTime?)cl.ContactDate),
+            HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.BandId),
+
+            OfferStatus = si.Student.ScholarshipOffers
+                .Where(so => so.BandId == band.BandId)
+                .OrderByDescending(so => so.CreatedAt)
+                .Select(so => so.Status.ToString()) // Explicit conversion
+                .FirstOrDefault(),
+
+            HasGuardianLinked = si.Student.Guardians.Any(),
+            RequiresGuardianApproval = si.Student.RequiresGuardianApproval
+        })
+        .ToListAsync();
 
             return students;
         }

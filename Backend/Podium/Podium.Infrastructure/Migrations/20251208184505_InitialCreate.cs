@@ -6,36 +6,54 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Podium.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMissingEntityProperties : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_UserId",
-                table: "RefreshTokens");
+            migrationBuilder.CreateTable(
+                name: "AspNetRoles",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoles", x => x.Id);
+                });
 
-            migrationBuilder.DropTable(
-                name: "DocumentTags");
-
-            migrationBuilder.DropTable(
-                name: "Documents");
-
-            migrationBuilder.RenameColumn(
-                name: "UserId",
-                table: "RefreshTokens",
-                newName: "ApplicationUserId");
-
-            migrationBuilder.RenameIndex(
-                name: "IX_RefreshTokens_UserId",
-                table: "RefreshTokens",
-                newName: "IX_RefreshTokens_ApplicationUserId");
-
-            migrationBuilder.AddColumn<string>(
-                name: "ApplicationUserId1",
-                table: "RefreshTokens",
-                type: "nvarchar(450)",
-                nullable: true);
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastLoginAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "AuditLogs",
@@ -56,6 +74,168 @@ namespace Podium.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AuditLogs", x => x.AuditLogId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GuardianNotificationPreferences",
+                columns: table => new
+                {
+                    GuardianNotificationPreferencesId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    GuardianUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    EmailEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    SmsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    InAppEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    PushEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnNewOffer = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnContactRequest = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnOfferExpiring = table.Column<bool>(type: "bit", nullable: false),
+                    OfferExpiringDaysThreshold = table.Column<int>(type: "int", nullable: false),
+                    NotifyOnVideoUpload = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnInterestShown = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnEventRegistration = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnActualContact = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnProfileUpdate = table.Column<bool>(type: "bit", nullable: false),
+                    DigestFrequency = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    DailyDigestTime = table.Column<TimeSpan>(type: "time", nullable: true),
+                    WeeklyDigestDay = table.Column<int>(type: "int", nullable: true),
+                    QuietHoursStart = table.Column<TimeSpan>(type: "time", nullable: true),
+                    QuietHoursEnd = table.Column<TimeSpan>(type: "time", nullable: true),
+                    StudentOverridesJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TimeZone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Language = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastNotificationSent = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsUnsubscribed = table.Column<bool>(type: "bit", nullable: false),
+                    UnsubscribedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GuardianNotificationPreferences", x => x.GuardianNotificationPreferencesId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StudentRatings",
+                columns: table => new
+                {
+                    StudentRatingId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    StudentId = table.Column<int>(type: "int", nullable: false),
+                    BandStaffUserId = table.Column<int>(type: "int", nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudentRatings", x => x.StudentRatingId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetRoleClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserLogins",
+                columns: table => new
+                {
+                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserTokens",
+                columns: table => new
+                {
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -114,45 +294,6 @@ namespace Podium.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "GuardianNotificationPreferences",
-                columns: table => new
-                {
-                    GuardianNotificationPreferencesId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    GuardianUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    EmailEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    SmsEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    InAppEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    PushEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnNewOffer = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnContactRequest = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnOfferExpiring = table.Column<bool>(type: "bit", nullable: false),
-                    OfferExpiringDaysThreshold = table.Column<int>(type: "int", nullable: false),
-                    NotifyOnVideoUpload = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnInterestShown = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnEventRegistration = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnActualContact = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyOnProfileUpdate = table.Column<bool>(type: "bit", nullable: false),
-                    DigestFrequency = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    DailyDigestTime = table.Column<TimeSpan>(type: "time", nullable: true),
-                    WeeklyDigestDay = table.Column<int>(type: "int", nullable: true),
-                    QuietHoursStart = table.Column<TimeSpan>(type: "time", nullable: true),
-                    QuietHoursEnd = table.Column<TimeSpan>(type: "time", nullable: true),
-                    StudentOverridesJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    TimeZone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Language = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LastUpdated = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    LastNotificationSent = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsUnsubscribed = table.Column<bool>(type: "bit", nullable: false),
-                    UnsubscribedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GuardianNotificationPreferences", x => x.GuardianNotificationPreferencesId);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Guardians",
                 columns: table => new
                 {
@@ -178,20 +319,35 @@ namespace Podium.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "StudentRatings",
+                name: "RefreshTokens",
                 columns: table => new
                 {
-                    StudentRatingId = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    StudentId = table.Column<int>(type: "int", nullable: false),
-                    BandStaffUserId = table.Column<int>(type: "int", nullable: false),
-                    Rating = table.Column<int>(type: "int", nullable: false),
-                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Token = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRevoked = table.Column<bool>(type: "bit", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReplacedByToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ApplicationUserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_StudentRatings", x => x.StudentRatingId);
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId1",
+                        column: x => x.ApplicationUserId1,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -467,13 +623,27 @@ namespace Podium.Infrastructure.Migrations
                     StudentId = table.Column<int>(type: "int", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Category = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Instrument = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     VideoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    OriginalFileName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    BlobStoragePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ThumbnailPath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    DurationSeconds = table.Column<int>(type: "int", nullable: true),
+                    TranscodingStatus = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    TranscodingError = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     ThumbnailUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     ViewCount = table.Column<int>(type: "int", nullable: false),
                     IsPublic = table.Column<bool>(type: "bit", nullable: false),
                     IsReviewed = table.Column<bool>(type: "bit", nullable: false),
-                    UploadedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    UploadedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AverageRating = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    RatingCount = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -537,13 +707,13 @@ namespace Podium.Infrastructure.Migrations
                         column: x => x.RecruiterStaffId,
                         principalTable: "BandStaff",
                         principalColumn: "BandStaffId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ContactLogs_Bands_BandId",
                         column: x => x.BandId,
                         principalTable: "Bands",
                         principalColumn: "BandId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ContactLogs_Students_StudentId",
                         column: x => x.StudentId,
@@ -579,13 +749,13 @@ namespace Podium.Infrastructure.Migrations
                         column: x => x.RecruiterStaffId,
                         principalTable: "BandStaff",
                         principalColumn: "BandStaffId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ContactRequests_Bands_BandId",
                         column: x => x.BandId,
                         principalTable: "Bands",
                         principalColumn: "BandId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ContactRequests_Students_StudentId",
                         column: x => x.StudentId,
@@ -663,10 +833,80 @@ namespace Podium.Infrastructure.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "VideoRatings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    VideoId = table.Column<int>(type: "int", nullable: false),
+                    BandStaffId = table.Column<int>(type: "int", nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VideoId1 = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VideoRatings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VideoRatings_BandStaff_BandStaffId",
+                        column: x => x.BandStaffId,
+                        principalTable: "BandStaff",
+                        principalColumn: "BandStaffId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_VideoRatings_Videos_VideoId",
+                        column: x => x.VideoId,
+                        principalTable: "Videos",
+                        principalColumn: "VideoId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_VideoRatings_Videos_VideoId1",
+                        column: x => x.VideoId1,
+                        principalTable: "Videos",
+                        principalColumn: "VideoId");
+                });
+
             migrationBuilder.CreateIndex(
-                name: "IX_RefreshTokens_ApplicationUserId1",
-                table: "RefreshTokens",
-                column: "ApplicationUserId1");
+                name: "IX_AspNetRoleClaims_RoleId",
+                table: "AspNetRoleClaims",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "RoleNameIndex",
+                table: "AspNetRoles",
+                column: "NormalizedName",
+                unique: true,
+                filter: "[NormalizedName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserClaims_UserId",
+                table: "AspNetUserClaims",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserLogins_UserId",
+                table: "AspNetUserLogins",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserRoles_RoleId",
+                table: "AspNetUserRoles",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "EmailIndex",
+                table: "AspNetUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "UserNameIndex",
+                table: "AspNetUsers",
+                column: "NormalizedUserName",
+                unique: true,
+                filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_ApplicationUserId",
@@ -813,6 +1053,22 @@ namespace Podium.Infrastructure.Migrations
                 column: "StudentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_ApplicationUserId",
+                table: "RefreshTokens",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_ApplicationUserId1",
+                table: "RefreshTokens",
+                column: "ApplicationUserId1");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_Token",
+                table: "RefreshTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_StudentGuardian_Guardian",
                 table: "StudentGuardians",
                 column: "GuardianId");
@@ -845,36 +1101,43 @@ namespace Podium.Infrastructure.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VideoRatings_BandStaffId",
+                table: "VideoRatings",
+                column: "BandStaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoRatings_VideoId",
+                table: "VideoRatings",
+                column: "VideoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoRatings_VideoId1",
+                table: "VideoRatings",
+                column: "VideoId1");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Videos_StudentId",
                 table: "Videos",
                 column: "StudentId");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId",
-                table: "RefreshTokens",
-                column: "ApplicationUserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId1",
-                table: "RefreshTokens",
-                column: "ApplicationUserId1",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId",
-                table: "RefreshTokens");
+            migrationBuilder.DropTable(
+                name: "AspNetRoleClaims");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_ApplicationUserId1",
-                table: "RefreshTokens");
+            migrationBuilder.DropTable(
+                name: "AspNetUserClaims");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserLogins");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserRoles");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
                 name: "AuditLogs");
@@ -901,6 +1164,9 @@ namespace Podium.Infrastructure.Migrations
                 name: "ProfileViews");
 
             migrationBuilder.DropTable(
+                name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
                 name: "StudentGuardians");
 
             migrationBuilder.DropTable(
@@ -910,19 +1176,22 @@ namespace Podium.Infrastructure.Migrations
                 name: "StudentRatings");
 
             migrationBuilder.DropTable(
-                name: "Videos");
+                name: "VideoRatings");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "BandEvents");
 
             migrationBuilder.DropTable(
-                name: "BandStaff");
-
-            migrationBuilder.DropTable(
                 name: "Guardians");
 
             migrationBuilder.DropTable(
-                name: "Students");
+                name: "BandStaff");
+
+            migrationBuilder.DropTable(
+                name: "Videos");
 
             migrationBuilder.DropTable(
                 name: "BandStaffPermissions");
@@ -930,107 +1199,11 @@ namespace Podium.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "Bands");
 
-            migrationBuilder.DropIndex(
-                name: "IX_RefreshTokens_ApplicationUserId1",
-                table: "RefreshTokens");
+            migrationBuilder.DropTable(
+                name: "Students");
 
-            migrationBuilder.DropColumn(
-                name: "ApplicationUserId1",
-                table: "RefreshTokens");
-
-            migrationBuilder.RenameColumn(
-                name: "ApplicationUserId",
-                table: "RefreshTokens",
-                newName: "UserId");
-
-            migrationBuilder.RenameIndex(
-                name: "IX_RefreshTokens_ApplicationUserId",
-                table: "RefreshTokens",
-                newName: "IX_RefreshTokens_UserId");
-
-            migrationBuilder.CreateTable(
-                name: "Documents",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UploadedBy = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ContentType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FileExtension = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    FileName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    FileSizeInBytes = table.Column<long>(type: "bigint", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
-                    ModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    StoragePath = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Version = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Documents", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Documents_AspNetUsers_UploadedBy",
-                        column: x => x.UploadedBy,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "DocumentTags",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DocumentId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    TagName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DocumentTags", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_DocumentTags_Documents_DocumentId",
-                        column: x => x.DocumentId,
-                        principalTable: "Documents",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Documents_CreatedAt",
-                table: "Documents",
-                column: "CreatedAt");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Documents_UploadedBy",
-                table: "Documents",
-                column: "UploadedBy");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DocumentTags_DocumentId",
-                table: "DocumentTags",
-                column: "DocumentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DocumentTags_TagName",
-                table: "DocumentTags",
-                column: "TagName");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_RefreshTokens_AspNetUsers_UserId",
-                table: "RefreshTokens",
-                column: "UserId",
-                principalTable: "AspNetUsers",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }

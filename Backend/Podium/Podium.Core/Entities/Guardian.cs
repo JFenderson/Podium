@@ -42,7 +42,7 @@ namespace Podium.Core.Entities
         public virtual ApplicationUser? ApplicationUser { get; set; }
 
         // Many-to-many relationship with Students
-        public ICollection<StudentGuardian> StudentLinks { get; set; }
+        public ICollection<StudentGuardian>? StudentLinks { get; set; }
         public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     }
 }

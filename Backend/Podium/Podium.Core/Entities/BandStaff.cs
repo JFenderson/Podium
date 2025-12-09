@@ -124,7 +124,7 @@ namespace Podium.Core.Entities
         public virtual Band? Band { get; set; }
 
         public virtual ICollection<ContactLog> ContactsInitiated { get; set; } = new List<ContactLog>();
-        public virtual ICollection<Offer> OffersCreated { get; set; } = new List<Offer>();
+        public virtual ICollection<ScholarshipOffer> OffersCreated { get; set; } = new List<ScholarshipOffer>();
         public BandStaffPermissions Permissions { get; set; } = null!;
     }
 }

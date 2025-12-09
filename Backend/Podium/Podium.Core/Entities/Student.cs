@@ -63,7 +63,7 @@ namespace Podium.Core.Entities
         public virtual ICollection<StudentInterest> StudentInterests { get; set; } = new List<StudentInterest>();
         public virtual ICollection<ContactRequest> ContactRequests { get; set; } = new List<ContactRequest>();
         public virtual ICollection<EventRegistration> EventRegistrations { get; set; } = new List<EventRegistration>();
-        public virtual ICollection<Offer> ScholarshipOffers { get; set; } = new List<Offer>();
+        public virtual ICollection<ScholarshipOffer> ScholarshipOffers { get; set; } = new List<ScholarshipOffer>();
         public virtual ICollection<ContactLog> ContactLogs { get; set; } = new List<ContactLog>();
         public virtual ICollection<Guardian> Guardians { get; set; } = new List<Guardian>();
     }
