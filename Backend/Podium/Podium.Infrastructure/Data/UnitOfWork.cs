@@ -25,6 +25,7 @@ namespace Podium.Infrastructure.Data
         private IRepository<BandEvent>? _bandEvents;
         private IRepository<EventRegistration>? _eventRegistrations;
         private IRepository<VideoRating>? _videoRatings;
+        private IRepository<Notification>? _notifications;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -63,6 +64,8 @@ namespace Podium.Infrastructure.Data
 
         public IRepository<EventRegistration> EventRegistrations =>
             _eventRegistrations ??= new Repository<EventRegistration>(_context);
+        public IRepository<Notification> Notifications =>
+            _notifications ??= new Repository<Notification>(_context);
 
         // Transaction operations
         public async Task<int> SaveChangesAsync()

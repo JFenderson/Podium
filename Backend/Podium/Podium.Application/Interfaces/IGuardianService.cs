@@ -20,5 +20,6 @@ namespace Podium.Application.Interfaces
         Task<NotificationListDto> GetNotificationsAsync(string guardianUserId, NotificationFilterDto filters);
         Task<GuardianNotificationPreferencesDto> UpdateNotificationPreferencesAsync(string guardianUserId, UpdatePreferencesRequest request);
         Task<GuardianDashboardDto> GetDashboardAsync(string guardianUserId);
+        Task<List<string>> GetGuardianUserIdsForStudentAsync(int studentId);
     }
 }

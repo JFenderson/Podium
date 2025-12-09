@@ -21,6 +21,7 @@ namespace Podium.Core.Interfaces
         IRepository<AuditLog> AuditLogs { get; }
         IRepository<BandEvent> BandEvents { get; }
         IRepository<EventRegistration> EventRegistrations { get; }
+        IRepository<Notification> Notifications { get; }
         /// <summary>
         /// Save all changes to the database
         /// </summary>

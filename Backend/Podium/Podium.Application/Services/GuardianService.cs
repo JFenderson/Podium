@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Podium.Core.Interfaces;
 using Podium.Application.Interfaces;
 
 
@@ -18,11 +19,13 @@ namespace Podium.Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<GuardianService> _logger;
+        private readonly INotificationService _notificationService;
 
-        public GuardianService(ApplicationDbContext context, ILogger<GuardianService> logger)
+        public GuardianService(ApplicationDbContext context, ILogger<GuardianService> logger, INotificationService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -330,13 +333,16 @@ namespace Podium.Application.Services
                 sg.CanApproveContacts);
         }
 
+        // =========================================================================
+        // SCENARIO 5: Contact request approved → notify recruiter(bandStaff)
+        // =========================================================================
         public async Task<ContactRequestDto> ApproveContactRequestAsync(int requestId, string guardianUserId, string? notes)
         {
             var request = await _context.ContactRequests
                 .Include(cr => cr.Student)
                 .Include(cr => cr.Band)
-                .Include(cr => cr.RecruiterStaff)
-                .FirstOrDefaultAsync(cr => cr.ContactRequestId == requestId); // Changed from Id
+                .Include(cr => cr.RecruiterStaff) // Ensure RecruiterStaff is included to get UserId
+                .FirstOrDefaultAsync(cr => cr.ContactRequestId == requestId);
 
             if (request == null)
                 throw new KeyNotFoundException($"Contact request {requestId} not found");
@@ -351,16 +357,30 @@ namespace Podium.Application.Services
 
             await _context.SaveChangesAsync();
 
+            // NEW: Send Notification to Recruiter
+            if (request.RecruiterStaff != null)
+            {
+                var studentName = $"{request.Student.FirstName} {request.Student.LastName}";
+
+                await _notificationService.NotifyUserAsync(
+                    request.RecruiterStaff.ApplicationUserId, // Target the recruiter
+                    "ContactApproved",
+                    "Contact Request Approved",
+                    $"A guardian has approved your request to contact {studentName}.",
+                    request.ContactRequestId.ToString()
+                );
+            }
+
             return new ContactRequestDto
             {
-                RequestId = request.ContactRequestId, // Changed from Id
+                RequestId = request.ContactRequestId,
                 StudentId = request.StudentId,
                 StudentName = request.Student.FirstName + " " + request.Student.LastName,
                 BandId = request.BandId,
                 BandName = request.Band.Name,
                 University = request.Band.UniversityName,
-                RecruiterName = request.RecruiterStaff.ApplicationUserId,
-                RecruiterTitle = request.RecruiterStaff.Role,
+                RecruiterName = request.RecruiterStaff?.ApplicationUserId ?? "Unknown",
+                RecruiterTitle = request.RecruiterStaff?.Role ?? "Staff",
                 Purpose = request.Purpose,
                 PreferredContactMethod = request.PreferredContactMethod,
                 RequestedDate = request.RequestedDate,
@@ -377,7 +397,7 @@ namespace Podium.Application.Services
                 .Include(cr => cr.Student)
                 .Include(cr => cr.Band)
                 .Include(cr => cr.RecruiterStaff)
-                .FirstOrDefaultAsync(cr => cr.ContactRequestId == requestId); // Changed from Id
+                .FirstOrDefaultAsync(cr => cr.ContactRequestId == requestId);
 
             if (request == null)
                 throw new KeyNotFoundException($"Contact request {requestId} not found");
@@ -393,16 +413,29 @@ namespace Podium.Application.Services
 
             await _context.SaveChangesAsync();
 
+            // OPTIONAL: Notify recruiter of decline (improves UX)
+            if (request.RecruiterStaff != null)
+            {
+                var studentName = $"{request.Student.FirstName} {request.Student.LastName}";
+                await _notificationService.NotifyUserAsync(
+                    request.RecruiterStaff.ApplicationUserId,
+                    "ContactDeclined",
+                    "Contact Request Declined",
+                    $"The guardian declined your request to contact {studentName}.",
+                    request.ContactRequestId.ToString()
+                );
+            }
+
             return new ContactRequestDto
             {
-                RequestId = request.ContactRequestId, // Changed from Id
+                RequestId = request.ContactRequestId,
                 StudentId = request.StudentId,
                 StudentName = request.Student.FirstName + " " + request.Student.LastName,
                 BandId = request.BandId,
                 BandName = request.Band.Name,
                 University = request.Band.UniversityName,
-                RecruiterName = request.RecruiterStaff.ApplicationUserId,
-                RecruiterTitle = request.RecruiterStaff.Role,
+                RecruiterName = request.RecruiterStaff?.ApplicationUserId ?? "Unknown",
+                RecruiterTitle = request.RecruiterStaff?.Role ?? "Staff",
                 Purpose = request.Purpose,
                 PreferredContactMethod = request.PreferredContactMethod,
                 RequestedDate = request.RequestedDate,
@@ -573,6 +606,26 @@ namespace Podium.Application.Services
                 RecruiterName = offer.CreatedByStaff?.ApplicationUserId ?? "Unknown",
                 BandDescription = offer.Band.Description
             };
+        }
+
+        // =========================================================================
+        // NEW HELPER: Used by OffersController (Scenario 2) & VideoService (Scenario 6)
+        // =========================================================================
+        /// <summary>
+        /// Retrieves the UserIds of all guardians linked to a specific student.
+        /// Used to send notifications when a student receives an offer or uploads a video.
+        /// </summary>
+        public async Task<List<string>> GetGuardianUserIdsForStudentAsync(int studentId)
+        {
+            // Optional: Filter by GuardianNotificationPreferences here if you want to be strict,
+            // but usually we fetch all IDs and let the NotificationService check perfs 
+            // or send to all for critical items like Offers.
+
+            return await _context.StudentGuardians
+                .Where(sg => sg.StudentId == studentId && sg.IsActive && sg.ReceivesNotifications)
+                .Include(sg => sg.Guardian)
+                .Select(sg => sg.Guardian.ApplicationUserId)
+                .ToListAsync();
         }
 
         public async Task<NotificationListDto> GetNotificationsAsync(string guardianUserId, NotificationFilterDto filters)

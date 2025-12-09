@@ -18,6 +18,7 @@ namespace Podium.Core.Entities
 
         [Required]
         public int BandId { get; set; }
+        public bool IsInterested { get; set; } = true;
 
         public DateTime InterestedDate { get; set; } = DateTime.UtcNow;
 

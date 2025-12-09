@@ -9,6 +9,7 @@ namespace Podium.Application.DTOs.Offer
     public class CreateOfferDto
     {
         public int StudentId { get; set; }
+        public int BandId { get; set; }
         public string OfferType { get; set; } = string.Empty;
         public decimal ScholarshipAmount { get; set; }
         public string? Description { get; set; }

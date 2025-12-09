@@ -7,6 +7,7 @@ using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
+using Podium.Core.Interfaces;
 
 
 namespace Podium.Application.Services;
@@ -15,13 +16,16 @@ public class StudentService : IStudentService
 {
     private readonly ApplicationDbContext _context;
     private readonly IPermissionService _permissionService;
+    private readonly INotificationService _notificationService;
 
     public StudentService(
         ApplicationDbContext context,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        INotificationService notificationService)
     {
         _context = context;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     
@@ -85,6 +89,59 @@ public class StudentService : IStudentService
         student.Instrument = dto.Instrument;
 
         await _context.SaveChangesAsync();
+
+        return ServiceResult<bool>.Success(true);
+    }
+
+    /// <summary>
+    /// Scenario 1: Student shows interest in a band -> Notify Recruiters
+    /// </summary>
+    public async Task<ServiceResult<bool>> ShowInterestAsync(int studentId, int bandId)
+    {
+        // 1. Authorization: Ensure the current user is the student
+        var isOwner = await _permissionService.IsStudentOwnerAsync(studentId);
+        if (!isOwner)
+        {
+            return ServiceResult<bool>.Forbidden("You can only express interest for your own profile");
+        }
+
+        // 2. Check if interest already exists
+        var existingInterest = await _context.StudentInterests
+            .AnyAsync(si => si.StudentId == studentId && si.BandId == bandId);
+
+        if (existingInterest)
+        {
+            return ServiceResult<bool>.Failure("You have already shown interest in this band");
+        }
+
+        // 3. Create Interest Record
+        var interest = new StudentInterest
+        {
+            StudentId = studentId,
+            BandId = bandId,
+            IsInterested = true,
+            InterestedDate = DateTime.UtcNow
+        };
+
+        _context.StudentInterests.Add(interest);
+        await _context.SaveChangesAsync();
+
+        // 4. Fetch Details for Notification
+        var student = await _context.Students
+            .Include(s => s.ApplicationUser) // Include user to get Name
+            .FirstOrDefaultAsync(s => s.StudentId == studentId);
+
+        var studentName = $"{student?.FirstName} {student?.LastName}";
+
+        // 5. Trigger Notification (Scenario 1)
+        // "Student shows interest in band → notify all band recruiters"
+        await _notificationService.NotifyBandStaffAsync(
+            bandId,
+            "NewInterest",
+            "New Student Interest",
+            $"{studentName} has shown interest in your band!",
+            studentId.ToString() // Related ID is the StudentId so they can click to view profile
+        );
 
         return ServiceResult<bool>.Success(true);
     }

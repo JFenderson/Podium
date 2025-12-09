@@ -17,6 +17,6 @@ namespace Podium.Application.Interfaces
         Task<ServiceResult<StudentDetailsDto>> GetStudentDetailsAsync(int studentId);
         Task<ServiceResult<bool>> UpdateStudentProfileAsync(int studentId, UpdateStudentDto dto);
         Task<ServiceResult<IEnumerable<StudentDetailsDto>>> GetAccessibleStudentsAsync();
-        
+        Task<ServiceResult<bool>> ShowInterestAsync(int studentId, int bandId);
     }
 }

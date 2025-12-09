@@ -34,6 +34,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<StudentRating> StudentRatings { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -312,5 +313,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             // Optional: Keep Student cascade or restrict it depending on preference
             // entity.HasOne(o => o.Student).WithMany(s => s.ScholarshipOffers).OnDelete(DeleteBehavior.Restrict);
         });
+
+        builder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

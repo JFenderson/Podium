@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Podium.Infrastructure.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 // Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddSignalR();
+
 // Configure Swagger with JWT support
 #region
 builder.Services.AddSwaggerGen(options =>
@@ -118,6 +122,22 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for the Hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+            {
+                // Read the token out of the query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Configure CORS
@@ -142,6 +162,7 @@ builder.Services.AddScoped<IStudentService, Podium.Application.Services.StudentS
 builder.Services.AddScoped<IStorageService, Podium.Infrastructure.Services.AzureBlobStorageService>();
 builder.Services.AddScoped<IAuditService, Podium.Application.Services.AuditService>();
 builder.Services.AddScoped<IScholarshipService, ScholarshipService>();
+builder.Services.AddScoped<INotificationService, Podium.Infrastructure.Services.NotificationService>();
 // Register Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, BandStaffPermissionHandler>();
@@ -250,7 +271,7 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Document Management API V1");
     });
 }
-
+app.MapHub<NotificationHub>("/notificationHub");
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAngularApp");
