@@ -1,14 +1,18 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Podium.Core.Entities;
+﻿using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Podium.Application.Interfaces;
 using Podium.Application.DTOs;
+using Podium.Application.DTOs.Auth;
+using Podium.Application.Interfaces;
+using Podium.Core.Constants;
+using Podium.Core.Entities;
 using Podium.Core.Interfaces;
+using Podium.Infrastructure.Data;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Podium.Infrastructure.Services;
 
@@ -16,40 +20,48 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly ApplicationDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         IConfiguration configuration,
+        RoleManager<IdentityRole> roleManager,
+        ApplicationDbContext context,
         IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _configuration = configuration;
+        _roleManager = roleManager;
+        _context = context;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AuthResult> RegisterAsync(string email, string password, string firstName, string lastName)
+    public async Task<AuthResult> RegisterAsync(RegisterDto dto)
     {
-        var existingUser = await _userManager.FindByEmailAsync(email);
+        //Basic validation
+        var existingUser = await _userManager.FindByEmailAsync(dto.Email);
         if (existingUser != null)
         {
             return new AuthResult
             {
                 Success = false,
-                Errors = new List<string> { "User with this email already exists" }
+                Errors = new List<string> { "Email already in use." }
             };
         }
-
+        //Create user
         var user = new ApplicationUser
         {
-            Email = email,
-            UserName = email,
-            FirstName = firstName,
-            LastName = lastName,
-            CreatedAt = DateTime.UtcNow
+            UserName = dto.Email,
+            Email = dto.Email,
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true
         };
 
-        var result = await _userManager.CreateAsync(user, password);
+        var result = await _userManager.CreateAsync(user, dto.Password);
 
         if (!result.Succeeded)
         {
@@ -60,12 +72,88 @@ public class AuthService : IAuthService
             };
         }
 
+        // Validate role exists (assumes "Student", "Guardian", "Recruiter", "Director" are seeded)
+        if (await _roleManager.RoleExistsAsync(dto.Role))
+        {
+            await _userManager.AddToRoleAsync(user, dto.Role);
+        }
+        else
+        {
+            // Fallback or Error
+            await _userManager.AddToRoleAsync(user, Roles.Student);
+        }
+
+        // 4. Create Role-Specific Profile
+        try
+        {
+            switch (dto.Role)
+            {
+                case Roles.Student:
+                    var student = new Student
+                    {
+                        ApplicationUserId = user.Id,
+                        FirstName = dto.FirstName,
+                        LastName = dto.LastName,
+                        Email = dto.Email,
+                        Instrument = dto.Instrument ?? "Unknown",
+                        GraduationYear = dto.GraduationYear ?? DateTime.Now.Year + 1,
+                        HighSchool = dto.HighSchool,
+                        PhoneNumber = dto.PhoneNumber
+                    };
+                    _context.Students.Add(student);
+                    break;
+
+                case Roles.Guardian:
+                    var guardian = new Guardian
+                    {
+                        ApplicationUserId = user.Id,
+                        FirstName = dto.FirstName,
+                        LastName = dto.LastName,
+                        Email = dto.Email,
+                        PhoneNumber = dto.PhoneNumber,
+                    };
+                    _context.Guardians.Add(guardian);
+                    break;
+
+                case Roles.Recruiter:
+                case Roles.Director:
+                    if (!dto.BandId.HasValue)
+                        throw new Exception("Band selection is required for Staff.");
+
+                    var staff = new BandStaff
+                    {
+                        ApplicationUserId = user.Id,
+                        BandId = dto.BandId.Value,
+                        Title = dto.StaffTitle ?? dto.Role,
+                        IsActive = true,
+                        // Set default permissions based on role
+                        CanViewStudents = true,
+                        CanContact = true,
+                        CanSendOffers = dto.Role == Roles.Director // Only Directors send offers by default
+                    };
+                    _context.BandStaff.Add(staff);
+                    break;
+            }
+
+
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            await _userManager.DeleteAsync(user);
+            return new AuthResult
+            {
+                Success = false,
+                Errors = new List<string> { $"Failed to create profile: {ex.Message}" } // Changed from new[]
+            };
+        }
+
         return await GenerateAuthResultAsync(user);
     }
 
-    public async Task<AuthResult> LoginAsync(string email, string password)
+    public async Task<AuthResult> LoginAsync(LoginDto dto)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null)
         {
             return new AuthResult
@@ -84,7 +172,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var isPasswordValid = await _userManager.CheckPasswordAsync(user, password);
+        var isPasswordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
         if (!isPasswordValid)
         {
             return new AuthResult
@@ -99,11 +187,11 @@ public class AuthService : IAuthService
 
         return await GenerateAuthResultAsync(user);
     }
-
-    public async Task<AuthResult> RefreshTokenAsync(string refreshToken)
+  
+    public async Task<AuthResult> RefreshTokenAsync(RefreshTokenRequestDto dto)
     {
         var storedToken = await _unitOfWork.RefreshTokens
-            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+            .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
 
         if (storedToken == null || !storedToken.IsActive)
         {
@@ -145,10 +233,10 @@ public class AuthService : IAuthService
         return authResult;
     }
 
-    public async Task<bool> RevokeTokenAsync(string refreshToken)
+    public async Task<bool> RevokeTokenAsync(RefreshTokenRequestDto dto)
     {
         var storedToken = await _unitOfWork.RefreshTokens
-            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+            .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
 
         if (storedToken == null || !storedToken.IsActive)
         {
@@ -170,7 +258,7 @@ public class AuthService : IAuthService
 
     private async Task<AuthResult> GenerateAuthResultAsync(ApplicationUser user)
     {
-        var accessToken = GenerateAccessToken(user);
+        var accessToken = await GenerateAccessToken(user);
         var refreshToken = GenerateRefreshToken();
 
         // Store refresh token
@@ -196,23 +284,37 @@ public class AuthService : IAuthService
         };
     }
 
-    private string GenerateAccessToken(ApplicationUser user)
+    private async Task<string> GenerateAccessToken(ApplicationUser user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured"));
 
+        // ---------------------------------------------------------
+        // 1. FETCH ROLES (This is the critical missing piece)
+        // ---------------------------------------------------------
+        var userRoles = await _userManager.GetRolesAsync(user);
+
         var claims = new List<Claim>
+    {
+        new(ClaimTypes.NameIdentifier, user.Id),
+        new(ClaimTypes.Email, user.Email ?? string.Empty),
+        new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+        new(JwtRegisteredClaimNames.Sub, user.Email ?? string.Empty),
+        new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+        // ---------------------------------------------------------
+        // 2. ADD ROLES TO CLAIMS
+        // ---------------------------------------------------------
+        foreach (var role in userRoles)
         {
-            new(ClaimTypes.NameIdentifier, user.Id),
-            new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-            new(JwtRegisteredClaimNames.Sub, user.Email ?? string.Empty),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
+            // Ensure GetAccessTokenExpirationMinutes() is accessible or replace with double.Parse(_configuration["JWT:ExpirationMinutes"])
             Expires = DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes()),
             Issuer = _configuration["JWT:Issuer"],
             Audience = _configuration["JWT:Audience"],
@@ -225,7 +327,7 @@ public class AuthService : IAuthService
         return tokenHandler.WriteToken(token);
     }
 
-    public async Task<bool> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
+    public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordDto dto)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null)
@@ -233,13 +335,13 @@ public class AuthService : IAuthService
             return false;
         }
 
-        var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+        var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
         return result.Succeeded;
     }
 
-    public async Task<bool> ResetPasswordAsync(string email)
+    public async Task<bool> ResetPasswordAsync(ResetPasswordConfirmDto dto)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null)
         {
             // Return true anyway to prevent email enumeration attacks
@@ -263,6 +365,8 @@ public class AuthService : IAuthService
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
     }
+
+
 
     private int GetAccessTokenExpirationMinutes()
     {

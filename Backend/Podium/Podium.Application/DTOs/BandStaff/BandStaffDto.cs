@@ -31,5 +31,7 @@ namespace Podium.Application.DTOs.BandStaff
         public DateTime JoinedDate { get; set; }
         public DateTime? LastActivityDate { get; set; }
         public DateTime? DeactivatedDate { get; set; }
+        public string? Email { get; set; }
+        public string? Title { get; set; }
     }
 }

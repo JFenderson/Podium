@@ -1,13 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Podium.Application.Interfaces;
-using Podium.Application.DTOs.Director;
+using Microsoft.EntityFrameworkCore;
+using Podium.Application.Authorization;
 using Podium.Application.DTOs.Band;
+using Podium.Application.DTOs.BandEvent;
 using Podium.Application.DTOs.BandStaff;
+using Podium.Application.DTOs.Director;
 using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Student;
-using Podium.Application.DTOs.BandEvent;
+using Podium.Application.Interfaces;
+using Podium.Infrastructure.Data;
+using System.Security.Claims;
 
 namespace BandRecruitment.Controllers
 {
@@ -23,16 +26,40 @@ namespace BandRecruitment.Controllers
         private readonly IDirectorService _directorService;
         private readonly IAuditService _auditService;
         private readonly ILogger<DirectorController> _logger;
+        private readonly ApplicationDbContext _context;
+        private readonly IPermissionService _permissionService;
 
         public DirectorController(
             IDirectorService directorService,
             IAuditService auditService,
-            ILogger<DirectorController> logger)
+            ILogger<DirectorController> logger,
+            ApplicationDbContext context,
+            IPermissionService permissionService)
         {
             _directorService = directorService;
             _auditService = auditService;
             _logger = logger;
+            _context = context;
+            _permissionService = permissionService;
         }
+
+        /// <summary>
+        /// Get current Director's information
+        /// </summary>
+        [HttpGet("me")]
+        public async Task<ActionResult<BandStaffDto>> GetMyInfo()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var staffList = await _directorService.GetStaffMembersAsync(userId, null, null);
+            var me = staffList.FirstOrDefault(s => s.ApplicationUserId == userId);
+
+            if (me == null) return NotFound("Staff profile not found");
+
+            return Ok(me);
+        }
+
 
         /// <summary>
         /// Get comprehensive dashboard statistics for the director's band.
@@ -54,6 +81,8 @@ namespace BandRecruitment.Controllers
                 if (dashboard == null)
                     return NotFound("Director profile or band not found");
 
+
+                _logger.LogInformation("Dashboard retrieved successfully for user {UserId}", userId);
                 return Ok(dashboard);
             }
             catch (UnauthorizedAccessException ex)

@@ -8,29 +8,26 @@ namespace Podium.Core.Entities
     /// </summary>
     public class Band
     {
-        [Key]
         public int BandId { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string Name { get; set; } = string.Empty;
+       
+        public string? BandName { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string UniversityName { get; set; } = string.Empty;
+       
+        public string? UniversityName { get; set; }
+        public string? City { get; set; }
 
-        [MaxLength(1000)]
+        public string? State { get; set; }
+
         public string? Description { get; set; }
 
-        [MaxLength(500)]
         public string? Achievements { get; set; }
 
         /// <summary>
         /// Director's ApplicationUser ID
         /// </summary>
-        [Required]
-        [MaxLength(450)]
-        public string DirectorApplicationUserId { get; set; } = string.Empty;
+ 
+        public string? DirectorApplicationUserId { get; set; }
 
         public decimal ScholarshipBudget { get; set; }
 

@@ -124,7 +124,7 @@ namespace Podium.Application.Services
                 .Select(so => new OfferActivityDto
                 {
                     OfferId = so.OfferId,
-                    BandName = so.Band.Name,
+                    BandName = so.Band.BandName,
                     Amount = so.ScholarshipAmount,
                     // Fix: Convert Enum to String for DTO
                     Status = so.Status.ToString(),
@@ -143,7 +143,7 @@ namespace Podium.Application.Services
                 {
                     EventId = er.EventId,
                     EventName = er.Event.EventName,
-                    BandName = er.Event.Band.Name,
+                    BandName = er.Event.Band.BandName,
                     EventDate = er.Event.EventDate,
                     DidAttend = er.DidAttend,
                     RegisteredDate = er.RegisteredDate
@@ -160,7 +160,7 @@ namespace Podium.Application.Services
                 {
                     ContactId = cl.ContactLogId,
                     RecruiterName = cl.RecruiterStaff.ApplicationUserId,
-                    BandName = cl.Band.Name,
+                    BandName = cl.Band.BandName,
                     ContactDate = cl.ContactDate,
                     ContactMethod = cl.ContactMethod,
                     Purpose = cl.Purpose
@@ -173,7 +173,7 @@ namespace Podium.Application.Services
             var interests = (await interestsTask).Select(si => new InterestActivityDto
             {
                 BandId = si.BandId,
-                BandName = si.Band.Name,
+                BandName = si.Band.BandName,
                 University = si.Band.UniversityName,
                 InterestDate = si.InterestedDate,
                 HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == si.BandId),
@@ -299,7 +299,7 @@ namespace Podium.Application.Services
                     StudentId = cr.StudentId,
                     StudentName = cr.Student.FirstName + " " + cr.Student.LastName,
                     BandId = cr.BandId,
-                    BandName = cr.Band.Name,
+                    BandName = cr.Band.BandName,
                     University = cr.Band.UniversityName,
                     RecruiterName = cr.RecruiterStaff.ApplicationUserId,
                     RecruiterTitle = cr.RecruiterStaff.Role,
@@ -378,7 +378,7 @@ namespace Podium.Application.Services
                 StudentId = request.StudentId,
                 StudentName = request.Student.FirstName + " " + request.Student.LastName,
                 BandId = request.BandId,
-                BandName = request.Band.Name,
+                BandName = request.Band.BandName,
                 University = request.Band.UniversityName,
                 RecruiterName = request.RecruiterStaff?.ApplicationUserId ?? "Unknown",
                 RecruiterTitle = request.RecruiterStaff?.Role ?? "Staff",
@@ -433,7 +433,7 @@ namespace Podium.Application.Services
                 StudentId = request.StudentId,
                 StudentName = request.Student.FirstName + " " + request.Student.LastName,
                 BandId = request.BandId,
-                BandName = request.Band.Name,
+                BandName = request.Band.BandName,
                 University = request.Band.UniversityName,
                 RecruiterName = request.RecruiterStaff?.ApplicationUserId ?? "Unknown",
                 RecruiterTitle = request.RecruiterStaff?.Role ?? "Staff",
@@ -500,7 +500,7 @@ namespace Podium.Application.Services
                     OfferId = offer.OfferId,
                     StudentId = offer.StudentId,
                     StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
-                    BandName = offer.Band.Name,
+                    BandName = offer.Band.BandName,
                     University = offer.Band.UniversityName,
                     Amount = offer.ScholarshipAmount,
                     OfferType = offer.OfferType,
@@ -591,7 +591,7 @@ namespace Podium.Application.Services
                 OfferId = offer.OfferId,
                 StudentId = offer.StudentId,
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
-                BandName = offer.Band.Name,
+                BandName = offer.Band.BandName,
                 University = offer.Band.UniversityName,
                 Amount = offer.ScholarshipAmount,
                 OfferType = offer.OfferType,
@@ -868,7 +868,7 @@ namespace Podium.Application.Services
                 .Select(si => new GuardianRecentActivityDto
                 {
                     ActivityType = "Interest",
-                    Description = $"Showed interest in {si.Band.Name}",
+                    Description = $"Showed interest in {si.Band.BandName}",
                     Timestamp = si.InterestedDate,
                     StudentId = si.StudentId,
                     StudentName = si.Student.FirstName + " " + si.Student.LastName
@@ -885,7 +885,7 @@ namespace Podium.Application.Services
                 .Select(so => new GuardianRecentActivityDto
                 {
                     ActivityType = "Offer",
-                    Description = $"Received ${so.ScholarshipAmount} scholarship offer from {so.Band.Name}",
+                    Description = $"Received ${so.ScholarshipAmount} scholarship offer from {so.Band.BandName}",
                     Timestamp = so.CreatedAt,
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName

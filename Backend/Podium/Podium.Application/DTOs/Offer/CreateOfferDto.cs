@@ -13,5 +13,6 @@ namespace Podium.Application.DTOs.Offer
         public string OfferType { get; set; } = string.Empty;
         public decimal ScholarshipAmount { get; set; }
         public string? Description { get; set; }
+        public DateTime ExpirationDate { get; set; }
     }
 }

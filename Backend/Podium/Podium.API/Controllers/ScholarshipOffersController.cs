@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Podium.API.Jobs;
 using Podium.Application.DTOs.Offer;
 using Podium.Application.Interfaces;
-using Podium.Core.Interfaces;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
+using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
 using System.Security.Claims;
-using Podium.Core.Constants;
 
 namespace Podium.API.Controllers
 {
@@ -21,11 +23,13 @@ namespace Podium.API.Controllers
         private readonly INotificationService _notificationService;
         private readonly IGuardianService _guardianService;
         private readonly IStudentService _studentService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
-        public ScholarshipOffersController(ApplicationDbContext context, IScholarshipService service)
+        public ScholarshipOffersController(ApplicationDbContext context, IScholarshipService service, IBackgroundJobClient backgroundJobClient)
         {
             _context = context;
             _service = service;
+            _backgroundJobClient = backgroundJobClient;
         }
 
         /// <summary>
@@ -36,28 +40,32 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "CanCreateOffer")]
         public async Task<ActionResult<ScholarshipOfferDto>> CreateOffer([FromBody] CreateOfferDto dto)
         {
-            // Verify student exists
+            // 1. Verify student exists
             var student = await _context.Students
-                .Include(s => s.ApplicationUser) // Include ApplicationUser to get UserId for notification
+                .Include(s => s.ApplicationUser)
                 .FirstOrDefaultAsync(s => s.StudentId == dto.StudentId);
 
             if (student == null) return NotFound("Student not found");
+
+            // --- DEFINE EMAIL VARIABLE HERE ---
+            var studentEmail = student.Email;
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 return Unauthorized();
 
-            // Create Offer Entity
+            // 2. Create Offer Entity
             var offer = new ScholarshipOffer
             {
                 StudentId = dto.StudentId,
-                BandId = dto.BandId, // Ensure this is in your DTO or derived from Staff context
+                BandId = dto.BandId,
                 CreatedByUserId = userId.ToString(),
                 OfferType = dto.OfferType,
                 ScholarshipAmount = dto.ScholarshipAmount,
                 Description = dto.Description,
-                Status = ScholarshipStatus.PendingApproval,
-                CreatedAt = DateTime.UtcNow
+                Status = ScholarshipStatus.Pending,
+                CreatedAt = DateTime.UtcNow,
+                ExpirationDate = dto.ExpirationDate // <--- Now valid
             };
 
             _context.Offers.Add(offer);
@@ -67,7 +75,7 @@ namespace Podium.API.Controllers
             // NOTIFICATION LOGIC (Scenario 2)
             // =========================================================
 
-            // 1. Notify the Student
+            // A. Real-time App Notification
             if (student.ApplicationUserId != null)
             {
                 await _notificationService.NotifyUserAsync(
@@ -77,6 +85,24 @@ namespace Podium.API.Controllers
                     $"You have received a {dto.OfferType} offer of ${dto.ScholarshipAmount:N0}!",
                     offer.OfferId.ToString()
                 );
+            }
+
+            // B. Email Background Jobs (Hangfire)
+            if (!string.IsNullOrEmpty(studentEmail))
+            {
+                // 1. Fire-and-Forget: Send Immediate Email
+                _backgroundJobClient.Enqueue<SendEmailNotificationsJob>(job =>
+                    job.ExecuteAsync(studentEmail, "New Scholarship Offer", "You have received a new offer!"));
+
+                // 2. Delayed Job: Schedule expiration reminder
+                var reminderDate = dto.ExpirationDate.AddDays(-1);
+                if (reminderDate > DateTime.UtcNow)
+                {
+                    var delay = reminderDate - DateTime.UtcNow;
+                    _backgroundJobClient.Schedule<SendEmailNotificationsJob>(job =>
+                        job.ExecuteAsync(studentEmail, "Offer Expiring Soon", "Your offer expires tomorrow!"),
+                        delay);
+                }
             }
 
             // 2. Notify Guardians (Optional: Check preferences first if implemented)
@@ -94,17 +120,11 @@ namespace Podium.API.Controllers
                     offer.OfferId.ToString()
                 );
             }
+
+
             // =========================================================
 
-            return CreatedAtAction(nameof(GetOffer), new { id = offer.OfferId }, new ScholarshipOfferDto
-            {
-                OfferId = offer.OfferId,
-                StudentId = offer.StudentId,
-                OfferType = offer.OfferType,
-                ScholarshipAmount = offer.ScholarshipAmount,
-                Status = offer.Status,
-                CreatedAt = offer.CreatedAt
-            });
+            return Ok(new { Message = "Offer created and notifications queued" });
         }
 
         /// <summary>
@@ -316,7 +336,7 @@ namespace Podium.API.Controllers
         public async Task<ActionResult<IEnumerable<ScholarshipOfferDto>>> GetPendingScholarships()
         {
             var offers = await _context.Offers
-                .Where(o => o.OfferType == "Scholarship" && o.Status == ScholarshipStatus.PendingApproval)
+                .Where(o => o.OfferType == "Scholarship" && o.Status == ScholarshipStatus.Pending)
                 .Select(o => new ScholarshipOfferDto
                 {
                     OfferId = o.OfferId,

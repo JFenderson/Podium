@@ -8,6 +8,8 @@
         Accepted = 3,
         Declined = 4,
         Rescinded = 5,
-        Expired = 6
+        Expired = 6,
+        Pending = 7,
+        Approved = 8
     }
 }

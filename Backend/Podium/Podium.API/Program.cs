@@ -1,3 +1,7 @@
+using Amazon.S3;
+using Amazon.S3.Model;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -6,6 +10,7 @@ using Microsoft.EntityFrameworkCore.SqlServer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Podium.API.Jobs;
 using Podium.Application.Authorization;
 using Podium.Application.Interfaces;
 using Podium.Application.Services;
@@ -14,13 +19,12 @@ using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
+using Podium.Infrastructure.Hubs;
 using Podium.Infrastructure.Services;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
-using Amazon.S3;
-using Amazon.S3.Model;
-using Podium.Infrastructure.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +35,30 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSignalR();
+
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        QueuePollInterval = TimeSpan.Zero,
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true
+    }));
+
+builder.Services.AddHangfireServer();
+
+builder.Services.AddTransient<IEmailService, EmailService>();
+
+builder.Services.AddScoped<ExpireContactRequestsJob>();
+builder.Services.AddScoped<ExpireScholarshipOffersJob>();
+builder.Services.AddScoped<ArchiveInactiveStudentsJob>();
+builder.Services.AddScoped<CleanOldAuditLogsJob>();
+builder.Services.AddScoped<ProcessTranscodingQueueJob>();
+builder.Services.AddScoped<SendEmailNotificationsJob>();
 
 // Configure Swagger with JWT support
 #region
@@ -120,7 +148,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidAudience = builder.Configuration["JWT:Audience"],
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+
+        // Optional: Ensure it maps the "role" claim correctly
+        RoleClaimType = ClaimTypes.Role
     };
     options.Events = new JwtBearerEvents
     {
@@ -163,6 +194,9 @@ builder.Services.AddScoped<IStorageService, Podium.Infrastructure.Services.Azure
 builder.Services.AddScoped<IAuditService, Podium.Application.Services.AuditService>();
 builder.Services.AddScoped<IScholarshipService, ScholarshipService>();
 builder.Services.AddScoped<INotificationService, Podium.Infrastructure.Services.NotificationService>();
+builder.Services.AddScoped<IVideoService, VideoService>();
+builder.Services.AddScoped<IDirectorService, DirectorService>();
+builder.Services.AddScoped<IGuardianService, GuardianService>();
 // Register Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, BandStaffPermissionHandler>();
@@ -271,7 +305,64 @@ if (app.Environment.IsDevelopment())
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Document Management API V1");
     });
 }
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    // Optional: Add authorization filter to restrict dashboard access to Admins
+    // Authorization = new [] { new MyAuthorizationFilter() } 
+});
+
+// We use a scope here to ensure we don't hold onto resources, 
+// though RecurringJob.AddOrUpdate typically handles static references.
+using (var scope = app.Services.CreateScope())
+{
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+    // Daily Jobs
+    recurringJobManager.AddOrUpdate<ExpireContactRequestsJob>(
+        "expire-contact-requests",
+        job => job.ExecuteAsync(),
+        Cron.Daily);
+
+    recurringJobManager.AddOrUpdate<ExpireScholarshipOffersJob>(
+        "expire-scholarships",
+        job => job.ExecuteAsync(),
+        Cron.Daily);
+
+    recurringJobManager.AddOrUpdate<ArchiveInactiveStudentsJob>(
+        "archive-students",
+        job => job.ExecuteAsync(),
+        Cron.Daily);
+
+    // Weekly Job
+    recurringJobManager.AddOrUpdate<CleanOldAuditLogsJob>(
+        "clean-audit-logs",
+        job => job.ExecuteAsync(),
+        Cron.Weekly);
+
+    // High Frequency Job (Every 5 minutes)
+    recurringJobManager.AddOrUpdate<ProcessTranscodingQueueJob>(
+        "process-transcoding",
+        job => job.ExecuteAsync(),
+        "*/5 * * * *");
+}
+
 app.MapHub<NotificationHub>("/notificationHub");
+
+// --- SEEDING CALL HERE ---
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        await DataSeeder.SeedDataAsync(scope.ServiceProvider);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
+    }
+}
+
+
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAngularApp");
@@ -280,6 +371,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+
 
 // Seed database
 using (var scope = app.Services.CreateScope())

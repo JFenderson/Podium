@@ -1,7 +1,10 @@
-﻿using Podium.Core.Interfaces;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Podium.Application.DTOs.Auth;
 using Podium.Application.Interfaces;
+using Podium.Core.Interfaces;
+using Podium.Infrastructure.Data;
 
 namespace Podium.API.Controllers;
 
@@ -11,51 +14,56 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
+    private readonly ApplicationDbContext _context;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, ApplicationDbContext context)
     {
         _authService = authService;
         _logger = logger;
+        _context = context;
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var result = await _authService.RegisterAsync(
-            request.Email,
-            request.Password,
-            request.FirstName,
-            request.LastName);
+        var result = await _authService.RegisterAsync(dto);
 
         if (!result.Success)
         {
             return BadRequest(new { errors = result.Errors });
         }
 
-        return Ok(new
-        {
-            accessToken = result.AccessToken,
-            refreshToken = result.RefreshToken,
-            expiresAt = result.ExpiresAt,
-            userId = result.UserId,
-            email = result.Email
-        });
+        return Ok(result);
+    }
+
+    // Helper for Frontend Registration Form
+    [HttpGet("registration-options")]
+    public async Task<IActionResult> GetRegistrationOptions()
+    {
+        var bands = await _context.Bands
+            .Where(b => b.IsActive)
+            .Select(b => new { b.BandId, b.BandName, b.State })
+            .ToListAsync();
+
+        var roles = new[] { "Student", "Guardian", "Recruiter", "Director" };
+
+        return Ok(new { Bands = bands, Roles = roles });
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var result = await _authService.LoginAsync(request.Email, request.Password);
+        var result = await _authService.LoginAsync(dto);
 
         if (!result.Success)
         {
@@ -73,14 +81,14 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto dto)
     {
-        if (string.IsNullOrEmpty(request.RefreshToken))
+        if (string.IsNullOrEmpty(dto.RefreshToken))
         {
             return BadRequest(new { error = "Refresh token is required" });
         }
 
-        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+        var result = await _authService.RefreshTokenAsync(dto);
 
         if (!result.Success)
         {
@@ -97,14 +105,14 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request)
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto dto)
     {
-        if (string.IsNullOrEmpty(request.RefreshToken))
+        if (string.IsNullOrEmpty(dto.RefreshToken))
         {
             return BadRequest(new { error = "Refresh token is required" });
         }
 
-        var result = await _authService.RevokeTokenAsync(request.RefreshToken);
+        var result = await _authService.RevokeTokenAsync(dto);
 
         if (!result)
         {
@@ -143,21 +151,3 @@ public class AuthController : ControllerBase
     }
 }
 
-public class RegisterRequest
-{
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-}
-
-public class LoginRequest
-{
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-}
-
-public class RefreshTokenRequest
-{
-    public string RefreshToken { get; set; } = string.Empty;
-}

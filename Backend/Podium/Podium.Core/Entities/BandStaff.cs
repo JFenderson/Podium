@@ -14,33 +14,16 @@ namespace Podium.Core.Entities
     {
         [Key]
         public int BandStaffId { get; set; }
-
-        /// <summary>
-        /// The band this staff member is associated with.
-        /// </summary>
-        [Required]
         public int BandId { get; set; }
 
-        /// <summary>
-        /// The user ID of the staff member (from Identity system).
-        /// </summary>
-        [Required]
-        [MaxLength(450)]
         public string ApplicationUserId { get; set; } = string.Empty;
-
-        [Required]
-        [StringLength(100)]
         public string FirstName { get; set; } = string.Empty;
 
-        [Required]
-        [StringLength(100)]
         public string LastName { get; set; } = string.Empty;
-
+        public string? Title { get; set; }
         /// <summary>
         /// Role title (e.g., "Assistant Director", "Recruiting Coordinator", "Section Leader").
         /// </summary>
-        [Required]
-        [StringLength(50)]
         public string Role { get; set; } = string.Empty;
 
         /// <summary>
@@ -113,7 +96,6 @@ namespace Podium.Core.Entities
         public string? Notes { get; set; }
         // Role differentiation
         public bool IsDirector { get; set; }
-        public string Title { get; set; } = string.Empty;
 
         // ============== NAVIGATION PROPERTIES ==============
 
@@ -125,6 +107,6 @@ namespace Podium.Core.Entities
 
         public virtual ICollection<ContactLog> ContactsInitiated { get; set; } = new List<ContactLog>();
         public virtual ICollection<ScholarshipOffer> OffersCreated { get; set; } = new List<ScholarshipOffer>();
-        public BandStaffPermissions Permissions { get; set; } = null!;
+        
     }
 }

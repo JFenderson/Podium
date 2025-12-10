@@ -99,6 +99,7 @@ namespace Podium.Core.Entities
         /// </summary>
         public bool CanManageNotifications { get; set; }
 
+
         /// <summary>
         /// Whether guardian receives notifications about this student's activity.
         /// </summary>

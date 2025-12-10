@@ -18,6 +18,7 @@ namespace Podium.Application.DTOs.Guardian
         // Aggregate statistics across all students
         public int TotalPendingApprovals { get; set; }
         public int TotalActiveOffers { get; set; }
+        public int TotalPendingOffers { get; set; }
         public int TotalUnreadNotifications { get; set; }
 
         // Priority alerts requiring immediate attention

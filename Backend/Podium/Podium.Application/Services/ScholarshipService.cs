@@ -193,10 +193,11 @@ namespace Podium.Application.Services
                 {
                     TotalCount = g.Count(),
                     TotalAmount = g.Sum(so => (decimal?)so.ScholarshipAmount) ?? 0m,
-                    PendingCount = g.Count(so => so.Status == ScholarshipStatus.PendingApproval),
-                    ApprovedCount = g.Count(so => so.Status == ScholarshipStatus.Sent), // Sent = Approved by Director
+                    PendingCount = g.Count(so => so.Status == ScholarshipStatus.Pending),
+                    ApprovedCount = g.Count(so => so.Status == ScholarshipStatus.Approved),
                     AcceptedCount = g.Count(so => so.Status == ScholarshipStatus.Accepted),
-                    DeclinedCount = g.Count(so => so.Status == ScholarshipStatus.Declined)
+                    DeclinedCount = g.Count(so => so.Status == ScholarshipStatus.Declined),
+                    RescindedCount = g.Count(so => so.Status == ScholarshipStatus.Rescinded)    
                 })
                 .FirstOrDefaultAsync();
 
@@ -214,7 +215,7 @@ namespace Podium.Application.Services
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,
-                    BandName = so.Band.Name,
+                    BandName = so.Band.BandName,
 
                     // Enum Mapping (Direct assignment based on your latest DTO)
                     Status = so.Status,
