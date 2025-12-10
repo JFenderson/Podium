@@ -1,4 +1,6 @@
-﻿namespace Podium.Core.Entities
+﻿using Podium.Core.Constants;
+
+namespace Podium.Core.Entities
 {
     public class OfferHistory
     {

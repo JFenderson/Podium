@@ -1,19 +1,10 @@
-﻿using System;
+﻿using Podium.Core.Constants;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
 {
-    public enum ScholarshipStatus
-    {
-        Draft = 0,
-        PendingApproval = 1,
-        Sent = 2,
-        Accepted = 3,
-        Declined = 4,
-        Rescinded = 5,
-        Expired = 6
-    }
 
     public class ScholarshipOffer
     {
