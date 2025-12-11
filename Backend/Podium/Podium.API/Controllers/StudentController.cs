@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
+using Podium.Application.Interfaces;
+using Podium.Application.Services;
 using Podium.Core.Constants;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
@@ -16,38 +18,30 @@ namespace Podium.API.Controllers
     public class StudentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IPermissionService _permissionService; // ✅ Renamed
-        private readonly Microsoft.AspNetCore.Authorization.IAuthorizationService _policyAuthService; // ✅ Full namespace
+        private readonly IPermissionService _permissionService;
+        private readonly Microsoft.AspNetCore.Authorization.IAuthorizationService _policyAuthService;
+        private readonly IStudentService _studentService;
 
         public StudentsController(
             ApplicationDbContext context,
-            IPermissionService permissionService, // ✅ Changed parameter
-            Microsoft.AspNetCore.Authorization.IAuthorizationService policyAuthService)
+            IPermissionService permissionService,
+            Microsoft.AspNetCore.Authorization.IAuthorizationService policyAuthService,
+            IStudentService studentService) 
         {
             _context = context;
             _permissionService = permissionService;
             _policyAuthService = policyAuthService;
+            _studentService = studentService;
         }
 
         /// <summary>
         /// Get all students - Only BandStaff with CanViewStudents permission
         /// </summary>
         [HttpGet]
-        [Authorize(Policy = "CanViewStudents")]
-        public async Task<ActionResult<IEnumerable<StudentDto>>> GetAllStudents()
+        public async Task<ActionResult<IEnumerable<StudentDetailsDto>>> GetAllStudents()
         {
-            var students = await _context.Students
-                .Select(s => new StudentDto
-                {
-                    StudentId = s.StudentId,
-                    FirstName = s.FirstName,
-                    LastName = s.LastName,
-                    Email = s.Email,
-                    Instrument = s.Instrument
-                })
-                .ToListAsync();
-
-            return Ok(students);
+            var result = await _studentService.GetAccessibleStudentsAsync();
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -55,35 +49,10 @@ namespace Podium.API.Controllers
         /// BandStaff with CanViewStudents can view any
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<StudentDto>> GetStudent(int id)
+        public async Task<ActionResult<StudentDetailsDto>> GetStudent(int id)
         {
-            // Resource-based authorization
-            var authResult = await _policyAuthService.AuthorizeAsync(
-                User,
-                id,
-                new ResourceAccessRequirement(Operations.ReadOperation));
-
-            if (!authResult.Succeeded)
-            {
-                return Forbid();
-            }
-
-            var student = await _context.Students
-                .FirstOrDefaultAsync(s => s.StudentId == id);
-
-            if (student == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(new StudentDto
-            {
-                StudentId = student.StudentId,
-                FirstName = student.FirstName,
-                LastName = student.LastName,
-                Email = student.Email,
-                Instrument = student.Instrument
-            });
+            var result = await _studentService.GetStudentDetailsAsync(id);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -92,90 +61,48 @@ namespace Podium.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateStudent(int id, [FromBody] UpdateStudentDto dto)
         {
-            // Check if user can update this student
-            var authResult = await _policyAuthService.AuthorizeAsync(
-                User,
-                id,
-                new ResourceAccessRequirement(Operations.UpdateOperation));
-
-            if (!authResult.Succeeded)
-            {
-                return Forbid();
-            }
-
-            var student = await _context.Students.FindAsync(id);
-            if (student == null)
-            {
-                return NotFound();
-            }
-
-            // Update student properties
-            student.FirstName = dto.FirstName;
-            student.LastName = dto.LastName;
-            student.Bio = dto.Bio;
-            student.Instrument = dto.Instrument;
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            var result = await _studentService.UpdateStudentProfileAsync(id, dto);
+            return HandleResult(result);
         }
-
 
         /// <summary>
         /// Get current student's profile - Uses custom permission service
         /// </summary>
         [HttpGet("me")]
         [Authorize(Policy = "StudentOnly")]
-        public async Task<ActionResult<StudentDto>> GetMyProfile()
+        public async Task<ActionResult<StudentDetailsDto>> GetMyProfile()
         {
-            var userId = await _permissionService.GetCurrentUserIdAsync();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
+            // Reuse the "GetAccessible" logic which returns just the user for Students
+            var result = await _studentService.GetAccessibleStudentsAsync();
 
-            var student = await _context.Students
-                .FirstOrDefaultAsync(s => s.ApplicationUserId == userId);
+            if (!result.IsSuccess) return HandleResult(result);
 
-            if (student == null)
-            {
-                return NotFound("Student profile not found");
-            }
+            var student = result.Data?.FirstOrDefault();
+            if (student == null) return NotFound("Student profile not found");
 
-            return Ok(new StudentDto
-            {
-                StudentId = student.StudentId,
-                FirstName = student.FirstName,
-                LastName = student.LastName,
-                Email = student.Email,
-                Instrument = student.Instrument
-            });
+            return Ok(student);
         }
 
         /// <summary>
-        /// Rate a student - Only BandStaff with CanRateStudents permission
+        /// Submit interest in a specific Band
+        /// </summary>
+        [HttpPost("interest")]
+        [Authorize(Policy = "StudentOnly")]
+        public async Task<IActionResult> ShowInterest([FromBody] InterestDto dto)
+        {
+            var result = await _studentService.ShowInterestAsync(dto.StudentId, dto.BandId);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Rate a student (BandStaff only)
         /// </summary>
         [HttpPost("{id}/rate")]
         [Authorize(Policy = "CanRateStudents")]
         public async Task<IActionResult> RateStudent(int id, [FromBody] RatingDto dto)
         {
-            // Verify student exists
-            var student = await _context.Students.FindAsync(id);
-            if (student == null)
-            {
-                return NotFound();
-            }
-
-            var userId = await _permissionService.GetCurrentUserIdAsync(); // ✅ Using IPermissionService
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            // Create rating (you'll need to create this entity)
-            // var rating = new StudentRating { ... };
-
-            return Ok(new { Message = "Rating submitted successfully" });
+            var result = await _studentService.RateStudentAsync(id, dto);
+            return HandleResult(result);
         }
 
         /// <summary>
@@ -222,6 +149,22 @@ namespace Podium.API.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // Helper to handle ServiceResult responses
+        private ActionResult HandleResult<T>(ServiceResult<T> result)
+        {
+            if (result.IsSuccess)
+            {
+                return result.Data == null ? NoContent() : Ok(result.Data);
+            }
+
+            return result.ResultType switch
+            {
+                ServiceResultType.NotFound => NotFound(result.ErrorMessage),
+                ServiceResultType.Forbidden => Forbid(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }

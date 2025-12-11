@@ -22,6 +22,9 @@ namespace Podium.Core.Interfaces
         IRepository<BandEvent> BandEvents { get; }
         IRepository<EventRegistration> EventRegistrations { get; }
         IRepository<Notification> Notifications { get; }
+        IRepository<StudentInterest>? StudentInterests { get; }
+        IRepository<StudentRating>? StudentRatings { get; }
+        IRepository<StudentGuardian>? StudentGuardians { get; }
         /// <summary>
         /// Save all changes to the database
         /// </summary>

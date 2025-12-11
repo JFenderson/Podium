@@ -32,6 +32,12 @@ public class Repository<T> : IRepository<T> where T : class
         return await _dbSet.Where(predicate).ToListAsync();
     }
 
+    public IQueryable<T> GetQueryable()
+    {
+        // Returns the set as IQueryable so services can chain .Include() and .Where()
+        return _dbSet.AsQueryable();
+    }
+
     public virtual async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
     {
         return await _dbSet.FirstOrDefaultAsync(predicate);

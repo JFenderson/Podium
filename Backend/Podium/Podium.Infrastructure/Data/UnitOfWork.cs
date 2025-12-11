@@ -26,6 +26,10 @@ namespace Podium.Infrastructure.Data
         private IRepository<EventRegistration>? _eventRegistrations;
         private IRepository<VideoRating>? _videoRatings;
         private IRepository<Notification>? _notifications;
+        private IRepository<StudentInterest>? _studentInterests;
+        private IRepository<StudentRating>? _studentRatings;
+        private IRepository<StudentGuardian>? _studentGuardian;
+
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -67,7 +71,16 @@ namespace Podium.Infrastructure.Data
         public IRepository<Notification> Notifications =>
             _notifications ??= new Repository<Notification>(_context);
 
-        // Transaction operations
+        public IRepository<StudentInterest> StudentInterests =>
+            _studentInterests ??= new Repository<StudentInterest>(_context);
+
+        public IRepository<StudentRating> StudentRatings =>
+            _studentRatings ??= new Repository<StudentRating>(_context);
+
+        public IRepository<StudentGuardian> StudentGuardians =>
+            _studentGuardian ??= new Repository<StudentGuardian>(_context);
+
+        // Ensure proper disposal and transaction handling
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();

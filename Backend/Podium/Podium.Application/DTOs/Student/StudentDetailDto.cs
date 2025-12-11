@@ -15,5 +15,18 @@ namespace Podium.Application.DTOs.Student
         public string? Instrument { get; set; }
         public string? Bio { get; set; }
         public decimal? GPA { get; set; }
+
+        // UX Enhancements
+        public string? PhoneNumber { get; set; }
+        public string? State { get; set; }
+        public string? HighSchool { get; set; }
+        public int GraduationYear { get; set; }
+        public string? IntendedMajor { get; set; }
+        public string? SkillLevel { get; set; }
+        public string? SchoolType { get; set; }
+
+        // Converted from JSON strings in Entity
+        public List<string> SecondaryInstruments { get; set; } = new();
+        public List<string> Achievements { get; set; } = new();
     }
 }
