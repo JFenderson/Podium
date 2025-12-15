@@ -245,7 +245,7 @@ namespace Podium.API.Controllers
                 return BadRequest("You cannot remove yourself");
             }
 
-            _unitOfWork.BandStaff.Delete(staff);
+            _unitOfWork.BandStaff.Remove(staff);
             await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
