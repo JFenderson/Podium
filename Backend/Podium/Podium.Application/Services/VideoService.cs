@@ -1,9 +1,12 @@
 ﻿
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.Video;
 using Podium.Application.Interfaces;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
+using Podium.Infrastructure.Data;
 using Video = Podium.Core.Entities.Video; // Assuming generic interfaces live here
 
 namespace Podium.Application.Services
@@ -37,6 +40,7 @@ namespace Podium.Application.Services
                 UploadedDate = v.CreatedAt,
                 ViewCount = v.ViewCount,
                 IsReviewed = v.IsReviewed
+                // Map status to DTO if needed
             }).ToList();
         }
 
@@ -52,13 +56,20 @@ namespace Podium.Application.Services
                 throw new UnauthorizedAccessException("Cannot view this video.");
             }
 
+            // Only generate URL if video is Ready
+            string videoUrl = string.Empty;
+            if (video.Status == VideoStatus.Ready)
+            {
+                videoUrl = await _storageService.GetVideoUrlAsync(video.Url);
+            }
+
             var response = new VideoResponse
             {
                 VideoId = video.Id,
                 Title = video.Title,
                 Description = video.Description,
                 Instrument = video.Instrument,
-                VideoUrl = await _storageService.GetVideoUrlAsync(video.Url), // Generate signed URL
+                VideoUrl = videoUrl,
                 UploadedDate = video.CreatedAt
             };
 
@@ -92,7 +103,11 @@ namespace Podium.Application.Services
                 Instrument = request.Instrument,
                 Url = fileName, // Store the path, not the full URL
                 IsPublic = request.IsPublic,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                Status = VideoStatus.Uploading,
+
+                ViewCount = 0,
+                IsReviewed = false
             };
 
             await _unitOfWork.Videos.AddAsync(video);
@@ -153,15 +168,71 @@ namespace Podium.Application.Services
         }
 
         // Implement remaining methods (UpdateVideo, SoftDelete, etc.) similarly...
-
-        public Task<Video> UpdateVideoAsync(int videoId, int studentId, UpdateVideoRequest request)
+        public async Task<List<VideoRatingResponse>> GetVideoRatingsAsync(int videoId)
         {
-            throw new NotImplementedException();
+            // Verify video exists
+            var video = await _unitOfWork.Videos.GetByIdAsync(videoId);
+            if (video == null) throw new KeyNotFoundException("Video not found");
+
+            // Use GetQueryable to Include related BandStaff data for the rater's name
+            var ratings = await _unitOfWork.VideoRatings.GetQueryable()
+                .Where(r => r.VideoId == videoId)
+                .Include(r => r.BandStaff)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return ratings.Select(r => new VideoRatingResponse
+            {
+                RatingId = r.Id,
+                BandStaffName = r.BandStaff != null ? $"{r.BandStaff.FirstName} {r.BandStaff.LastName}" : "Unknown Staff",
+                Rating = r.Rating,
+                Comment = r.Comment,
+                CreatedAt = r.CreatedAt,
+                Success = true
+            }).ToList();
         }
 
-        public Task<bool> SoftDeleteVideoAsync(int videoId, int studentId)
+        public async Task<Video> UpdateVideoAsync(int videoId, int studentId, UpdateVideoRequest request)
         {
-            throw new NotImplementedException();
+            var video = await _unitOfWork.Videos.GetByIdAsync(videoId);
+
+            if (video == null)
+                throw new KeyNotFoundException($"Video {videoId} not found");
+
+            // Authorization: Ensure the student owns this video
+            if (video.StudentId != studentId)
+                throw new UnauthorizedAccessException("You do not have permission to update this video.");
+
+            // Update Fields
+            video.Title = request.Title;
+            video.Description = request.Description;
+            video.IsPublic = request.IsPublic;
+
+            // Allow updating thumbnail if provided (optional)
+            // if (!string.IsNullOrEmpty(request.ThumbnailUrl)) video.ThumbnailUrl = request.ThumbnailUrl;
+
+            _unitOfWork.Videos.Update(video);
+            await _unitOfWork.SaveChangesAsync();
+
+            return video;
+        }
+
+        public async Task<bool> SoftDeleteVideoAsync(int videoId, int studentId)
+        {
+            var video = await _unitOfWork.Videos.GetByIdAsync(videoId);
+
+            if (video == null) return false;
+
+            // Authorization: Ensure the student owns this video
+            if (video.StudentId != studentId)
+                throw new UnauthorizedAccessException("You do not have permission to delete this video.");
+
+            // Use the Repository's Remove method which now handles Soft Delete 
+            // (based on your ISoftDelete implementation in the repository)
+            _unitOfWork.Videos.Remove(video);
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> IncrementViewCountAsync(int videoId)
@@ -170,14 +241,12 @@ namespace Podium.Application.Services
             if (video == null) return false;
 
             video.ViewCount++;
+            _unitOfWork.Videos.Update(video);
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
 
-        public Task<List<VideoRatingResponse>> GetVideoRatingsAsync(int videoId)
-        {
-            throw new NotImplementedException();
-        }
+       
 
         public Task<VideoRatingResponse> UpdateRatingAsync(int videoId, int recruiterId, RateVideoRequest request)
         {
@@ -185,10 +254,59 @@ namespace Podium.Application.Services
             return RateVideoAsync(videoId, recruiterId, request);
         }
 
-        public Task<bool> UpdateTranscodingStatusAsync(string uploadId, TranscodingWebhookRequest request)
+        public async Task<bool> UpdateTranscodingStatusAsync(string uploadId, TranscodingWebhookRequest request)
         {
-            // Logic to handle callbacks from Azure Media Services or AWS MediaConvert
-            return Task.FromResult(true);
+            // Assuming uploadId corresponds to the stored Url path (e.g. "{studentId}/{guid}_{filename}")
+            // or we use a dedicated JobId field. For now, we look up by Url.
+            var video = await _unitOfWork.Videos.FirstOrDefaultAsync(v => v.Url == uploadId);
+
+            if (video == null)
+            {
+                _logger.LogWarning($"Transcoding webhook received for unknown video: {uploadId}");
+                return false;
+            }
+
+            _logger.LogInformation($"Updating transcoding status for video {video.Id} to {request.Status}");
+
+            // Map Webhook Status to Enum
+            switch (request.Status?.ToLower())
+            {
+                case "processing":
+                    video.Status = VideoStatus.Processing;
+                    break;
+                case "completed":
+                case "finished":
+                case "ready":
+                    video.Status = VideoStatus.Ready;
+                    video.CompletedAt = DateTime.UtcNow;
+                    if (!string.IsNullOrEmpty(request.ThumbnailPath))
+                    {
+                        video.ThumbnailUrl = request.ThumbnailPath;
+                    }
+                    if (!string.IsNullOrEmpty(request.OutputUrl))
+                    {
+                        // Optionally update URL if the transcoded output location differs
+                        // video.Url = request.OutputUrl; 
+                    }
+                    break;
+                case "failed":
+                case "error":
+                    video.Status = VideoStatus.Failed;
+                    video.TranscodingError = request.ErrorMessage;
+                    break;
+                default:
+                    // Log unknown status but don't fail
+                    _logger.LogWarning($"Unknown transcoding status: {request.Status}");
+                    break;
+            }
+
+            // Update legacy string field if needed
+            video.TranscodingStatus = request.Status;
+
+            _unitOfWork.Videos.Update(video);
+            await _unitOfWork.SaveChangesAsync();
+
+            return true;
         }
     }
 }

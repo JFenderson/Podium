@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Podium.Core.Constants;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
@@ -33,7 +34,9 @@ namespace Podium.Core.Entities
         public virtual ICollection<VideoRating> Ratings { get; set; } = new List<VideoRating>();
         public string Instrument { get; set; }
         public int ViewCount { get; set; }
-        public bool IsPublic { get; set; }
+        public bool? IsPublic { get; set; }
+
+        public VideoStatus Status { get; set; } = VideoStatus.Uploading;
         public string TranscodingStatus { get; set; }
         public string TranscodingError { get; set; }
         public DateTime CompletedAt { get; set; }

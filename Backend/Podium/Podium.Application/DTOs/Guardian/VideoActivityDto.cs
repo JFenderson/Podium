@@ -13,6 +13,6 @@ namespace Podium.Application.DTOs.Guardian
         public string Instrument { get; set; } = string.Empty;
         public DateTime UploadedDate { get; set; }
         public int Views { get; set; }
-        public bool IsPublic { get; set; }
+        public bool? IsPublic { get; set; }
     }
 }
