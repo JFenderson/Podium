@@ -43,6 +43,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
+        // --- Global Query Filters for Soft Delete ---
+        builder.Entity<Student>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ScholarshipOffer>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Video>().HasQueryFilter(e => !e.IsDeleted);
+
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

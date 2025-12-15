@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Podium.Core.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Podium.Core.Entities
 {
-    public class Student : BaseEntity
+    public class Student : BaseEntity, ISoftDelete
     {
 
         [Required]
@@ -51,6 +52,8 @@ namespace Podium.Core.Entities
         public string? HighSchool { get; set; }
         public string? State { get; set; }
         public string? SchoolType { get; set; }
+
+        public bool IsDeleted { get; set; }
 
         // Navigation property
         [ForeignKey(nameof(ApplicationUserId))]

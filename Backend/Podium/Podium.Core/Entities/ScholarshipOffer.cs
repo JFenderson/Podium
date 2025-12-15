@@ -46,6 +46,8 @@ namespace Podium.Core.Entities
 
         public bool RequiresGuardianApproval { get; set; } = true;
 
+        public bool IsDeleted { get; set; }
+
         // Navigation
         [ForeignKey(nameof(BandId))]
         public virtual Band? Band { get; set; }

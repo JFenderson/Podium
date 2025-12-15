@@ -70,11 +70,33 @@ public class Repository<T> : IRepository<T> where T : class
 
     public virtual void Remove(T entity)
     {
-        _dbSet.Remove(entity);
+        if (entity is ISoftDelete softDeleteEntity)
+        {
+            softDeleteEntity.IsDeleted = true;
+            _dbSet.Update(entity);
+        }
+        else
+        {
+            _dbSet.Remove(entity);
+        }
     }
 
     public virtual void RemoveRange(IEnumerable<T> entities)
     {
-        _dbSet.RemoveRange(entities);
+        // Check if T implements ISoftDelete (since T is known at compile time for the class, 
+        // but we can check the first entity or use type checking)
+        if (typeof(ISoftDelete).IsAssignableFrom(typeof(T)))
+        {
+            foreach (var entity in entities)
+            {
+                var softDeleteEntity = (ISoftDelete)entity;
+                softDeleteEntity.IsDeleted = true;
+            }
+            _dbSet.UpdateRange(entities);
+        }
+        else
+        {
+            _dbSet.RemoveRange(entities);
+        }
     }
 }

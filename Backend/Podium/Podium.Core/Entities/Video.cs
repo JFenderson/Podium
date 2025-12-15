@@ -28,6 +28,8 @@ namespace Podium.Core.Entities
         [ForeignKey(nameof(StudentId))]
         public virtual Student? Student { get; set; }
 
+        public bool IsDeleted { get; set; }
+
         public virtual ICollection<VideoRating> Ratings { get; set; } = new List<VideoRating>();
         public string Instrument { get; set; }
         public int ViewCount { get; set; }
