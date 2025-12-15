@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Podium.Application.DTOs.BandStaff;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
+using Podium.Core.Interfaces; // Updated to Core.Interfaces
 using Podium.Infrastructure.Authorization;
-using Podium.Infrastructure.Data;
 
 namespace Podium.Application.Authorization
 {
@@ -15,85 +15,53 @@ namespace Podium.Application.Authorization
     public class PermissionService : IPermissionService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public PermissionService(
             IHttpContextAccessor httpContextAccessor,
-            ApplicationDbContext context,
+            IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager)
         {
             _httpContextAccessor = httpContextAccessor;
-            _context = context;
+            _unitOfWork = unitOfWork;
             _userManager = userManager;
         }
 
-        /// <summary>
-        /// Get the current authenticated user's ID (string/GUID)
-        /// </summary>
         public async Task<string?> GetCurrentUserIdAsync()
         {
-            if (_httpContextAccessor.HttpContext?.User == null)
-            {
-                return null;
-            }
-
+            if (_httpContextAccessor.HttpContext?.User == null) return null;
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
             return user?.Id;
         }
 
-        /// <summary>
-        /// Get the current authenticated user's primary role
-        /// </summary>
         public async Task<string?> GetCurrentUserRoleAsync()
         {
-            if (_httpContextAccessor.HttpContext?.User == null)
-            {
-                return null;
-            }
-
+            if (_httpContextAccessor.HttpContext?.User == null) return null;
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
             if (user == null) return null;
-
             var roles = await _userManager.GetRolesAsync(user);
             return roles.FirstOrDefault();
         }
 
-        /// <summary>
-        /// Check if current user has a specific role
-        /// </summary>
         public async Task<bool> HasRoleAsync(string role)
         {
-            if (_httpContextAccessor.HttpContext?.User == null)
-            {
-                return false;
-            }
-
+            if (_httpContextAccessor.HttpContext?.User == null) return false;
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
             if (user == null) return false;
-
             return await _userManager.IsInRoleAsync(user, role);
         }
 
-        /// <summary>
-        /// Check if current user has a specific BandStaff permission
-        /// </summary>
         public async Task<bool> HasPermissionAsync(string permission)
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return false;
-            }
+            if (userId == null) return false;
 
-            var bandStaff = await _context.BandStaff
+            var bandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
-            if (bandStaff == null)
-            {
-                return false;
-            }
+            if (bandStaff == null) return false;
 
             return permission switch
             {
@@ -106,112 +74,70 @@ namespace Podium.Application.Authorization
             };
         }
 
-        /// <summary>
-        /// Check if current user is the owner of a specific student profile
-        /// </summary>
         public async Task<bool> IsStudentOwnerAsync(int studentId)
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return false;
-            }
+            if (userId == null) return false;
 
             var role = await GetCurrentUserRoleAsync();
-            if (role != Roles.Student)
-            {
-                return false;
-            }
+            if (role != Roles.Student) return false;
 
-            return await _context.Students
+            return await _unitOfWork.Students.GetQueryable()
                 .AnyAsync(s => s.Id == studentId && s.ApplicationUserId == userId);
         }
 
-        /// <summary>
-        /// Check if current user is a guardian of a specific student
-        /// </summary>
         public async Task<bool> IsGuardianOfStudentAsync(int studentId)
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return false;
-            }
+            if (userId == null) return false;
 
             var role = await GetCurrentUserRoleAsync();
-            if (role != Roles.Guardian)
-            {
-                return false;
-            }
+            if (role != Roles.Guardian) return false;
 
-            var guardian = await _context.Guardians
+            var guardian = await _unitOfWork.Guardians.GetQueryable()
                 .Include(g => g.Students)
                 .FirstOrDefaultAsync(g => g.ApplicationUserId == userId);
 
             return guardian?.Students?.Any(s => s.Id == studentId) == true;
         }
 
-        /// <summary>
-        /// Check if current user can approve scholarships (Directors only)
-        /// </summary>
         public async Task<bool> CanApproveScholarshipsAsync()
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return false;
-            }
+            if (userId == null) return false;
 
-            var bandStaff = await _context.BandStaff
+            var bandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
             return bandStaff?.Role == "Director";
         }
 
-        /// <summary>
-        /// Check if current user can send offers (Recruiters/Directors with permission)
-        /// </summary>
         public async Task<bool> CanSendOffersAsync()
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return false;
-            }
+            if (userId == null) return false;
 
             var role = await GetCurrentUserRoleAsync();
-            if (role != Roles.Recruiter && role != Roles.Director)
-            {
-                return false;
-            }
+            if (role != Roles.Recruiter && role != Roles.Director) return false;
 
-            var bandStaff = await _context.BandStaff
+            var bandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
             return bandStaff?.CanSendOffers == true;
         }
 
-        /// <summary>
-        /// Get all permissions for the current BandStaff user
-        /// </summary>
         public async Task<BandStaffPermissionsDto?> GetBandStaffPermissionsAsync()
         {
             var userId = await GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return null;
-            }
+            if (userId == null) return null;
 
-            var bandStaff = await _context.BandStaff
+            var bandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
-            if (bandStaff == null)
-            {
-                return null;
-            }
+            if (bandStaff == null) return null;
 
             return new BandStaffPermissionsDto
             {

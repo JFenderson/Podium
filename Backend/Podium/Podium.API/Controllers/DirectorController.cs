@@ -26,8 +26,7 @@ namespace BandRecruitment.Controllers
         private readonly IDirectorService _directorService;
         private readonly IAuditService _auditService;
         private readonly ILogger<DirectorController> _logger;
-        private readonly ApplicationDbContext _context;
-        private readonly IPermissionService _permissionService;
+
 
         public DirectorController(
             IDirectorService directorService,
@@ -39,8 +38,7 @@ namespace BandRecruitment.Controllers
             _directorService = directorService;
             _auditService = auditService;
             _logger = logger;
-            _context = context;
-            _permissionService = permissionService;
+
         }
 
         /// <summary>
