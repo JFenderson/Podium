@@ -14,13 +14,13 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ILogger<AuthController> _logger;
-    private readonly ApplicationDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger, ApplicationDbContext context)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger, IUnitOfWork unitOfWork)
     {
         _authService = authService;
         _logger = logger;
-        _context = context;
+        _unitOfWork = unitOfWork;
     }
 
     [HttpPost("register")]
@@ -45,7 +45,7 @@ public class AuthController : ControllerBase
     [HttpGet("registration-options")]
     public async Task<IActionResult> GetRegistrationOptions()
     {
-        var bands = await _context.Bands
+        var bands = await _unitOfWork.Bands.GetQueryable()
             .Where(b => b.IsActive)
             .Select(b => new { b.Id, b.BandName, b.State })
             .ToListAsync();

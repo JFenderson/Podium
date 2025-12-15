@@ -1,26 +1,26 @@
-﻿using Podium.Application.DTOs.Offer;
+﻿using Microsoft.EntityFrameworkCore;
+using Podium.Application.DTOs.Offer;
 using Podium.Application.Interfaces;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
+using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Podium.Core.Constants;
 
 namespace Podium.Application.Services
 {
     public class ScholarshipService : IScholarshipService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ScholarshipService(ApplicationDbContext context)
+        public ScholarshipService(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
-
         public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
         {
             // 1. Validate Budget (Optional check before creating)
@@ -38,8 +38,8 @@ namespace Podium.Application.Services
                 ExpirationDate = DateTime.UtcNow.AddDays(30) // Default 30 days
             };
 
-            _context.Offers.Add(offer);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.ScholarshipOffers.AddAsync(offer);
+            await _unitOfWork.SaveChangesAsync();
 
             // TODO: Trigger Notification (SignalR)
             return MapToDto(offer);
@@ -47,7 +47,7 @@ namespace Podium.Application.Services
 
         public async Task ApproveOfferAsync(int offerId, string directorId)
         {
-            var offer = await _context.Offers.FindAsync(offerId);
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
             if (offer == null) throw new KeyNotFoundException("Offer not found");
 
             if (offer.Status != ScholarshipStatus.PendingApproval)
@@ -57,13 +57,14 @@ namespace Podium.Application.Services
             offer.ApprovedByUserId = directorId;
             offer.ApprovedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _unitOfWork.ScholarshipOffers.Update(offer);
+            await _unitOfWork.SaveChangesAsync();
             // TODO: Notify Student
         }
 
         public async Task RespondToOfferAsync(int offerId, RespondToOfferDto dto, string userId, bool isGuardian)
         {
-            var offer = await _context.Offers.FindAsync(offerId);
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
             if (offer == null) throw new KeyNotFoundException("Offer not found");
 
             // VALIDATION RULES
@@ -73,7 +74,7 @@ namespace Podium.Application.Services
             if (DateTime.UtcNow > offer.ExpirationDate)
             {
                 offer.Status = ScholarshipStatus.Expired;
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync(); // Save the status change to Expired
                 throw new InvalidOperationException("This offer has expired.");
             }
 
@@ -91,13 +92,14 @@ namespace Podium.Application.Services
 
             offer.ResponseNotes = dto.Comment;
 
-            await _context.SaveChangesAsync();
+            _unitOfWork.ScholarshipOffers.Update(offer);
+            await _unitOfWork.SaveChangesAsync();
             // TODO: Update Budget Committed Amount
         }
 
         public async Task RescindOfferAsync(int offerId, RescindScholarshipRequest dto, string directorId)
         {
-            var offer = await _context.Offers.FindAsync(offerId);
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
             if (offer == null) throw new KeyNotFoundException();
 
             // Can only rescind if it hasn't been finalized yet
@@ -109,13 +111,14 @@ namespace Podium.Application.Services
             offer.RescindReason = dto.Reason;
             offer.RescindedDate = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            _unitOfWork.ScholarshipOffers.Update(offer);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<ScholarshipBudgetDto> GetBudgetStatsAsync(int bandId)
         {
-            // Efficient Database Query for Budget
-            var stats = await _context.Offers
+            // Efficient Database Query for Budget using IUnitOfWork
+            var stats = await _unitOfWork.ScholarshipOffers.GetQueryable()
                 .Where(o => o.BandId == bandId)
                 .GroupBy(o => 1) // Group all to get aggregates
                 .Select(g => new ScholarshipBudgetDto
@@ -133,10 +136,8 @@ namespace Podium.Application.Services
         // Helper mapper
         private static ScholarshipOfferDto MapToDto(ScholarshipOffer offer) => new ScholarshipOfferDto
         {
-
             OfferId = offer.Id,
             StudentId = offer.StudentId,
-            // Fix: Convert Enum to String for DTO
             Status = offer.Status,
             ScholarshipAmount = offer.ScholarshipAmount,
             OfferType = offer.OfferType,
@@ -144,26 +145,23 @@ namespace Podium.Application.Services
             ApprovedAt = offer.ApprovedAt,
             ExpirationDate = offer.ExpirationDate,
             RequiresGuardianApproval = offer.RequiresGuardianApproval
-
         };
 
         public async Task<ScholarshipOverviewDto> GetScholarshipsAsync(string userId, ScholarshipFilterDto filters)
         {
             // 1. Get the Director's Active Band
-            var band = await _context.Bands
+            var band = await _unitOfWork.Bands.GetQueryable()
                 .FirstOrDefaultAsync(b => b.DirectorApplicationUserId == userId && b.IsActive);
 
             if (band == null)
                 throw new KeyNotFoundException("Active band not found for this director.");
 
             // 2. Start the Query
-            var query = _context.Offers
+            var query = _unitOfWork.ScholarshipOffers.GetQueryable()
                 .Where(so => so.BandId == band.Id)
                 .AsQueryable();
 
             // 3. Apply Filters
-
-            // Status Filter: Convert String (from UI) to Enum (for DB)
             if (!string.IsNullOrEmpty(filters.Status))
             {
                 if (Enum.TryParse<ScholarshipStatus>(filters.Status, true, out var statusEnum))
@@ -172,21 +170,19 @@ namespace Podium.Application.Services
                 }
             }
 
-            // Amount Filters
             if (filters.MinAmount.HasValue)
                 query = query.Where(so => so.ScholarshipAmount >= filters.MinAmount.Value);
 
             if (filters.MaxAmount.HasValue)
                 query = query.Where(so => so.ScholarshipAmount <= filters.MaxAmount.Value);
 
-            // Date Filters
             if (filters.CreatedAfter.HasValue)
                 query = query.Where(so => so.CreatedAt >= filters.CreatedAfter.Value);
 
             if (filters.CreatedBefore.HasValue)
                 query = query.Where(so => so.CreatedAt <= filters.CreatedBefore.Value);
 
-            // 4. Calculate Statistics (Summary of ALL offers matching the filter)
+            // 4. Calculate Statistics
             var summary = await query
                 .GroupBy(so => 1)
                 .Select(g => new
@@ -197,7 +193,7 @@ namespace Podium.Application.Services
                     ApprovedCount = g.Count(so => so.Status == ScholarshipStatus.Approved),
                     AcceptedCount = g.Count(so => so.Status == ScholarshipStatus.Accepted),
                     DeclinedCount = g.Count(so => so.Status == ScholarshipStatus.Declined),
-                    RescindedCount = g.Count(so => so.Status == ScholarshipStatus.Rescinded)    
+                    RescindedCount = g.Count(so => so.Status == ScholarshipStatus.Rescinded)
                 })
                 .FirstOrDefaultAsync();
 
@@ -216,38 +212,25 @@ namespace Podium.Application.Services
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,
                     BandName = so.Band.BandName,
-
-                    // Enum Mapping (Direct assignment based on your latest DTO)
                     Status = so.Status,
-
                     ScholarshipAmount = so.ScholarshipAmount,
                     OfferType = so.OfferType,
-
-                    // Dates
                     CreatedAt = so.CreatedAt,
                     ApprovedAt = so.ApprovedAt,
                     ResponseDate = so.ResponseDate,
                     ExpirationDate = so.ExpirationDate,
-
-                    // Details
                     Notes = so.Description,
                     Terms = so.Terms,
                     RescindReason = so.RescindReason,
-
-                    // People
-                    // Safe navigation in case CreatedByStaff is null
                     CreatedByStaffName = so.CreatedByStaff != null ? so.CreatedByStaff.ApplicationUserId : "Unknown",
                     ApprovedByUserId = so.ApprovedByUserId,
                     RespondedByGuardianUserId = so.RespondedByGuardianUserId,
-
                     RequiresGuardianApproval = so.RequiresGuardianApproval
                 })
                 .ToListAsync();
 
             // 6. Return Overview
-            // Note: Assuming Band entity has a 'ScholarshipBudget' property. 
-            // If not, replace band.ScholarshipBudget with a hardcoded value or fetch from settings.
-            decimal totalBudget = 50000m; // Default or band.ScholarshipBudget;
+            decimal totalBudget = 50000m;
 
             return new ScholarshipOverviewDto
             {
@@ -258,16 +241,15 @@ namespace Podium.Application.Services
                 AcceptedCount = summary?.AcceptedCount ?? 0,
                 DeclinedCount = summary?.DeclinedCount ?? 0,
                 AvailableBudget = totalBudget - (summary?.TotalAmount ?? 0m),
-
                 Offers = offers,
-
                 CurrentPage = filters.Page,
                 PageSize = filters.PageSize,
-                // Calculate Total Pages
                 TotalPages = (int)Math.Ceiling((double)(summary?.TotalCount ?? 0) / filters.PageSize)
             };
         }
 
         public Task CheckExpirationsAsync() => Task.CompletedTask;
+    
+     
     }
 }
