@@ -24,12 +24,27 @@ namespace Podium.Application.Services
         }
         public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
         {
-            // 1. Validate Budget (Optional check before creating)
+            // 1. Fetch the Band to check/deduct budget
+            // Note: In a real scenario, use dto.BandId. Using 1 here to match previous hardcoding logic.
+            int bandId = dto.BandId;
+            var band = await _unitOfWork.Bands.GetByIdAsync(bandId);
+
+            if (band == null)
+                throw new KeyNotFoundException("Band not found.");
+
+            // 2. Validate Budget
+            if (band.ScholarshipBudget < dto.ScholarshipAmount)
+            {
+                throw new InvalidOperationException($"Insufficient scholarship budget. Remaining: ${band.ScholarshipBudget}");
+            }
+
+            // 3. Deduct from Budget (Optimistic Concurrency will protect this)
+            band.ScholarshipBudget -= dto.ScholarshipAmount;
 
             var offer = new ScholarshipOffer
             {
                 StudentId = dto.StudentId,
-                BandId = 1, // Retrieve from current user context in real app
+                BandId = bandId,
                 CreatedByUserId = userId,
                 ScholarshipAmount = dto.ScholarshipAmount,
                 Description = dto.Description,
@@ -39,8 +54,20 @@ namespace Podium.Application.Services
                 ExpirationDate = DateTime.UtcNow.AddDays(30) // Default 30 days
             };
 
-            await _unitOfWork.ScholarshipOffers.AddAsync(offer);
-            await _unitOfWork.SaveChangesAsync();
+            _unitOfWork.ScholarshipOffers.AddAsync(offer);
+
+            try
+            {
+                // 4. Attempt to Save (Updates Band Budget AND Inserts Offer in one transaction)
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // 5. Handle Concurrency Conflict
+                // This occurs if another user modified the Band record (e.g. another deduction) 
+                // between the time we fetched 'band' and now.
+                throw new InvalidOperationException("The band's budget was updated by another transaction. Please try creating the offer again.");
+            }
 
             // TODO: Trigger Notification (SignalR)
             return MapToDto(offer);

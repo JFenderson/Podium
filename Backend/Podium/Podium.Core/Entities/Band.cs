@@ -33,6 +33,10 @@ namespace Podium.Core.Entities
 
         public bool IsActive { get; set; } = true;
 
+        // Concurrency Token
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
         // Navigation properties
         [ForeignKey(nameof(DirectorApplicationUserId))]
         public virtual ApplicationUser? Director { get; set; }

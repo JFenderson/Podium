@@ -13,6 +13,9 @@ namespace Podium.Infrastructure.Data.Configurations
             builder.Property(b => b.ScholarshipBudget)
                    .HasColumnType("decimal(18,2)");
 
+            builder.Property(b => b.RowVersion)
+                   .IsRowVersion();
+
             builder.HasOne(b => b.Director)
                    .WithMany()
                    .HasForeignKey(b => b.DirectorApplicationUserId)
