@@ -10,6 +10,7 @@
         Rescinded = 5,
         Expired = 6,
         Pending = 7,
-        Approved = 8
+        Approved = 8,
+        PendingGuardianSignature = 9
     }
 }

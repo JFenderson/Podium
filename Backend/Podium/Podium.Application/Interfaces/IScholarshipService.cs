@@ -12,6 +12,7 @@ namespace Podium.Application.Interfaces
         Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector);
         Task ApproveOfferAsync(int offerId, string directorId);
         Task RespondToOfferAsync(int offerId, RespondToOfferDto dto, string userId, bool isGuardian);
+        Task GuardianFinalizeOfferAsync(int offerId, string guardianUserId, bool accept);
         Task RescindOfferAsync(int offerId, RescindScholarshipRequest dto, string directorId);
         Task<ScholarshipBudgetDto> GetBudgetStatsAsync(int bandId);
         Task CheckExpirationsAsync(); // To be called by a background job

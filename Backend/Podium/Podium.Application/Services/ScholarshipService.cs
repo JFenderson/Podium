@@ -5,6 +5,7 @@ using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
+using SendGrid.Helpers.Mail;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -78,8 +79,26 @@ namespace Podium.Application.Services
                 throw new InvalidOperationException("This offer has expired.");
             }
 
-            offer.Status = dto.Accept ? ScholarshipStatus.Accepted : ScholarshipStatus.Declined;
+            if (dto.Accept)
+            {
+                // If responder is a Student (not guardian) and approval is required
+                if (!isGuardian && offer.RequiresGuardianApproval)
+                {
+                    offer.Status = ScholarshipStatus.PendingGuardianSignature;
+                }
+                else
+                {
+                    offer.Status = ScholarshipStatus.Accepted;
+                }
+            }
+            else
+            {
+                offer.Status = ScholarshipStatus.Declined;
+            }
+
             offer.ResponseDate = DateTime.UtcNow;
+
+
             if (isGuardian)
             {
                 offer.RespondedByGuardianUserId = userId;
@@ -95,6 +114,33 @@ namespace Podium.Application.Services
             _unitOfWork.ScholarshipOffers.Update(offer);
             await _unitOfWork.SaveChangesAsync();
             // TODO: Update Budget Committed Amount
+        }
+
+        public async Task GuardianFinalizeOfferAsync(int offerId, string guardianUserId, bool accept)
+        {
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
+            if (offer == null) throw new KeyNotFoundException("Offer not found");
+
+            // Can only finalize if it is pending signature
+            if (offer.Status != ScholarshipStatus.PendingGuardianSignature)
+                throw new InvalidOperationException($"Cannot finalize offer in status {offer.Status}. Expected PendingGuardianSignature.");
+
+            // Check expiration
+            if (DateTime.UtcNow > offer.ExpirationDate)
+            {
+                offer.Status = ScholarshipStatus.Expired;
+                await _unitOfWork.SaveChangesAsync();
+                throw new InvalidOperationException("This offer has expired.");
+            }
+
+            offer.Status = accept ? ScholarshipStatus.Accepted : ScholarshipStatus.Declined;
+
+            // Update Guardian Response Info
+            offer.RespondedByGuardianUserId = guardianUserId;
+            offer.RespondedByGuardian = true;
+            offer.ResponseDate = DateTime.UtcNow; // Update timestamp to finalization time
+
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task RescindOfferAsync(int offerId, RescindScholarshipRequest dto, string directorId)
