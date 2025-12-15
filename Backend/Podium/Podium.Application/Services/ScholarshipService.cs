@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Podium.Application.Services
@@ -40,6 +41,7 @@ namespace Podium.Application.Services
 
             // 3. Deduct from Budget (Optimistic Concurrency will protect this)
             band.ScholarshipBudget -= dto.ScholarshipAmount;
+            _unitOfWork.Bands.Update(band);
 
             var offer = new ScholarshipOffer
             {
@@ -54,7 +56,7 @@ namespace Podium.Application.Services
                 ExpirationDate = DateTime.UtcNow.AddDays(30) // Default 30 days
             };
 
-            _unitOfWork.ScholarshipOffers.AddAsync(offer);
+            await _unitOfWork.ScholarshipOffers.AddAsync(offer);
 
             try
             {
@@ -172,19 +174,49 @@ namespace Podium.Application.Services
 
         public async Task RescindOfferAsync(int offerId, RescindScholarshipRequest dto, string directorId)
         {
+            //Get Offer
             var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
             if (offer == null) throw new KeyNotFoundException();
 
-            // Can only rescind if it hasn't been finalized yet
+            // Validate Status
             if (offer.Status == ScholarshipStatus.Accepted || offer.Status == ScholarshipStatus.Declined)
                 throw new InvalidOperationException("Cannot rescind a finalized offer.");
 
+            // 3. Refund Budget (Since we deducted it upon Creation)
+            var band = await _unitOfWork.Bands.GetByIdAsync(offer.BandId);
+            if (band != null)
+            {
+                band.ScholarshipBudget += offer.ScholarshipAmount;
+                _unitOfWork.Bands.Update(band);
+            }
+
+            // 4. Update Offer
+            var previousStatus = offer.Status;
             offer.Status = ScholarshipStatus.Rescinded;
             offer.RescindedByUserId = directorId;
             offer.RescindReason = dto.Reason;
             offer.RescindedDate = DateTime.UtcNow;
+            _unitOfWork.ScholarshipOffers.Update(offer); ;
 
-            _unitOfWork.ScholarshipOffers.Update(offer);
+            // 5. Create Permanent Audit Record
+            var auditRecord = new AuditLog
+            {
+                ApplicationUserId = directorId,
+                ActionType = "RescindOffer",
+                Description = $"Director rescinded offer #{offerId}",
+                CreatedAt = DateTime.UtcNow,
+                MetadataJson = JsonSerializer.Serialize(new
+                {
+                    OfferId = offer.Id,
+                    DirectorId = directorId,
+                    Reason = dto.Reason,
+                    AmountReturned = offer.ScholarshipAmount,
+                    PreviousStatus = previousStatus.ToString()
+                })
+            };
+
+            await _unitOfWork.AuditLogs.AddAsync(auditRecord);
+
             await _unitOfWork.SaveChangesAsync();
         }
 
