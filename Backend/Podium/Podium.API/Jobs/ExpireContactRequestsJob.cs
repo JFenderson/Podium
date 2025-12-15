@@ -1,16 +1,17 @@
-﻿using Podium.Infrastructure.Data;
+﻿using Podium.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Podium.API.Jobs
 {
     public class ExpireContactRequestsJob
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExpireContactRequestsJob> _logger;
 
-        public ExpireContactRequestsJob(ApplicationDbContext context, ILogger<ExpireContactRequestsJob> logger)
+        public ExpireContactRequestsJob(IUnitOfWork unitOfWork, ILogger<ExpireContactRequestsJob> logger)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -18,10 +19,9 @@ namespace Podium.API.Jobs
         {
             _logger.LogInformation("Starting ExpireContactRequestsJob...");
 
-            // Threshold: 30 days ago
             var expirationThreshold = DateTime.UtcNow.AddDays(-30);
 
-            var expiredRequests = await _context.ContactRequests
+            var expiredRequests = await _unitOfWork.ContactRequests.GetQueryable()
                 .Where(r => r.Status == "Pending" && r.RequestedDate < expirationThreshold)
                 .ToListAsync();
 
@@ -30,11 +30,12 @@ namespace Podium.API.Jobs
                 request.Status = "Expired";
                 request.DeclineReason = "Auto-expired after 30 days of inactivity.";
                 request.ResponseDate = DateTime.UtcNow;
+                _unitOfWork.ContactRequests.Update(request);
             }
 
             if (expiredRequests.Any())
             {
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
                 _logger.LogInformation($"Expired {expiredRequests.Count} contact requests.");
             }
         }

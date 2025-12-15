@@ -3,30 +3,31 @@ using Podium.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Podium.Application.DTOs.Student;
-using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.BandStaff;
-using Podium.Application.DTOs.Rating;
 using Podium.Core.Entities;
 using Podium.Application.Authorization;
+using Podium.Core.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace Podium.API.Controllers
 {
-
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     public class BandStaffController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IPermissionService _permissionService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public BandStaffController(
-            ApplicationDbContext context,
-            IPermissionService permissionService)
+            IUnitOfWork unitOfWork,
+            IPermissionService permissionService,
+            UserManager<ApplicationUser> userManager)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _permissionService = permissionService;
+            _userManager = userManager;
         }
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<ActionResult<IEnumerable<BandStaffDto>>> GetAllStaff()
         {
-            var staff = await _context.BandStaff
+            var staff = await _unitOfWork.BandStaff.GetQueryable()
                 .Include(bs => bs.ApplicationUser)
                 .Select(bs => new BandStaffDto
                 {
@@ -69,7 +70,7 @@ namespace Podium.API.Controllers
                 return Unauthorized();
             }
 
-            var staff = await _context.BandStaff
+            var staff = await _unitOfWork.BandStaff.GetQueryable()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
             if (staff == null)
@@ -99,7 +100,7 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<IActionResult> UpdatePermissions(int id, [FromBody] BandStaffPermissionsDto dto)
         {
-            var staff = await _context.BandStaff.FindAsync(id);
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
             if (staff == null)
             {
                 return NotFound();
@@ -119,7 +120,8 @@ namespace Podium.API.Controllers
             staff.CanManageEvents = dto.CanManageEvents;
             staff.CanManageStaff = dto.CanManageStaff;
 
-            await _context.SaveChangesAsync();
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok(new { Message = "Permissions updated successfully" });
         }
@@ -131,7 +133,7 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<IActionResult> PromoteToDirector(int id)
         {
-            var staff = await _context.BandStaff.FindAsync(id);
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
             if (staff == null)
             {
                 return NotFound();
@@ -146,7 +148,8 @@ namespace Podium.API.Controllers
             // Optionally grant additional permissions when promoting
             staff.CanManageStaff = true;
 
-            await _context.SaveChangesAsync();
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok(new { Message = "Staff member promoted to Director" });
         }
@@ -158,15 +161,15 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<ActionResult<BandStaffDto>> CreateStaff([FromBody] CreateBandStaffDto dto)
         {
-            // Check if user already exists
-            var existingUser = await _context.Users.FindAsync(dto.ApplicationUserId);
+            // Check if user already exists (Using UserManager instead of Context)
+            var existingUser = await _userManager.FindByIdAsync(dto.ApplicationUserId);
             if (existingUser == null)
             {
                 return BadRequest("User not found");
             }
 
             // Check if staff profile already exists
-            var existingStaff = await _context.BandStaff
+            var existingStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == dto.ApplicationUserId);
             if (existingStaff != null)
             {
@@ -186,8 +189,8 @@ namespace Podium.API.Controllers
                 CanManageStaff = dto.CanManageStaff
             };
 
-            _context.BandStaff.Add(staff);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.BandStaff.AddAsync(staff);
+            await _unitOfWork.SaveChangesAsync();
 
             return CreatedAtAction(
                 nameof(GetMyInfo),
@@ -229,7 +232,7 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<IActionResult> RemoveStaff(int id)
         {
-            var staff = await _context.BandStaff.FindAsync(id);
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
             if (staff == null)
             {
                 return NotFound();
@@ -242,8 +245,8 @@ namespace Podium.API.Controllers
                 return BadRequest("You cannot remove yourself");
             }
 
-            _context.BandStaff.Remove(staff);
-            await _context.SaveChangesAsync();
+            _unitOfWork.BandStaff.Delete(staff);
+            await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
         }

@@ -1,18 +1,22 @@
-﻿using Podium.Infrastructure.Data;
+﻿using Podium.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Hangfire;
+using Microsoft.Extensions.Logging;
 
 namespace Podium.API.Jobs
 {
     public class ArchiveInactiveStudentsJob
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly ILogger<ArchiveInactiveStudentsJob> _logger;
 
-        public ArchiveInactiveStudentsJob(ApplicationDbContext context, IBackgroundJobClient backgroundJobClient, ILogger<ArchiveInactiveStudentsJob> logger)
+        public ArchiveInactiveStudentsJob(
+            IUnitOfWork unitOfWork,
+            IBackgroundJobClient backgroundJobClient,
+            ILogger<ArchiveInactiveStudentsJob> logger)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _backgroundJobClient = backgroundJobClient;
             _logger = logger;
         }
@@ -22,28 +26,25 @@ namespace Podium.API.Jobs
             _logger.LogInformation("Starting ArchiveInactiveStudentsJob...");
 
             var archiveThreshold = DateTime.UtcNow.AddMonths(-24);
-            var warningThreshold = DateTime.UtcNow.AddMonths(-23); // Send warning 1 month before
+            var warningThreshold = DateTime.UtcNow.AddMonths(-23);
 
-            // 1. Handle Archiving (Assuming an IsActive flag exists on User or similar logic)
-            // Since Student entity provided doesn't have IsActive, we check LastActivityDate
-            var studentsToArchive = await _context.Students
+            // 1. Handle Archiving
+            var studentsToArchive = await _unitOfWork.Students.GetQueryable()
                 .Include(s => s.ApplicationUser)
-                .Where(s => s.LastActivityDate < archiveThreshold) // && s.ApplicationUser.IsActive
+                .Where(s => s.LastActivityDate < archiveThreshold)
                 .ToListAsync();
 
             foreach (var student in studentsToArchive)
             {
-                // Logic to archive: e.g., set flag, move data, or lock account
-                // student.ApplicationUser.IsActive = false; // Example
                 _logger.LogInformation($"Archiving student {student.Id} due to inactivity.");
-
-                // Send final notification
                 _backgroundJobClient.Enqueue<SendEmailNotificationsJob>(job =>
                    job.ExecuteAsync(student.Email, "Account Archived", "Your account has been archived due to inactivity."));
+
+                // Logic to archive would go here (e.g. _unitOfWork.Students.Update(student))
             }
 
             // 2. Handle Warnings
-            var studentsToWarn = await _context.Students
+            var studentsToWarn = await _unitOfWork.Students.GetQueryable()
                 .Where(s => s.LastActivityDate < warningThreshold && s.LastActivityDate > archiveThreshold)
                 .ToListAsync();
 
@@ -53,7 +54,11 @@ namespace Podium.API.Jobs
                    job.ExecuteAsync(student.Email, "Action Required: Account Expiration", "Please log in to keep your account active."));
             }
 
-            await _context.SaveChangesAsync();
+            // Save any changes if students were modified
+            if (studentsToArchive.Any())
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
     }
 }
