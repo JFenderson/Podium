@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore; 
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.AuditLog;
 using Podium.Core.Entities;
-using Podium.Infrastructure.Data;
+using Podium.Core.Interfaces; // Updated to Core.Interfaces
 using Podium.Application.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -14,20 +14,15 @@ namespace Podium.Application.Services
 {
     public class AuditService : IAuditService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<AuditService> _logger;
 
-        public AuditService(ApplicationDbContext context, ILogger<AuditService> logger)
+        public AuditService(IUnitOfWork unitOfWork, ILogger<AuditService> logger)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
-        /// <summary>
-        /// Log a user action with optional metadata.
-        /// IMPORTANT: Runs asynchronously but doesn't block the main operation.
-        /// Uses fire-and-forget pattern for performance.
-        /// </summary>
         public async Task LogActionAsync(string userId, string actionType, string description, object? metadata = null)
         {
             var auditLog = new AuditLog
@@ -39,16 +34,12 @@ namespace Podium.Application.Services
                 MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
             };
 
-            _context.AuditLogs.Add(auditLog);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.AuditLogs.AddAsync(auditLog);
+            await _unitOfWork.SaveChangesAsync();
 
-            // Check for anomalous patterns
             await CheckForSecurityAnomaliesAsync(userId);
         }
 
-        /// <summary>
-        /// Log security-related events with optional metadata.
-        /// </summary>
         public async Task LogSecurityEventAsync(string userId, string actionType, string description, string severity = "Medium", object? metadata = null)
         {
             var auditLog = new AuditLog
@@ -62,23 +53,16 @@ namespace Podium.Application.Services
                 MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
             };
 
-            _context.AuditLogs.Add(auditLog);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.AuditLogs.AddAsync(auditLog);
+            await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogWarning(
-                "SECURITY EVENT: {ActionType} by {UserId} - {Description}",
-                actionType, userId, description);
+            _logger.LogWarning("SECURITY EVENT: {ActionType} by {UserId} - {Description}", actionType, userId, description);
         }
 
-        /// <summary>
-        /// Retrieve audit logs with filtering.
-        /// Used for compliance reporting and security investigations.
-        /// </summary>
         public async Task<List<AuditLogDto>> GetAuditLogsAsync(AuditLogFilterDto filters)
         {
-            var query = _context.AuditLogs.AsQueryable();
+            var query = _unitOfWork.AuditLogs.GetQueryable();
 
-            // Support both UserId and ApplicationUserId for backwards compatibility
             var userIdFilter = filters.ApplicationUserId ?? filters.UserId;
             if (!string.IsNullOrEmpty(userIdFilter))
                 query = query.Where(al => al.ApplicationUserId == userIdFilter);
@@ -95,21 +79,17 @@ namespace Podium.Application.Services
             if (filters.SecurityEventsOnly)
                 query = query.Where(al => al.IsSecurityEvent);
 
-            var totalCount = await query.CountAsync();
-
-            // Phase 1: Load raw data from database
             var rawLogs = await query
                 .OrderByDescending(al => al.CreatedAt)
                 .Skip((filters.Page - 1) * filters.PageSize)
                 .Take(filters.PageSize)
                 .ToListAsync();
 
-            // Phase 2: Map to DTOs in memory (where JsonSerializer works)
             var logs = rawLogs.Select(al => new AuditLogDto
             {
                 VideoId = al.Id,
                 ApplicationUserId = al.ApplicationUserId,
-                UserId = al.ApplicationUserId, // Alias
+                UserId = al.ApplicationUserId,
                 ActionType = al.ActionType,
                 Description = al.Description,
                 Timestamp = al.CreatedAt,
@@ -136,13 +116,9 @@ namespace Podium.Application.Services
             );
         }
 
-        /// <summary>
-        /// Check for anomalous security patterns that may indicate an attack.
-        /// Example: Multiple failed access attempts in short time period.
-        /// </summary>
         private async Task CheckForSecurityAnomaliesAsync(string userId)
         {
-            var recentAttempts = await _context.AuditLogs
+            var recentAttempts = await _unitOfWork.AuditLogs.GetQueryable()
                 .Where(al =>
                     al.ApplicationUserId == userId &&
                     al.ActionType == "UnauthorizedAccess" &&
@@ -151,11 +127,7 @@ namespace Podium.Application.Services
 
             if (recentAttempts >= 5)
             {
-                _logger.LogCritical(
-                    "SECURITY ALERT: User {UserId} has {AttemptCount} unauthorized access attempts in last 5 minutes",
-                    userId, recentAttempts);
-
-                // TODO: Trigger alert, temporarily lock account, notify security team
+                _logger.LogCritical("SECURITY ALERT: User {UserId} has {AttemptCount} unauthorized access attempts in last 5 minutes", userId, recentAttempts);
             }
         }
     }

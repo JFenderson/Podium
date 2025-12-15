@@ -1,18 +1,17 @@
-﻿using Humanizer;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Podium.Application.DTOs;
 using Podium.Application.DTOs.Auth;
+using Podium.Application.DTOs;
 using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
-using Podium.Infrastructure.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace Podium.Infrastructure.Services;
 
@@ -21,36 +20,28 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IConfiguration _configuration;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly ApplicationDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         IConfiguration configuration,
         RoleManager<IdentityRole> roleManager,
-        ApplicationDbContext context,
         IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _configuration = configuration;
         _roleManager = roleManager;
-        _context = context;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterDto dto)
     {
-        //Basic validation
         var existingUser = await _userManager.FindByEmailAsync(dto.Email);
         if (existingUser != null)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "Email already in use." }
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { "Email already in use." } };
         }
-        //Create user
+
         var user = new ApplicationUser
         {
             UserName = dto.Email,
@@ -62,28 +53,20 @@ public class AuthService : IAuthService
         };
 
         var result = await _userManager.CreateAsync(user, dto.Password);
-
         if (!result.Succeeded)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = result.Errors.Select(e => e.Description).ToList()
-            };
+            return new AuthResult { Success = false, Errors = result.Errors.Select(e => e.Description).ToList() };
         }
 
-        // Validate role exists (assumes "Student", "Guardian", "Recruiter", "Director" are seeded)
         if (await _roleManager.RoleExistsAsync(dto.Role))
         {
             await _userManager.AddToRoleAsync(user, dto.Role);
         }
         else
         {
-            // Fallback or Error
             await _userManager.AddToRoleAsync(user, Roles.Student);
         }
 
-        // 4. Create Role-Specific Profile
         try
         {
             switch (dto.Role)
@@ -100,7 +83,7 @@ public class AuthService : IAuthService
                         HighSchool = dto.HighSchool,
                         PhoneNumber = dto.PhoneNumber
                     };
-                    _context.Students.Add(student);
+                    await _unitOfWork.Students.AddAsync(student);
                     break;
 
                 case Roles.Guardian:
@@ -112,40 +95,32 @@ public class AuthService : IAuthService
                         Email = dto.Email,
                         PhoneNumber = dto.PhoneNumber,
                     };
-                    _context.Guardians.Add(guardian);
+                    await _unitOfWork.Guardians.AddAsync(guardian);
                     break;
 
                 case Roles.Recruiter:
                 case Roles.Director:
-                    if (!dto.BandId.HasValue)
-                        throw new Exception("Band selection is required for Staff.");
-
+                    if (!dto.BandId.HasValue) throw new Exception("Band selection is required for Staff.");
                     var staff = new BandStaff
                     {
                         ApplicationUserId = user.Id,
                         BandId = dto.BandId.Value,
                         Title = dto.StaffTitle ?? dto.Role,
                         IsActive = true,
-                        // Set default permissions based on role
                         CanViewStudents = true,
                         CanContact = true,
-                        CanSendOffers = dto.Role == Roles.Director // Only Directors send offers by default
+                        CanSendOffers = dto.Role == Roles.Director
                     };
-                    _context.BandStaff.Add(staff);
+                    await _unitOfWork.BandStaff.AddAsync(staff);
                     break;
             }
 
-
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
         catch (Exception ex)
         {
             await _userManager.DeleteAsync(user);
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { $"Failed to create profile: {ex.Message}" } // Changed from new[]
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { $"Failed to create profile: {ex.Message}" } };
         }
 
         return await GenerateAuthResultAsync(user);
@@ -154,32 +129,15 @@ public class AuthService : IAuthService
     public async Task<AuthResult> LoginAsync(LoginDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
-        if (user == null)
+        if (user == null || !user.IsActive)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "Invalid email or password" }
-            };
-        }
-
-        if (!user.IsActive)
-        {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "Account is inactive" }
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { "Invalid email or password" } };
         }
 
         var isPasswordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
         if (!isPasswordValid)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "Invalid email or password" }
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { "Invalid email or password" } };
         }
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -187,61 +145,46 @@ public class AuthService : IAuthService
 
         return await GenerateAuthResultAsync(user);
     }
-  
+
     public async Task<AuthResult> RefreshTokenAsync(RefreshTokenRequestDto dto)
     {
-        var storedToken = await _unitOfWork.RefreshTokens
+        var storedToken = await _unitOfWork.RefreshTokens.GetQueryable()
             .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
 
         if (storedToken == null || !storedToken.IsActive)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "Invalid or expired refresh token" }
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { "Invalid or expired refresh token" } };
         }
 
         var user = await _userManager.FindByIdAsync(storedToken.ApplicationUserId);
         if (user == null || !user.IsActive)
         {
-            return new AuthResult
-            {
-                Success = false,
-                Errors = new List<string> { "User not found or inactive" }
-            };
+            return new AuthResult { Success = false, Errors = new List<string> { "User not found or inactive" } };
         }
 
-        // Revoke old token
         storedToken.IsRevoked = true;
         storedToken.RevokedAt = DateTime.UtcNow;
         _unitOfWork.RefreshTokens.Update(storedToken);
 
-        // Generate new tokens
         var authResult = await GenerateAuthResultAsync(user);
-
-        // Link old token to new one
-        var newStoredToken = await _unitOfWork.RefreshTokens
+        var newStoredToken = await _unitOfWork.RefreshTokens.GetQueryable()
             .FirstOrDefaultAsync(rt => rt.Token == authResult.RefreshToken);
+
         if (newStoredToken != null)
         {
             storedToken.ReplacedByToken = newStoredToken.Token;
         }
 
         await _unitOfWork.SaveChangesAsync();
-
         return authResult;
     }
 
     public async Task<bool> RevokeTokenAsync(RefreshTokenRequestDto dto)
     {
-        var storedToken = await _unitOfWork.RefreshTokens
+        var storedToken = await _unitOfWork.RefreshTokens.GetQueryable()
             .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
 
-        if (storedToken == null || !storedToken.IsActive)
-        {
-            return false;
-        }
+        if (storedToken == null || !storedToken.IsActive) return false;
 
         storedToken.IsRevoked = true;
         storedToken.RevokedAt = DateTime.UtcNow;
@@ -261,7 +204,6 @@ public class AuthService : IAuthService
         var accessToken = await GenerateAccessToken(user);
         var refreshToken = GenerateRefreshToken();
 
-        // Store refresh token
         var refreshTokenEntity = new RefreshToken
         {
             Token = refreshToken,
@@ -287,25 +229,18 @@ public class AuthService : IAuthService
     private async Task<string> GenerateAccessToken(ApplicationUser user)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured"));
-
-        // ---------------------------------------------------------
-        // 1. FETCH ROLES (This is the critical missing piece)
-        // ---------------------------------------------------------
+        var key = Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? throw new InvalidOperationException("JWT Secret missing"));
         var userRoles = await _userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
-    {
-        new(ClaimTypes.NameIdentifier, user.Id),
-        new(ClaimTypes.Email, user.Email ?? string.Empty),
-        new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-        new(JwtRegisteredClaimNames.Sub, user.Email ?? string.Empty),
-        new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-    };
+        {
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(ClaimTypes.Email, user.Email ?? string.Empty),
+            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+            new(JwtRegisteredClaimNames.Sub, user.Email ?? string.Empty),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
 
-        // ---------------------------------------------------------
-        // 2. ADD ROLES TO CLAIMS
-        // ---------------------------------------------------------
         foreach (var role in userRoles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
@@ -314,27 +249,19 @@ public class AuthService : IAuthService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            // Ensure GetAccessTokenExpirationMinutes() is accessible or replace with double.Parse(_configuration["JWT:ExpirationMinutes"])
             Expires = DateTime.UtcNow.AddMinutes(GetAccessTokenExpirationMinutes()),
             Issuer = _configuration["JWT:Issuer"],
             Audience = _configuration["JWT:Audience"],
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
     }
 
     public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordDto dto)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            return false;
-        }
-
+        if (user == null) return false;
         var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
         return result.Succeeded;
     }
@@ -342,19 +269,8 @@ public class AuthService : IAuthService
     public async Task<bool> ResetPasswordAsync(ResetPasswordConfirmDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
-        if (user == null)
-        {
-            // Return true anyway to prevent email enumeration attacks
-            return true;
-        }
-
-        // Generate password reset token
+        if (user == null) return true;
         var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-        // TODO: Send email with reset token
-        // For now, just log it or store it somewhere
-        // In production, you'd send this via email service
-
         return true;
     }
 
@@ -365,8 +281,6 @@ public class AuthService : IAuthService
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
     }
-
-
 
     private int GetAccessTokenExpirationMinutes()
     {

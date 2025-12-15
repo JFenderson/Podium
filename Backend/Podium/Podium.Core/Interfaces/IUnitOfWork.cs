@@ -25,6 +25,11 @@ namespace Podium.Core.Interfaces
         IRepository<StudentInterest>? StudentInterests { get; }
         IRepository<StudentRating>? StudentRatings { get; }
         IRepository<StudentGuardian>? StudentGuardians { get; }
+
+        IRepository<ContactRequest> ContactRequests { get; }
+        IRepository<ContactLog> ContactLogs { get; }
+        IRepository<GuardianNotification> GuardianNotifications { get; }
+        IRepository<GuardianNotificationPreferences> GuardianNotificationPreferences { get; }
         /// <summary>
         /// Save all changes to the database
         /// </summary>

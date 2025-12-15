@@ -29,7 +29,10 @@ namespace Podium.Infrastructure.Data
         private IRepository<StudentInterest>? _studentInterests;
         private IRepository<StudentRating>? _studentRatings;
         private IRepository<StudentGuardian>? _studentGuardian;
-
+        private IRepository<ContactRequest>? _contactRequests;
+        private IRepository<ContactLog>? _contactLogs;
+        private IRepository<GuardianNotification>? _guardianNotifications;
+        private IRepository<GuardianNotificationPreferences>? _guardianNotificationPreferences;
 
         public UnitOfWork(ApplicationDbContext context)
         {
@@ -79,6 +82,11 @@ namespace Podium.Infrastructure.Data
 
         public IRepository<StudentGuardian> StudentGuardians =>
             _studentGuardian ??= new Repository<StudentGuardian>(_context);
+
+        public IRepository<ContactRequest> ContactRequests => _contactRequests ??= new Repository<ContactRequest>(_context);
+        public IRepository<ContactLog> ContactLogs => _contactLogs ??= new Repository<ContactLog>(_context);
+        public IRepository<GuardianNotification> GuardianNotifications => _guardianNotifications ??= new Repository<GuardianNotification>(_context);
+        public IRepository<GuardianNotificationPreferences> GuardianNotificationPreferences => _guardianNotificationPreferences ??= new Repository<GuardianNotificationPreferences>(_context);
 
         // Ensure proper disposal and transaction handling
         public async Task<int> SaveChangesAsync()
