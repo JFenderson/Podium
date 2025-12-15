@@ -124,7 +124,7 @@ namespace Podium.Application.Authorization
             }
 
             return await _context.Students
-                .AnyAsync(s => s.StudentId == studentId && s.ApplicationUserId == userId);
+                .AnyAsync(s => s.Id == studentId && s.ApplicationUserId == userId);
         }
 
         /// <summary>
@@ -148,7 +148,7 @@ namespace Podium.Application.Authorization
                 .Include(g => g.Students)
                 .FirstOrDefaultAsync(g => g.ApplicationUserId == userId);
 
-            return guardian?.Students?.Any(s => s.StudentId == studentId) == true;
+            return guardian?.Students?.Any(s => s.Id == studentId) == true;
         }
 
         /// <summary>

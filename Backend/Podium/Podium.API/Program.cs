@@ -350,15 +350,17 @@ using (var scope = app.Services.CreateScope())
 app.MapHub<NotificationHub>("/notificationHub");
 
 // --- SEEDING CALL HERE ---
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        await DataSeeder.SeedDataAsync(scope.ServiceProvider);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // FIX: Pass the 3 arguments individually
+        await DataSeeder.SeedDataAsync(userManager, roleManager, context);
     }
 }
 
@@ -392,3 +394,4 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
+public partial class Program { }

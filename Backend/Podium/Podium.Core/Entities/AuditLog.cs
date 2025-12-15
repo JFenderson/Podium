@@ -8,13 +8,11 @@ using System.Threading.Tasks;
 
 namespace Podium.Core.Entities
 {
-    public class AuditLog
+    public class AuditLog : BaseEntity
     {
-        public int AuditLogId { get; set; }
 
-        [Required]
         [MaxLength(450)]
-        public string ApplicationUserId { get; set; } = string.Empty;
+        public string? ApplicationUserId { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(100)]
@@ -24,7 +22,6 @@ namespace Podium.Core.Entities
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
 
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
         [MaxLength(50)]
         public string? IpAddress { get; set; }
@@ -39,5 +36,8 @@ namespace Podium.Core.Entities
 
         [Column(TypeName = "nvarchar(max)")]
         public string? MetadataJson { get; set; }
+
+        [ForeignKey(nameof(ApplicationUserId))]
+        public virtual ApplicationUser? ApplicationUser { get; set; }
     }
 }

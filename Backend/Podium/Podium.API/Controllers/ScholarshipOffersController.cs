@@ -43,7 +43,7 @@ namespace Podium.API.Controllers
             // 1. Verify student exists
             var student = await _context.Students
                 .Include(s => s.ApplicationUser)
-                .FirstOrDefaultAsync(s => s.StudentId == dto.StudentId);
+                .FirstOrDefaultAsync(s => s.Id == dto.StudentId);
 
             if (student == null) return NotFound("Student not found");
 
@@ -83,7 +83,7 @@ namespace Podium.API.Controllers
                     "ScholarshipOffer",
                     "You Received an Offer!",
                     $"You have received a {dto.OfferType} offer of ${dto.ScholarshipAmount:N0}!",
-                    offer.OfferId.ToString()
+                    offer.Id.ToString()
                 );
             }
 
@@ -108,7 +108,7 @@ namespace Podium.API.Controllers
             // 2. Notify Guardians (Optional: Check preferences first if implemented)
             // Assuming IGuardianService has a method to get Guardian UserIds
             // If not, you can implement a helper here using _context.StudentGuardians
-            var guardianUserIds = await _guardianService.GetGuardianUserIdsForStudentAsync(student.StudentId);
+            var guardianUserIds = await _guardianService.GetGuardianUserIdsForStudentAsync(student.Id);
 
             foreach (var guardianId in guardianUserIds)
             {
@@ -117,7 +117,7 @@ namespace Podium.API.Controllers
                     "ScholarshipOffer",
                     "New Offer for your Student",
                     $"{student.FirstName} has received a scholarship offer.",
-                    offer.OfferId.ToString()
+                    offer.Id.ToString()
                 );
             }
 
@@ -137,7 +137,7 @@ namespace Podium.API.Controllers
             var offer = await _context.Offers
                 .Include(o => o.Student) // Include for names in notification
                 .Include(o => o.Band)    // Include for BandId
-                .FirstOrDefaultAsync(o => o.OfferId == id);
+                .FirstOrDefaultAsync(o => o.Id == id);
 
             if (offer == null) return NotFound();
 
@@ -166,7 +166,7 @@ namespace Podium.API.Controllers
                     "OfferUpdate",
                     $"Offer {dto.Status}",
                     $"{studentName} has {dto.Status.ToLower()} the scholarship offer.",
-                    offer.OfferId.ToString()
+                    offer.Id.ToString()
                 );
             }
 
@@ -211,7 +211,7 @@ namespace Podium.API.Controllers
             if (role == "Student")
             {
                 var student = await _context.Students
-                    .FirstOrDefaultAsync(s => s.ApplicationUserId == userIdClaim && s.StudentId == offer.StudentId);
+                    .FirstOrDefaultAsync(s => s.ApplicationUserId == userIdClaim && s.Id == offer.StudentId);
 
                 if (student == null)
                 {
@@ -312,10 +312,10 @@ namespace Podium.API.Controllers
             }
 
             var offers = await _context.Offers
-                .Where(o => o.StudentId == student.StudentId)
+                .Where(o => o.StudentId == student.Id)
                 .Select(o => new ScholarshipOfferDto
                 {
-                    OfferId = o.OfferId,
+                    OfferId = o.Id,
                     StudentId = o.StudentId,
                     OfferType = o.OfferType,
                     ScholarshipAmount = o.ScholarshipAmount,
@@ -339,7 +339,7 @@ namespace Podium.API.Controllers
                 .Where(o => o.OfferType == "Scholarship" && o.Status == ScholarshipStatus.Pending)
                 .Select(o => new ScholarshipOfferDto
                 {
-                    OfferId = o.OfferId,
+                    OfferId = o.Id,
                     StudentId = o.StudentId,
                     OfferType = o.OfferType,
                     ScholarshipAmount = o.ScholarshipAmount,

@@ -47,7 +47,7 @@ public class AuthController : ControllerBase
     {
         var bands = await _context.Bands
             .Where(b => b.IsActive)
-            .Select(b => new { b.BandId, b.BandName, b.State })
+            .Select(b => new { b.Id, b.BandName, b.State })
             .ToListAsync();
 
         var roles = new[] { "Student", "Guardian", "Recruiter", "Director" };

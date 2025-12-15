@@ -81,11 +81,11 @@ namespace Podium.API.Controllers
 
             var video = await _videoService.CreateVideoAsync(userId, request);
 
-            return CreatedAtAction(nameof(GetVideo), new { id = video.VideoId }, new VideoResponse
+            return CreatedAtAction(nameof(GetVideo), new { id = video.Id }, new VideoResponse
             {
-                VideoId = video.VideoId,
+                VideoId = video.Id,
                 Title = video.Title,
-                VideoUrl = await _storageService.GetVideoUrlAsync(video.VideoUrl) // Return a viewable link immediately
+                VideoUrl = await _storageService.GetVideoUrlAsync(video.Url) // Return a viewable link immediately
             });
         }
 

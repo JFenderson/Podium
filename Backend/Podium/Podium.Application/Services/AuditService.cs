@@ -35,7 +35,7 @@ namespace Podium.Application.Services
                 ApplicationUserId = userId,
                 ActionType = actionType,
                 Description = description,
-                Timestamp = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
                 MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
             };
 
@@ -56,7 +56,7 @@ namespace Podium.Application.Services
                 ApplicationUserId = userId,
                 ActionType = actionType,
                 Description = description,
-                Timestamp = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
                 IsSecurityEvent = true,
                 Severity = severity,
                 MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null
@@ -87,10 +87,10 @@ namespace Podium.Application.Services
                 query = query.Where(al => al.ActionType == filters.ActionType);
 
             if (filters.StartDate.HasValue)
-                query = query.Where(al => al.Timestamp >= filters.StartDate.Value);
+                query = query.Where(al => al.CreatedAt >= filters.StartDate.Value);
 
             if (filters.EndDate.HasValue)
-                query = query.Where(al => al.Timestamp <= filters.EndDate.Value);
+                query = query.Where(al => al.CreatedAt <= filters.EndDate.Value);
 
             if (filters.SecurityEventsOnly)
                 query = query.Where(al => al.IsSecurityEvent);
@@ -99,7 +99,7 @@ namespace Podium.Application.Services
 
             // Phase 1: Load raw data from database
             var rawLogs = await query
-                .OrderByDescending(al => al.Timestamp)
+                .OrderByDescending(al => al.CreatedAt)
                 .Skip((filters.Page - 1) * filters.PageSize)
                 .Take(filters.PageSize)
                 .ToListAsync();
@@ -107,12 +107,12 @@ namespace Podium.Application.Services
             // Phase 2: Map to DTOs in memory (where JsonSerializer works)
             var logs = rawLogs.Select(al => new AuditLogDto
             {
-                VideoId = al.AuditLogId,
+                VideoId = al.Id,
                 ApplicationUserId = al.ApplicationUserId,
                 UserId = al.ApplicationUserId, // Alias
                 ActionType = al.ActionType,
                 Description = al.Description,
-                Timestamp = al.Timestamp,
+                Timestamp = al.CreatedAt,
                 IpAddress = al.IpAddress,
                 UserAgent = al.UserAgent,
                 IsSecurityEvent = al.IsSecurityEvent,
@@ -146,7 +146,7 @@ namespace Podium.Application.Services
                 .Where(al =>
                     al.ApplicationUserId == userId &&
                     al.ActionType == "UnauthorizedAccess" &&
-                    al.Timestamp >= DateTime.UtcNow.AddMinutes(-5))
+                    al.CreatedAt >= DateTime.UtcNow.AddMinutes(-5))
                 .CountAsync();
 
             if (recentAttempts >= 5)

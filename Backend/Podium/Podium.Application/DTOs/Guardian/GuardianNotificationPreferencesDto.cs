@@ -35,7 +35,7 @@ namespace Podium.Application.DTOs.Guardian
         // Per-student customization (overrides)
         public Dictionary<int, StudentNotificationOverrideDto>? StudentOverrides { get; set; }
 
-        public DateTime LastUpdated { get; set; }
+        public DateTime? LastUpdated { get; set; }
     }
 
 }

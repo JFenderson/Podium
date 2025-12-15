@@ -1,4 +1,5 @@
 ﻿using Podium.Application.DTOs.Guardian;
+using Podium.Application.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -17,9 +18,11 @@ namespace Podium.Application.Interfaces
         Task<List<GuardianScholarshipDto>> GetScholarshipsAsync(string guardianUserId, int? studentId, string? status);
         Task<bool> CanRespondToScholarshipAsync(string guardianUserId, int offerId);
         Task<GuardianScholarshipDto> RespondToScholarshipAsync(int offerId, string guardianUserId, string response, string? notes);
-        Task<NotificationListDto> GetNotificationsAsync(string guardianUserId, NotificationFilterDto filters);
-        Task<GuardianNotificationPreferencesDto> UpdateNotificationPreferencesAsync(string guardianUserId, UpdatePreferencesRequest request);
-        Task<GuardianDashboardDto> GetDashboardAsync(string guardianUserId);
         Task<List<string>> GetGuardianUserIdsForStudentAsync(int studentId);
+
+        Task<ServiceResult<NotificationListDto>> GetNotificationsAsync(string guardianUserId, NotificationFilterDto filters);
+
+        Task<ServiceResult<GuardianDashboardDto>> GetDashboardAsync();
+        Task<ServiceResult<GuardianNotificationPreferencesDto>> UpdateNotificationPreferencesAsync(UpdatePreferencesRequest request);
     }
 }

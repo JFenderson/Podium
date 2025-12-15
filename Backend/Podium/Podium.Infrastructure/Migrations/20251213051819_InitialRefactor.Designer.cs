@@ -12,8 +12,8 @@ using Podium.Infrastructure.Data;
 namespace Podium.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251210181132_UpdateBandEntity")]
-    partial class UpdateBandEntity
+    [Migration("20251213051819_InitialRefactor")]
+    partial class InitialRefactor
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -244,11 +244,11 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.AuditLog", b =>
                 {
-                    b.Property<int>("AuditLogId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditLogId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ActionType")
                         .IsRequired()
@@ -256,9 +256,11 @@ namespace Podium.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ApplicationUserId")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -268,6 +270,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<string>("IpAddress")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsSecurityEvent")
                         .HasColumnType("bit");
@@ -279,33 +284,32 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime>("Timestamp")
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.HasKey("AuditLogId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.HasIndex("Timestamp");
+                    b.HasIndex("CreatedAt");
 
                     b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.Band", b =>
                 {
-                    b.Property<int>("BandId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BandId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Achievements")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BandName")
                         .IsRequired()
@@ -313,37 +317,39 @@ namespace Podium.Infrastructure.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DirectorApplicationUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("ScholarshipBudget")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("State")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("UniversityName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.HasKey("BandId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("DirectorApplicationUserId");
 
@@ -352,11 +358,11 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.BandEvent", b =>
                 {
-                    b.Property<int>("BandEventId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BandEventId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
                         .HasColumnType("int");
@@ -364,7 +370,7 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int?>("CapacityLimit")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
@@ -390,6 +396,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsRegistrationOpen")
                         .HasColumnType("bit");
 
@@ -407,7 +416,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<DateTime?>("RegistrationDeadline")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("BandEventId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("BandId");
 
@@ -416,15 +428,14 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.BandStaff", b =>
                 {
-                    b.Property<int>("BandStaffId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BandStaffId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ApplicationUserId")
                         .IsRequired()
-                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("BandId")
@@ -474,18 +485,17 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime?>("DeactivatedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDirector")
@@ -499,15 +509,11 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ModifiedBy")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -515,14 +521,12 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("SuccessfulPlacements")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TotalContactsInitiated")
@@ -534,7 +538,7 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("BandStaffId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
 
@@ -549,22 +553,25 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.ContactLog", b =>
                 {
-                    b.Property<int>("ContactLogId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ContactLogId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("ContactDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("ContactMethod")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -580,7 +587,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.HasKey("ContactLogId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("BandId");
 
@@ -593,18 +603,24 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.ContactRequest", b =>
                 {
-                    b.Property<int>("ContactRequestId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ContactRequestId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("DeclineReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsUrgent")
                         .HasColumnType("bit");
@@ -644,7 +660,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.HasKey("ContactRequestId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("BandId");
 
@@ -657,33 +676,40 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.EventRegistration", b =>
                 {
-                    b.Property<int>("EventRegistrationId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EventRegistrationId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BandEventId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("DidAttend")
                         .HasColumnType("bit");
 
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTime>("RegisteredDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.HasKey("EventRegistrationId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.HasIndex("EventId");
+                    b.HasKey("Id");
 
-                    b.HasIndex("StudentId", "EventId")
+                    b.HasIndex("BandEventId", "StudentId")
+                        .IsUnique();
+
+                    b.HasIndex("StudentId", "BandEventId")
                         .IsUnique();
 
                     b.ToTable("EventRegistrations");
@@ -691,15 +717,18 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.Guardian", b =>
                 {
-                    b.Property<int>("GuardianId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GuardianId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ApplicationUserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -714,6 +743,9 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -726,7 +758,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("SmsNotificationsEnabled")
                         .HasColumnType("bit");
 
-                    b.HasKey("GuardianId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
 
@@ -735,23 +770,24 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.GuardianNotification", b =>
                 {
-                    b.Property<int>("GuardianNotificationId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GuardianNotificationId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ActionUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("GuardianApplicationUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("GuardianId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
@@ -780,7 +816,12 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.HasKey("GuardianNotificationId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GuardianId");
 
                     b.HasIndex("StudentId");
 
@@ -789,13 +830,13 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.GuardianNotificationPreferences", b =>
                 {
-                    b.Property<int>("GuardianNotificationPreferencesId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GuardianNotificationPreferencesId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<TimeSpan?>("DailyDigestTime")
@@ -809,12 +850,13 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("EmailEnabled")
                         .HasColumnType("bit");
 
-                    b.Property<string>("GuardianUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("GuardianId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("InAppEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsUnsubscribed")
@@ -880,12 +922,15 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<DateTime?>("UnsubscribedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int?>("WeeklyDigestDay")
                         .HasColumnType("int");
 
-                    b.HasKey("GuardianNotificationPreferencesId");
+                    b.HasKey("Id");
 
-                    b.HasIndex(new[] { "GuardianUserId" }, "IX_GuardianNotificationPreferences_Guardian")
+                    b.HasIndex(new[] { "GuardianId" }, "IX_GuardianNotificationPreferences_Guardian")
                         .IsUnique();
 
                     b.ToTable("GuardianNotificationPreferences");
@@ -901,6 +946,9 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
@@ -923,44 +971,57 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.ProfileView", b =>
                 {
-                    b.Property<int>("ProfileViewId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProfileViewId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ViewedByApplicationUserId")
-                        .IsRequired()
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ViewerUserId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<DateTime>("ViewedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ProfileViewId");
+                    b.HasKey("Id");
 
                     b.HasIndex("BandId");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("ViewerUserId");
+
+                    b.HasIndex("StudentId", "ViewedAt");
 
                     b.ToTable("ProfileViews");
                 });
@@ -975,9 +1036,6 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<string>("ApplicationUserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ApplicationUserId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1003,11 +1061,12 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("ApplicationUserId1");
 
                     b.HasIndex("Token")
                         .IsUnique();
@@ -1017,11 +1076,11 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.ScholarshipOffer", b =>
                 {
-                    b.Property<int>("OfferId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OfferId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("ApprovedAt")
                         .HasColumnType("datetime2");
@@ -1049,6 +1108,9 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("OfferType")
                         .IsRequired()
@@ -1096,7 +1158,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<string>("Terms")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("OfferId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("ApprovedByUserId");
 
@@ -1111,11 +1176,11 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.Student", b =>
                 {
-                    b.Property<int>("StudentId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StudentId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Achievements")
                         .HasColumnType("nvarchar(max)");
@@ -1127,6 +1192,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<string>("Bio")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -1153,6 +1221,9 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<string>("IntendedMajor")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastActivityDate")
                         .HasColumnType("datetime2");
@@ -1182,14 +1253,23 @@ namespace Podium.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("State")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("YearsExperience")
                         .HasColumnType("int");
 
-                    b.HasKey("StudentId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("GraduationYear");
+
+                    b.HasIndex("Instrument");
+
+                    b.HasIndex("State", "Instrument");
 
                     b.ToTable("Students");
                 });
@@ -1217,15 +1297,12 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("CanViewProfile")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("GuardianId1")
-                        .HasColumnType("int");
 
                     b.Property<string>("GuardianUserId")
                         .HasColumnType("nvarchar(max)");
@@ -1234,6 +1311,9 @@ namespace Podium.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsVerified")
@@ -1261,6 +1341,12 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("StudentId1")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("VerificationMetadata")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1278,7 +1364,7 @@ namespace Podium.Infrastructure.Migrations
 
                     b.HasKey("StudentId", "GuardianId");
 
-                    b.HasIndex("GuardianId1");
+                    b.HasIndex("StudentId1");
 
                     b.HasIndex("StudentId", "GuardianId")
                         .IsUnique()
@@ -1294,17 +1380,23 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.StudentInterest", b =>
                 {
-                    b.Property<int>("StudentInterestId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StudentInterestId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("InterestedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsInterested")
                         .HasColumnType("bit");
@@ -1316,7 +1408,10 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.HasKey("StudentInterestId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
 
                     b.HasIndex("BandId");
 
@@ -1328,13 +1423,13 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.StudentRating", b =>
                 {
-                    b.Property<int>("StudentRatingId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StudentRatingId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BandStaffUserId")
+                    b.Property<int>("BandStaffId")
                         .HasColumnType("int");
 
                     b.Property<string>("Comments")
@@ -1343,60 +1438,57 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.HasKey("StudentRatingId");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BandStaffId");
+
+                    b.HasIndex("StudentId");
 
                     b.ToTable("StudentRatings");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.Video", b =>
                 {
-                    b.Property<int>("VideoId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VideoId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal?>("AverageRating")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<decimal>("AverageRating")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(3,2)")
+                        .HasDefaultValue(0m);
 
-                    b.Property<string>("BlobStoragePath")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("CompletedAt")
+                    b.Property<DateTime>("CompletedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int?>("DurationSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<long>("FileSizeBytes")
-                        .HasColumnType("bigint");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Instrument")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsPublic")
@@ -1405,24 +1497,11 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("IsReviewed")
                         .HasColumnType("bit");
 
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("RatingCount")
-                        .HasColumnType("int");
-
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ThumbnailPath")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("ThumbnailUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1430,29 +1509,24 @@ namespace Podium.Infrastructure.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("TranscodingError")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TranscodingStatus")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("UploadedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("VideoUrl")
+                    b.Property<string>("Url")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ViewCount")
                         .HasColumnType("int");
 
-                    b.HasKey("VideoId");
+                    b.HasKey("Id");
 
                     b.HasIndex("StudentId");
 
@@ -1477,6 +1551,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
@@ -1486,16 +1563,11 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int>("VideoId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("VideoId1")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BandStaffId");
 
                     b.HasIndex("VideoId");
-
-                    b.HasIndex("VideoId1");
 
                     b.ToTable("VideoRatings");
                 });
@@ -1551,13 +1623,22 @@ namespace Podium.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Podium.Core.Entities.AuditLog", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ApplicationUser");
+                });
+
             modelBuilder.Entity("Podium.Core.Entities.Band", b =>
                 {
                     b.HasOne("Podium.Core.Entities.ApplicationUser", "Director")
                         .WithMany()
                         .HasForeignKey("DirectorApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Director");
                 });
@@ -1648,9 +1729,9 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.EventRegistration", b =>
                 {
-                    b.HasOne("Podium.Core.Entities.BandEvent", "Event")
+                    b.HasOne("Podium.Core.Entities.BandEvent", "BandEvent")
                         .WithMany("Registrations")
-                        .HasForeignKey("EventId")
+                        .HasForeignKey("BandEventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1660,7 +1741,7 @@ namespace Podium.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Event");
+                    b.Navigation("BandEvent");
 
                     b.Navigation("Student");
                 });
@@ -1678,11 +1759,30 @@ namespace Podium.Infrastructure.Migrations
 
             modelBuilder.Entity("Podium.Core.Entities.GuardianNotification", b =>
                 {
+                    b.HasOne("Podium.Core.Entities.Guardian", "Guardian")
+                        .WithMany()
+                        .HasForeignKey("GuardianId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Podium.Core.Entities.Student", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId");
 
+                    b.Navigation("Guardian");
+
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Podium.Core.Entities.GuardianNotificationPreferences", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.Guardian", "Guardian")
+                        .WithMany()
+                        .HasForeignKey("GuardianId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Guardian");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.Notification", b =>
@@ -1710,22 +1810,25 @@ namespace Podium.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Podium.Core.Entities.ApplicationUser", "ViewerUser")
+                        .WithMany()
+                        .HasForeignKey("ViewerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Band");
 
                     b.Navigation("Student");
+
+                    b.Navigation("ViewerUser");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.RefreshToken", b =>
                 {
                     b.HasOne("Podium.Core.Entities.ApplicationUser", "ApplicationUser")
-                        .WithMany()
+                        .WithMany("RefreshTokens")
                         .HasForeignKey("ApplicationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Podium.Core.Entities.ApplicationUser", null)
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("ApplicationUserId1");
 
                     b.Navigation("ApplicationUser");
                 });
@@ -1776,20 +1879,20 @@ namespace Podium.Infrastructure.Migrations
             modelBuilder.Entity("Podium.Core.Entities.StudentGuardian", b =>
                 {
                     b.HasOne("Podium.Core.Entities.Guardian", "Guardian")
-                        .WithMany()
+                        .WithMany("StudentLinks")
                         .HasForeignKey("GuardianId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Podium.Core.Entities.Guardian", null)
-                        .WithMany("StudentLinks")
-                        .HasForeignKey("GuardianId1");
 
                     b.HasOne("Podium.Core.Entities.Student", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Podium.Core.Entities.Student", null)
+                        .WithMany("StudentGuardianLinks")
+                        .HasForeignKey("StudentId1");
 
                     b.Navigation("Guardian");
 
@@ -1799,7 +1902,7 @@ namespace Podium.Infrastructure.Migrations
             modelBuilder.Entity("Podium.Core.Entities.StudentInterest", b =>
                 {
                     b.HasOne("Podium.Core.Entities.Band", "Band")
-                        .WithMany("StudentInterests")
+                        .WithMany()
                         .HasForeignKey("BandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1811,6 +1914,25 @@ namespace Podium.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Band");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Podium.Core.Entities.StudentRating", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.BandStaff", "BandStaff")
+                        .WithMany()
+                        .HasForeignKey("BandStaffId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Podium.Core.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BandStaff");
 
                     b.Navigation("Student");
                 });
@@ -1835,14 +1957,10 @@ namespace Podium.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("Podium.Core.Entities.Video", "Video")
-                        .WithMany()
+                        .WithMany("Ratings")
                         .HasForeignKey("VideoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Podium.Core.Entities.Video", null)
-                        .WithMany("Ratings")
-                        .HasForeignKey("VideoId1");
 
                     b.Navigation("BandStaff");
 
@@ -1861,8 +1979,6 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("Offers");
 
                     b.Navigation("Staff");
-
-                    b.Navigation("StudentInterests");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.BandEvent", b =>
@@ -1891,6 +2007,8 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("EventRegistrations");
 
                     b.Navigation("ScholarshipOffers");
+
+                    b.Navigation("StudentGuardianLinks");
 
                     b.Navigation("StudentInterests");
 

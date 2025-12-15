@@ -134,7 +134,7 @@ namespace Podium.Application.Services
         private static ScholarshipOfferDto MapToDto(ScholarshipOffer offer) => new ScholarshipOfferDto
         {
 
-            OfferId = offer.OfferId,
+            OfferId = offer.Id,
             StudentId = offer.StudentId,
             // Fix: Convert Enum to String for DTO
             Status = offer.Status,
@@ -158,7 +158,7 @@ namespace Podium.Application.Services
 
             // 2. Start the Query
             var query = _context.Offers
-                .Where(so => so.BandId == band.BandId)
+                .Where(so => so.BandId == band.Id)
                 .AsQueryable();
 
             // 3. Apply Filters
@@ -211,7 +211,7 @@ namespace Podium.Application.Services
                 .Take(filters.PageSize)
                 .Select(so => new ScholarshipOfferDto
                 {
-                    OfferId = so.OfferId,
+                    OfferId = so.Id,
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,

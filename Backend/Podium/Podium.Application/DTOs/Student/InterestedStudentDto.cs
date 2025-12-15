@@ -18,7 +18,7 @@ namespace Podium.Application.DTOs.Student
         public string? Phone { get; set; }
         public string PrimaryInstrument { get; set; } = string.Empty;
         public string SkillLevel { get; set; } = string.Empty;
-        public int GraduationYear { get; set; }
+        public int? GraduationYear { get; set; }
         public string HighSchool { get; set; } = string.Empty;
         public string State { get; set; } = string.Empty;
         public DateTime InterestedDate { get; set; }

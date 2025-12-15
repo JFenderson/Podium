@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Podium.Infrastructure", "Po
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Podium.Application", "Podium.Application\Podium.Application.csproj", "{A241F6EF-7A8B-4E9C-9F2B-72B324CBEDBA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Podium.Tests", "Podium.Tests\Podium.Tests.csproj", "{0B0B3560-E886-4191-A2A9-1679D34BA71E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{A241F6EF-7A8B-4E9C-9F2B-72B324CBEDBA}.Release|x64.Build.0 = Release|Any CPU
 		{A241F6EF-7A8B-4E9C-9F2B-72B324CBEDBA}.Release|x86.ActiveCfg = Release|Any CPU
 		{A241F6EF-7A8B-4E9C-9F2B-72B324CBEDBA}.Release|x86.Build.0 = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|x64.Build.0 = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Debug|x86.Build.0 = Debug|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|x64.ActiveCfg = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|x64.Build.0 = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|x86.ActiveCfg = Release|Any CPU
+		{0B0B3560-E886-4191-A2A9-1679D34BA71E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

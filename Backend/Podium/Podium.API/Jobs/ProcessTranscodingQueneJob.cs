@@ -21,7 +21,7 @@ namespace Podium.API.Jobs
         {
             var pendingVideos = await _context.Videos
                 .Where(v => v.TranscodingStatus == "Pending")
-                .OrderBy(v => v.UploadedDate)
+                .OrderBy(v => v.CreatedAt)
                 .Take(5) // Process in batches
                 .ToListAsync();
 

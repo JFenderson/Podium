@@ -6,10 +6,9 @@ namespace Podium.Core.Entities
     /// <summary>
     /// Logs actual contact made with a student (after approval).
     /// </summary>
-    public class ContactLog
+    public class ContactLog : BaseEntity
     {
-        [Key]
-        public int ContactLogId { get; set; }
+       
 
         [Required]
         public int StudentId { get; set; }
@@ -20,7 +19,6 @@ namespace Podium.Core.Entities
         [Required]
         public int RecruiterStaffId { get; set; }
 
-        public DateTime ContactDate { get; set; } = DateTime.UtcNow;
 
         [Required]
         [MaxLength(50)]

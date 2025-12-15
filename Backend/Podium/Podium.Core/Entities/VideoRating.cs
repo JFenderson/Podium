@@ -6,10 +6,9 @@ namespace Podium.Core.Entities
     /// <summary>
     /// Represents a recruiter's rating of a student video
     /// </summary>
-    public class VideoRating
+    public class VideoRating : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
+
 
         [Required]
         public int VideoId { get; set; }
@@ -33,8 +32,6 @@ namespace Podium.Core.Entities
         [MaxLength(500)]
         public string? Comment { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public DateTime? UpdatedAt { get; set; }
     }
 }

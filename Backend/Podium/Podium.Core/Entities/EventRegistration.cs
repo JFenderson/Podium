@@ -7,19 +7,17 @@ namespace Podium.Core.Entities
     /// <summary>
     /// Represents a student's registration for a band event.
     /// </summary>
-    [Index(nameof(StudentId), nameof(EventId), IsUnique = true)]
-    public class EventRegistration
+    [Index(nameof(StudentId), nameof(BandEventId), IsUnique = true)]
+    public class EventRegistration : BaseEntity
     {
-        [Key]
-        public int EventRegistrationId { get; set; }
+        
 
         [Required]
         public int StudentId { get; set; }
 
         [Required]
-        public int EventId { get; set; }
+        public int BandEventId { get; set; }
 
-        public DateTime RegisteredDate { get; set; } = DateTime.UtcNow;
 
         public bool DidAttend { get; set; } = false;
 
@@ -30,7 +28,7 @@ namespace Podium.Core.Entities
         [ForeignKey(nameof(StudentId))]
         public virtual Student Student { get; set; } = null!;
 
-        [ForeignKey(nameof(EventId))]
-        public virtual BandEvent Event { get; set; } = null!;
+        [ForeignKey(nameof(BandEventId))]
+        public virtual BandEvent BandEvent { get; set; } = null!;
     }
 }

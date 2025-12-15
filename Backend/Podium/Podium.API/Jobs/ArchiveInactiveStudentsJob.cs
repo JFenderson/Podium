@@ -35,7 +35,7 @@ namespace Podium.API.Jobs
             {
                 // Logic to archive: e.g., set flag, move data, or lock account
                 // student.ApplicationUser.IsActive = false; // Example
-                _logger.LogInformation($"Archiving student {student.StudentId} due to inactivity.");
+                _logger.LogInformation($"Archiving student {student.Id} due to inactivity.");
 
                 // Send final notification
                 _backgroundJobClient.Enqueue<SendEmailNotificationsJob>(job =>

@@ -19,7 +19,7 @@ namespace Podium.API.Jobs
 
             // ExecuteDeleteAsync is efficient for bulk deletes in EF Core 7+
             var deletedCount = await _context.AuditLogs
-                .Where(x => x.Timestamp < cutoffDate)
+                .Where(x => x.CreatedAt < cutoffDate)
                 .ExecuteDeleteAsync();
         }
     }

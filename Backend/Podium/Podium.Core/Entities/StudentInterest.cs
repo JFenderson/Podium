@@ -8,10 +8,9 @@ namespace Podium.Core.Entities
     /// Represents a student's interest in a specific band.
     /// </summary>
     [Index(nameof(StudentId), nameof(BandId), IsUnique = true)]
-    public class StudentInterest
+    public class StudentInterest : BaseEntity
     {
-        [Key]
-        public int StudentInterestId { get; set; }
+     
 
         [Required]
         public int StudentId { get; set; }

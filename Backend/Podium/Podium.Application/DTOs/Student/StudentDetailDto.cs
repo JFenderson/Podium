@@ -20,7 +20,7 @@ namespace Podium.Application.DTOs.Student
         public string? PhoneNumber { get; set; }
         public string? State { get; set; }
         public string? HighSchool { get; set; }
-        public int GraduationYear { get; set; }
+        public int? GraduationYear { get; set; }
         public string? IntendedMajor { get; set; }
         public string? SkillLevel { get; set; }
         public string? SchoolType { get; set; }

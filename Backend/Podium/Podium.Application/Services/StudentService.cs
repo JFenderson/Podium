@@ -42,7 +42,7 @@ public class StudentService : IStudentService
         // But we need the User data, so we access the Queryable/Set if possible.
         var student = await _unitOfWork.Students.GetQueryable()
             .Include(s => s.ApplicationUser)
-            .FirstOrDefaultAsync(s => s.StudentId == studentId);
+            .FirstOrDefaultAsync(s => s.Id == studentId);
 
         if (student == null)
             return ServiceResult<StudentDetailsDto>.Failure("Student not found");
@@ -154,7 +154,7 @@ public class StudentService : IStudentService
         var rating = new StudentRating
         {
             StudentId = studentId,
-            BandStaffUserId = bandStaff.BandStaffId,
+            BandStaffId = bandStaff.Id,
             Rating = dto.Rating,
             Comments = dto.Comments,
             CreatedAt = DateTime.UtcNow
@@ -189,6 +189,7 @@ public class StudentService : IStudentService
                 // Get Guardian and include Students
                 var guardianQuery = _unitOfWork.Guardians.GetQueryable()
                     .Include(g => g.Students)
+                        .ThenInclude(s => s.ApplicationUser)
                     .Where(g => g.ApplicationUserId == userId);
 
                 var guardian = await guardianQuery.FirstOrDefaultAsync();
@@ -196,8 +197,8 @@ public class StudentService : IStudentService
                 if (guardian?.Students == null || !guardian.Students.Any())
                     return ServiceResult<IEnumerable<StudentDetailsDto>>.Success(Enumerable.Empty<StudentDetailsDto>());
 
-                var studentIds = guardian.Students.Select(s => s.StudentId).ToList();
-                query = query.Where(s => studentIds.Contains(s.StudentId));
+                var studentIds = guardian.Students.Select(s => s.Id).ToList();
+                query = query.Where(s => studentIds.Contains(s.Id));
                 break;
             case Roles.Recruiter:
             case Roles.Director:
@@ -225,7 +226,7 @@ public class StudentService : IStudentService
 
         return new StudentDetailsDto
         {
-            StudentId = s.StudentId,
+            StudentId = s.Id,
             FirstName = s.FirstName,
             LastName = s.LastName,
             Email = s.ApplicationUser?.Email ?? s.Email,

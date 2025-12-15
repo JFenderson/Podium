@@ -17,10 +17,9 @@ namespace Podium.Core.Entities
     [Table("StudentGuardians")]
     [Index(nameof(StudentId), nameof(GuardianId), IsUnique = true, Name = "IX_StudentGuardian_Student_Guardian")]
     [Index(nameof(GuardianId), Name = "IX_StudentGuardian_Guardian")]
-    public class StudentGuardian
+    public class StudentGuardian : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
+ 
 
         /// <summary>
         /// The student associated with this guardian link.
@@ -111,7 +110,6 @@ namespace Podium.Core.Entities
         [MaxLength(450)]
         public string? CreatedBy { get; set; } // Usually the student themselves
 
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         [MaxLength(450)]
         public string? ModifiedBy { get; set; }

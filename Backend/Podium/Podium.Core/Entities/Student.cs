@@ -8,10 +8,8 @@ using System.Threading.Tasks;
 
 namespace Podium.Core.Entities
 {
-    public class Student
+    public class Student : BaseEntity
     {
-        [Key]
-        public int StudentId { get; set; }
 
         [Required]
         public string ApplicationUserId { get; set; } = string.Empty;
@@ -66,5 +64,7 @@ namespace Podium.Core.Entities
         public virtual ICollection<ScholarshipOffer> ScholarshipOffers { get; set; } = new List<ScholarshipOffer>();
         public virtual ICollection<ContactLog> ContactLogs { get; set; } = new List<ContactLog>();
         public virtual ICollection<Guardian> Guardians { get; set; } = new List<Guardian>();
+
+        public virtual ICollection<StudentGuardian>? StudentGuardianLinks { get; set; }
     }
 }

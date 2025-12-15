@@ -6,10 +6,9 @@ namespace Podium.Core.Entities
     /// <summary>
     /// Represents a band event (showcase, camp, audition, etc.)
     /// </summary>
-    public class BandEvent
+    public class BandEvent : BaseEntity
     {
-        [Key]
-        public int BandEventId { get; set; }
+
 
         [Required]
         public int BandId { get; set; }
@@ -45,7 +44,6 @@ namespace Podium.Core.Entities
 
         public bool IsArchived { get; set; } = false;
 
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         [ForeignKey(nameof(BandId))]

@@ -10,8 +10,9 @@ namespace Podium.Infrastructure.Services
     {
         private readonly BlobServiceClient _blobServiceClient;
         private readonly string _containerName;
+        private bool _containerInitialized = false;
 
-        public AzureBlobStorageService(IConfiguration configuration)  // ✅ Changed
+        public AzureBlobStorageService(IConfiguration configuration) 
         {
             var connectionString = configuration["AzureStorage:ConnectionString"]
                 ?? throw new InvalidOperationException("Azure Storage connection string not configured in appsettings.json");
@@ -22,12 +23,24 @@ namespace Podium.Infrastructure.Services
             _blobServiceClient = new BlobServiceClient(connectionString);
 
             // Ensure container exists
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            containerClient.CreateIfNotExists(PublicAccessType.None);
+            //var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            //containerClient.CreateIfNotExists(PublicAccessType.None);
+        }
+
+        private async Task EnsureContainerExistsAsync()
+        {
+            if (!_containerInitialized)
+            {
+                var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+                await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+                _containerInitialized = true;
+            }
         }
 
         public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
         {
+            await EnsureContainerExistsAsync();
+
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             var blobClient = containerClient.GetBlobClient(fileName);
 

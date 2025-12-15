@@ -31,10 +31,10 @@ namespace Podium.Application.Services
             // Map to DTO
             return videos.Select(v => new MyVideoListItem
             {
-                VideoId = v.VideoId,
+                VideoId = v.Id,
                 Title = v.Title,
                 ThumbnailUrl = v.ThumbnailUrl,
-                UploadedDate = v.UploadedDate,
+                UploadedDate = v.CreatedAt,
                 ViewCount = v.ViewCount,
                 IsReviewed = v.IsReviewed
             }).ToList();
@@ -54,12 +54,12 @@ namespace Podium.Application.Services
 
             var response = new VideoResponse
             {
-                VideoId = video.VideoId,
+                VideoId = video.Id,
                 Title = video.Title,
                 Description = video.Description,
                 Instrument = video.Instrument,
-                VideoUrl = await _storageService.GetVideoUrlAsync(video.VideoUrl), // Generate signed URL
-                UploadedDate = video.UploadedDate
+                VideoUrl = await _storageService.GetVideoUrlAsync(video.Url), // Generate signed URL
+                UploadedDate = video.CreatedAt
             };
 
             return response;
@@ -90,9 +90,9 @@ namespace Podium.Application.Services
                 Title = request.Title,
                 Description = request.Description,
                 Instrument = request.Instrument,
-                VideoUrl = fileName, // Store the path, not the full URL
+                Url = fileName, // Store the path, not the full URL
                 IsPublic = request.IsPublic,
-                UploadedDate = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow
             };
 
             await _unitOfWork.Videos.AddAsync(video);

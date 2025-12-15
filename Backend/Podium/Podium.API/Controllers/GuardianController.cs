@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Podium.Application.Interfaces;
 using Podium.Application.DTOs.Guardian;
+using Podium.Application.Interfaces;
+using Podium.Application.Services;
 using Podium.Core.Entities;
+using System.Security.Claims;
 
 namespace BandRecruitment.Controllers
 {
@@ -373,36 +374,28 @@ namespace BandRecruitment.Controllers
         [HttpGet("notifications")]
         [ProducesResponseType(typeof(NotificationListDto), 200)]
         public async Task<ActionResult<NotificationListDto>> GetNotifications(
-            [FromQuery] string? type,
-            [FromQuery] bool? isRead,
-            [FromQuery] DateTime? since,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+             [FromQuery] string? type,
+             [FromQuery] bool? isRead,
+             [FromQuery] DateTime? since,
+             [FromQuery] int page = 1,
+             [FromQuery] int pageSize = 20)
         {
-            try
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User ID not found in token");
+
+            var filters = new NotificationFilterDto
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized("User ID not found in token");
+                Type = type,
+                IsRead = isRead,
+                Since = since,
+                Page = page,
+                PageSize = pageSize
+            };
 
-                var filters = new NotificationFilterDto
-                {
-                    Type = type,
-                    IsRead = isRead,
-                    Since = since,
-                    Page = page,
-                    PageSize = pageSize
-                };
-
-                var notifications = await _guardianService.GetNotificationsAsync(userId, filters);
-
-                return Ok(notifications);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving notifications");
-                return StatusCode(500, "An error occurred while retrieving notifications");
-            }
+            var result = await _guardianService.GetNotificationsAsync(userId, filters);
+            // FIX: Explicitly specify <NotificationListDto>
+            return HandleResult<NotificationListDto>(result);
         }
 
         /// <summary>
@@ -417,16 +410,11 @@ namespace BandRecruitment.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized("User ID not found in token");
+                if (!ModelState.IsValid) return BadRequest(ModelState);
 
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
-                var preferences = await _guardianService.UpdateNotificationPreferencesAsync(userId, request);
-
-                return Ok(preferences);
+                var result = await _guardianService.UpdateNotificationPreferencesAsync(request);
+                // FIX: Explicitly specify <GuardianNotificationPreferencesDto>
+                return HandleResult<GuardianNotificationPreferencesDto>(result);
             }
             catch (Exception ex)
             {
@@ -449,19 +437,30 @@ namespace BandRecruitment.Controllers
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized("User ID not found in token");
-
-                var dashboard = await _guardianService.GetDashboardAsync(userId);
-
-                return Ok(dashboard);
+                var result = await _guardianService.GetDashboardAsync();
+                // FIX: Explicitly specify <GuardianDashboardDto>
+                return HandleResult<GuardianDashboardDto>(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving guardian dashboard");
                 return StatusCode(500, "An error occurred while retrieving dashboard");
             }
+        }
+
+        private ActionResult HandleResult<T>(ServiceResult<T> result)
+        {
+            if (result.IsSuccess)
+            {
+                return result.Data == null ? NoContent() : Ok(result.Data);
+            }
+
+            return result.ResultType switch
+            {
+                ServiceResultType.NotFound => NotFound(result.ErrorMessage),
+                ServiceResultType.Forbidden => Forbid(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
     }
 }

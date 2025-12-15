@@ -1,52 +1,61 @@
-﻿namespace Podium.Application.Services;
-
-/// <summary>
-/// Generic service result for operation outcomes
-/// </summary>
-public class ServiceResult<T>
+﻿namespace Podium.Application.Services
 {
-    public bool IsSuccess { get; set; }
-    public T? Data { get; set; }
-    public string? ErrorMessage { get; set; }
-    public ServiceResultType ResultType { get; set; }
-
-    public static ServiceResult<T> Success(T data)
+    public enum ServiceResultType
     {
-        return new ServiceResult<T>
-        {
-            IsSuccess = true,
-            Data = data,
-            ResultType = ServiceResultType.Success
-        };
+        Success,
+        Failure,
+        Forbidden,
+        NotFound
     }
 
-    public static ServiceResult<T> Failure(string errorMessage)
+    /// <summary>
+    /// Generic service result for operation outcomes
+    /// </summary>
+    public class ServiceResult<T>
     {
-        return new ServiceResult<T>
-        {
-            IsSuccess = false,
-            ErrorMessage = errorMessage,
-            ResultType = ServiceResultType.Failure
-        };
-    }
+        public bool IsSuccess { get; set; }
+        public T? Data { get; set; }
+        public string? ErrorMessage { get; set; }
+        public ServiceResultType ResultType { get; set; }
 
-    public static ServiceResult<T> Forbidden(string errorMessage)
-    {
-        return new ServiceResult<T>
+        public static ServiceResult<T> Success(T data)
         {
-            IsSuccess = false,
-            ErrorMessage = errorMessage,
-            ResultType = ServiceResultType.Forbidden
-        };
-    }
+            return new ServiceResult<T>
+            {
+                IsSuccess = true,
+                Data = data,
+                ResultType = ServiceResultType.Success
+            };
+        }
 
-    public static ServiceResult<T> NotFound(string errorMessage)
-    {
-        return new ServiceResult<T>
+        public static ServiceResult<T> Failure(string errorMessage)
         {
-            IsSuccess = false,
-            ErrorMessage = errorMessage,
-            ResultType = ServiceResultType.NotFound
-        };
+            return new ServiceResult<T>
+            {
+                IsSuccess = false,
+                ErrorMessage = errorMessage,
+                ResultType = ServiceResultType.Failure
+            };
+        }
+
+        public static ServiceResult<T> Forbidden(string errorMessage)
+        {
+            return new ServiceResult<T>
+            {
+                IsSuccess = false,
+                ErrorMessage = errorMessage,
+                ResultType = ServiceResultType.Forbidden
+            };
+        }
+
+        public static ServiceResult<T> NotFound(string errorMessage)
+        {
+            return new ServiceResult<T>
+            {
+                IsSuccess = false,
+                ErrorMessage = errorMessage,
+                ResultType = ServiceResultType.NotFound
+            };
+        }
     }
 }

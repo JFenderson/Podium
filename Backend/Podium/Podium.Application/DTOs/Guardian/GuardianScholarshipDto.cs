@@ -22,7 +22,7 @@ namespace Podium.Application.DTOs.Guardian
         public string OfferType { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public DateTime OfferDate { get; set; }
-        public DateTime ExpirationDate { get; set; }
+        public DateTime? ExpirationDate { get; set; }
         public int DaysUntilExpiration { get; set; }
         public string? Terms { get; set; }
         public string? Requirements { get; set; }

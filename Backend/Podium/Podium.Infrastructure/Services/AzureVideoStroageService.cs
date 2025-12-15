@@ -1,35 +1,56 @@
 ﻿using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Specialized;
+using Azure.Storage.Blobs.Models; // For PublicAccessType
 using Azure.Storage.Sas;
 using Microsoft.Extensions.Configuration;
 using Podium.Core.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 namespace Podium.Infrastructure.Services
 {
     public class AzureVideoStorageService : IVideoStorageService
     {
-        private readonly BlobContainerClient _containerClient;
+        private readonly BlobServiceClient _blobServiceClient;
+        private readonly string _containerName;
+        private bool _isInitialized = false; // Flag to track initialization
 
         public AzureVideoStorageService(IConfiguration configuration)
         {
             var connectionString = configuration["AzureStorage:ConnectionString"]
                 ?? throw new InvalidOperationException("Azure Storage connection string missing.");
 
-            var containerName = configuration["AzureStorage:VideoContainerName"]
+            _containerName = configuration["AzureStorage:VideoContainerName"]
                 ?? "podium-videos";
 
-            var blobServiceClient = new BlobServiceClient(connectionString);
-            _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-            _containerClient.CreateIfNotExists();
+            // LIGHTWEIGHT: Only create the client object. No network calls here.
+            _blobServiceClient = new BlobServiceClient(connectionString);
         }
 
-        public Task<string> GenerateUploadUrlAsync(string fileName, string contentType, int expirationMinutes = 60)
+        // --- LAZY INITIALIZATION HELPER ---
+        private async Task<BlobContainerClient> GetContainerClientAsync()
         {
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+
+            if (!_isInitialized)
+            {
+                // This is the network call that was crashing your constructor.
+                // Now it only happens when you actually try to use video features.
+                await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+                _isInitialized = true;
+            }
+
+            return containerClient;
+        }
+
+        public async Task<string> GenerateUploadUrlAsync(string fileName, string contentType, int expirationMinutes = 60)
+        {
+            // 1. Ensure container exists
+            var containerClient = await GetContainerClientAsync();
+            var blobClient = containerClient.GetBlobClient(fileName);
 
             var sasBuilder = new BlobSasBuilder
             {
-                BlobContainerName = _containerClient.Name,
+                BlobContainerName = _containerName,
                 BlobName = fileName,
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow.AddMinutes(-2), // clock skew buffer
@@ -41,19 +62,28 @@ namespace Podium.Infrastructure.Services
             // "Write" and "Create" permissions are needed for uploading
             sasBuilder.SetPermissions(BlobSasPermissions.Create | BlobSasPermissions.Write);
 
-            var sasUri = blobClient.GenerateSasUri(sasBuilder);
-            return Task.FromResult(sasUri.ToString());
+            // Note: GenerateSasUri requires the Storage Account Key (available in emulator/connection string)
+            // If using Managed Identity in production, this logic changes slightly (User Delegation SAS).
+            // For now (Emulator/Key), this works fine.
+            if (blobClient.CanGenerateSasUri)
+            {
+                var sasUri = blobClient.GenerateSasUri(sasBuilder);
+                return sasUri.ToString();
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot generate SAS URI. Check storage connection string.");
+            }
         }
 
-        public Task<string> GetVideoUrlAsync(string fileName, int expirationMinutes = 120)
+        public async Task<string> GetVideoUrlAsync(string fileName, int expirationMinutes = 120)
         {
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var containerClient = await GetContainerClientAsync();
+            var blobClient = containerClient.GetBlobClient(fileName);
 
-            // Check if we need a SAS token (private) or just the URL (public)
-            // Assuming private for student privacy:
             var sasBuilder = new BlobSasBuilder
             {
-                BlobContainerName = _containerClient.Name,
+                BlobContainerName = _containerName,
                 BlobName = fileName,
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow.AddMinutes(-2),
@@ -63,13 +93,19 @@ namespace Podium.Infrastructure.Services
 
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
 
-            var sasUri = blobClient.GenerateSasUri(sasBuilder);
-            return Task.FromResult(sasUri.ToString());
+            if (blobClient.CanGenerateSasUri)
+            {
+                var sasUri = blobClient.GenerateSasUri(sasBuilder);
+                return sasUri.ToString();
+            }
+
+            return blobClient.Uri.ToString(); // Fallback (likely won't work if private)
         }
 
         public async Task DeleteVideoAsync(string fileName)
         {
-            var blobClient = _containerClient.GetBlobClient(fileName);
+            var containerClient = await GetContainerClientAsync();
+            var blobClient = containerClient.GetBlobClient(fileName);
             await blobClient.DeleteIfExistsAsync();
         }
     }

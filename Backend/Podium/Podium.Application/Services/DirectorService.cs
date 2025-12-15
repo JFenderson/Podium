@@ -44,7 +44,7 @@ namespace Podium.Application.Services
             if (band == null)
                 return null;
 
-            var bandId = band.BandId;
+            var bandId = band.Id;
             var now = DateTime.UtcNow;
             var oneWeekAgo = now.AddDays(-7);
             var oneMonthAgo = now.AddMonths(-1);
@@ -89,7 +89,7 @@ namespace Podium.Application.Services
                 .Take(5)
                 .Select(e => new UpcomingEventDto
                 {
-                    EventId = e.BandEventId,
+                    EventId = e.Id,
                     EventName = e.EventName,
                     EventDate = e.EventDate,
                     EventType = e.EventType,
@@ -105,7 +105,7 @@ namespace Podium.Application.Services
                 .Take(5)
                 .Select(bs => new StaffActivitySummaryDto
                 {
-                    StaffId = bs.BandStaffId,
+                    StaffId = bs.Id,
                     StaffName = bs.FirstName + " " + bs.LastName, // Use real name
                     Role = bs.Title ?? bs.Role,
                     ContactsInitiated = bs.TotalContactsInitiated,
@@ -165,7 +165,7 @@ namespace Podium.Application.Services
 
             var query = _context.BandStaff
                 .Include(bs => bs.ApplicationUser) // Include user details
-                .Where(bs => bs.BandId == band.BandId);
+                .Where(bs => bs.BandId == band.Id);
 
             if (isActive.HasValue)
                 query = query.Where(bs => bs.IsActive == isActive.Value);
@@ -182,7 +182,7 @@ namespace Podium.Application.Services
             return await query
                 .Select(bs => new BandStaffDto
                 {
-                    BandStaffId = bs.BandStaffId,
+                    BandStaffId = bs.Id,
                     BandId = bs.BandId,
                     ApplicationUserId = bs.ApplicationUserId,
                     // Map Name correctly
@@ -216,7 +216,7 @@ namespace Podium.Application.Services
 
         public async Task<bool> CanAccessBandAsync(string userId, int bandId)
         {
-            return await _context.Bands.AnyAsync(b => b.BandId == bandId && b.DirectorApplicationUserId == userId);
+            return await _context.Bands.AnyAsync(b => b.Id == bandId && b.DirectorApplicationUserId == userId);
         }
 
         public async Task<BandAnalyticsDto> GetBandAnalyticsAsync(int bandId, DateTime startDate, DateTime endDate)
@@ -290,7 +290,7 @@ namespace Podium.Application.Services
         {
             // Verify director owns the band
             var band = await _context.Bands
-                .FirstOrDefaultAsync(b => b.BandId == request.BandId && b.DirectorApplicationUserId == directorUserId && b.IsActive);
+                .FirstOrDefaultAsync(b => b.Id == request.BandId && b.DirectorApplicationUserId == directorUserId && b.IsActive);
 
             if (band == null)
                 throw new UnauthorizedAccessException("You do not have permission to add staff to this band");
@@ -314,7 +314,7 @@ namespace Podium.Application.Services
 
                 return new BandStaffDto
                 {
-                    BandStaffId = existingStaff.BandStaffId,
+                    BandStaffId = existingStaff.Id,
                     BandId = existingStaff.BandId,
                     ApplicationUserId = existingStaff.ApplicationUserId,
                     Role = existingStaff.Role,
@@ -350,7 +350,7 @@ namespace Podium.Application.Services
 
             return new BandStaffDto
             {
-                BandStaffId = newStaff.BandStaffId,
+                BandStaffId = newStaff.Id,
                 BandId = newStaff.BandId,
                 ApplicationUserId = newStaff.ApplicationUserId,
                 Role = newStaff.Role,
@@ -369,7 +369,7 @@ namespace Podium.Application.Services
         {
             var staffMember = await _context.BandStaff
                 .Include(bs => bs.Band)
-                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
+                .FirstOrDefaultAsync(bs => bs.Id == staffId);
 
             if (staffMember == null)
                 return false;
@@ -380,7 +380,7 @@ namespace Podium.Application.Services
         public async Task<BandStaffDto> UpdateStaffMemberAsync(int staffId, UpdateBandStaffDto request)
         {
             var staffMember = await _context.BandStaff
-                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
+                .FirstOrDefaultAsync(bs => bs.Id == staffId);
 
             if (staffMember == null)
                 throw new KeyNotFoundException($"Staff member {staffId} not found");
@@ -396,7 +396,7 @@ namespace Podium.Application.Services
 
             return new BandStaffDto
             {
-                BandStaffId = staffMember.BandStaffId,
+                BandStaffId = staffMember.Id,
                 BandId = staffMember.BandId,
                 ApplicationUserId = staffMember.ApplicationUserId,
                 Role = staffMember.Role,
@@ -414,7 +414,7 @@ namespace Podium.Application.Services
         public async Task RemoveStaffMemberAsync(int staffId)
         {
             var staffMember = await _context.BandStaff
-                .FirstOrDefaultAsync(bs => bs.BandStaffId == staffId);
+                .FirstOrDefaultAsync(bs => bs.Id == staffId);
 
             if (staffMember == null)
                 throw new KeyNotFoundException($"Staff member {staffId} not found");
@@ -477,7 +477,7 @@ namespace Podium.Application.Services
                 throw new KeyNotFoundException("Band not found for this director");
 
             var query = _context.Offers
-                .Where(so => so.BandId == band.BandId)
+                .Where(so => so.BandId == band.Id)
                 .AsQueryable();
 
             // Apply filters
@@ -525,7 +525,7 @@ namespace Podium.Application.Services
                 .Take(filters.PageSize)
                 .Select(so => new ScholarshipOfferDto
                 {
-                    OfferId = so.OfferId,
+                    OfferId = so.Id,
                     StudentId = so.StudentId,
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,
@@ -563,7 +563,7 @@ namespace Podium.Application.Services
         {
             var offer = await _context.Offers
                 .Include(so => so.Band)
-                .FirstOrDefaultAsync(so => so.OfferId == offerId);
+                .FirstOrDefaultAsync(so => so.Id == offerId);
 
             if (offer == null)
                 return false;
@@ -577,7 +577,7 @@ namespace Podium.Application.Services
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .FirstOrDefaultAsync(so => so.OfferId == offerId);
+                .FirstOrDefaultAsync(so => so.Id == offerId);
 
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
@@ -595,7 +595,7 @@ namespace Podium.Application.Services
 
             return new ScholarshipOfferDto
             {
-                OfferId = offer.OfferId,
+                OfferId = offer.Id,
                 StudentId = offer.StudentId,
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                 BandId = offer.BandId,
@@ -620,7 +620,7 @@ namespace Podium.Application.Services
                 .Include(so => so.Student)
                 .Include(so => so.Band)
                 .Include(so => so.CreatedByStaff)
-                .FirstOrDefaultAsync(so => so.OfferId == offerId);
+                .FirstOrDefaultAsync(so => so.Id == offerId);
 
             if (offer == null)
                 throw new KeyNotFoundException($"Scholarship offer {offerId} not found");
@@ -637,7 +637,7 @@ namespace Podium.Application.Services
 
             return new ScholarshipOfferDto
             {
-                OfferId = offer.OfferId,
+                OfferId = offer.Id,
                 StudentId = offer.StudentId,
                 StudentName = offer.Student.FirstName + " " + offer.Student.LastName,
                 BandId = offer.BandId,
@@ -666,7 +666,7 @@ namespace Podium.Application.Services
                 return new List<InterestedStudentDto>();
 
             var query = _context.StudentInterests
-                .Where(si => si.BandId == band.BandId)
+                .Where(si => si.BandId == band.Id)
                 .Include(si => si.Student)
                 .AsQueryable();
 
@@ -700,12 +700,12 @@ namespace Podium.Application.Services
             InterestedDate = si.InterestedDate,
             VideosUploaded = si.Student.Videos.Count,
             EventsAttended = si.Student.EventRegistrations.Count(er => er.DidAttend),
-            HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.BandId),
-            LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.BandId).Max(cl => (DateTime?)cl.ContactDate),
-            HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.BandId),
+            HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == band.Id),
+            LastContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == band.Id).Max(cl => (DateTime?)cl.CreatedAt),
+            HasOffer = si.Student.ScholarshipOffers.Any(so => so.BandId == band.Id),
 
             OfferStatus = si.Student.ScholarshipOffers
-                .Where(so => so.BandId == band.BandId)
+                .Where(so => so.BandId == band.Id)
                 .OrderByDescending(so => so.CreatedAt)
                 .Select(so => so.Status.ToString()) // Explicit conversion
                 .FirstOrDefault(),
@@ -727,7 +727,7 @@ namespace Podium.Application.Services
                 return new List<BandEventDto>();
 
             var query = _context.BandEvents
-                .Where(e => e.BandId == band.BandId);
+                .Where(e => e.BandId == band.Id);
 
             if (!filters.IncludeArchived)
                 query = query.Where(e => !e.IsArchived);
@@ -745,7 +745,7 @@ namespace Podium.Application.Services
                 .OrderBy(e => e.EventDate)
                 .Select(e => new BandEventDto
                 {
-                    EventId = e.BandEventId,
+                    EventId = e.Id,
                     EventName = e.EventName,
                     Description = e.Description,
                     EventType = e.EventType,
@@ -759,7 +759,7 @@ namespace Podium.Application.Services
                     RegistrationDeadline = e.RegistrationDeadline,
                     IsVirtual = e.IsVirtual,
                     MeetingLink = e.MeetingLink,
-                    CreatedDate = e.CreatedDate
+                    CreatedDate = e.CreatedAt
                 })
                 .ToListAsync();
         }

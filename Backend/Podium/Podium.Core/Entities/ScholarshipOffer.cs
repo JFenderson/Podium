@@ -6,10 +6,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Podium.Core.Entities
 {
 
-    public class ScholarshipOffer
+    public class ScholarshipOffer : BaseEntity
     {
-        [Key]
-        public int OfferId { get; set; }
+  
         public int StudentId { get; set; }
         public int BandId { get; set; }
 
@@ -27,11 +26,9 @@ namespace Podium.Core.Entities
 
         // Audit Trail
         public string? CreatedByUserId { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int? CreatedByStaffId { get; set; }
-        [ForeignKey("CreatedByStaffId")]
-        public virtual BandStaff? CreatedByStaff { get; set; }
+
 
         public string? ApprovedByUserId { get; set; }
         public DateTime ApprovedAt { get; set; }
@@ -50,8 +47,14 @@ namespace Podium.Core.Entities
         public bool RequiresGuardianApproval { get; set; } = true;
 
         // Navigation
-        public virtual Student? Student { get; set; }
+        [ForeignKey(nameof(BandId))]
         public virtual Band? Band { get; set; }
+
+        [ForeignKey(nameof(StudentId))]
+        public virtual Student? Student { get; set; }
+
+        [ForeignKey(nameof(CreatedByStaffId))]
+        public virtual BandStaff? CreatedByStaff { get; set; }
         public virtual ApplicationUser? ApprovedByUser { get; set; }
         public DateTime ApprovedDate { get; set; }
     }

@@ -7,10 +7,9 @@ namespace Podium.Core.Entities
     /// Represents a request from a recruiter to contact a student.
     /// Requires guardian approval if student is a minor.
     /// </summary>
-    public class ContactRequest
+    public class ContactRequest : BaseEntity
     {
-        [Key]
-        public int ContactRequestId { get; set; }
+
 
         [Required]
         public int StudentId { get; set; }

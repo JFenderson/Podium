@@ -12,26 +12,16 @@ namespace Podium.Infrastructure.Data
 {
     public static class DataSeeder
     {
-        public static async Task SeedDataAsync(IServiceProvider serviceProvider)
+        public static async Task SeedDataAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context)
         {
-            using var scope = serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
             // 1. Ensure Database is Created & Migrated
             await context.Database.MigrateAsync();
 
             // 2. Seed Roles
-            string[] roleNames = { Roles.Admin, Roles.Director, Roles.Recruiter, Roles.Student, Roles.Guardian };
-            foreach (var roleName in roleNames)
-            {
-                if (!await roleManager.RoleExistsAsync(roleName))
-                {
-                    await roleManager.CreateAsync(new IdentityRole(roleName));
-                }
-            }
+            await SeedRolesAsync(roleManager);
 
+            // 3. Seed Admin User (CRITICAL FOR TESTS)
+            await SeedAdminUserAsync(userManager);
             // 3. Seed Bands (Using the list we created earlier)
             if (!await context.Bands.AnyAsync())
             {
@@ -50,8 +40,8 @@ namespace Podium.Infrastructure.Data
             var asuBand = await context.Bands.FirstOrDefaultAsync(b => b.UniversityName == "Alabama State University");
             if (asuBand != null)
             {
-                await CreateStaffUser(userManager, context, "director@asu.edu", "James", "Oliver", Roles.Director, asuBand.BandId, "Director of Bands", commonPassword);
-                await CreateStaffUser(userManager, context, "recruiter@asu.edu", "Sarah", "Jenkins", Roles.Recruiter, asuBand.BandId, "Percussion Instructor", commonPassword);
+                await CreateStaffUser(userManager, context, "director@asu.edu", "James", "Oliver", Roles.Director, asuBand.Id, "Director of Bands", commonPassword);
+                await CreateStaffUser(userManager, context, "recruiter@asu.edu", "Sarah", "Jenkins", Roles.Recruiter, asuBand.Id, "Percussion Instructor", commonPassword);
                 // Link Director to Band (Owner)
                 var director = await userManager.FindByEmailAsync("director@asu.edu");
                 if (director != null)
@@ -64,8 +54,8 @@ namespace Podium.Infrastructure.Data
             var famuBand = await context.Bands.FirstOrDefaultAsync(b => b.UniversityName == "Florida A&M University");
             if (famuBand != null)
             {
-                await CreateStaffUser(userManager, context, "director@famu.edu", "William", "Foster", Roles.Director, famuBand.BandId, "Director of Bands", commonPassword);
-                await CreateStaffUser(userManager, context, "recruiter@famu.edu", "Robert", "Lee", Roles.Recruiter, famuBand.BandId, "Woodwind Coordinator", commonPassword);
+                await CreateStaffUser(userManager, context, "director@famu.edu", "William", "Foster", Roles.Director, famuBand.Id, "Director of Bands", commonPassword);
+                await CreateStaffUser(userManager, context, "recruiter@famu.edu", "Robert", "Lee", Roles.Recruiter, famuBand.Id, "Woodwind Coordinator", commonPassword);
                 // Link Director
                 var director = await userManager.FindByEmailAsync("director@famu.edu");
                 if (director != null)
@@ -78,7 +68,7 @@ namespace Podium.Infrastructure.Data
             var suBand = await context.Bands.FirstOrDefaultAsync(b => b.UniversityName == "Southern University");
             if (suBand != null)
             {
-                await CreateStaffUser(userManager, context, "director@subr.edu", "Isaac", "Greggs", Roles.Director, suBand.BandId, "Director of Bands", commonPassword);
+                await CreateStaffUser(userManager, context, "director@subr.edu", "Isaac", "Greggs", Roles.Director, suBand.Id, "Director of Bands", commonPassword);
                 var director = await userManager.FindByEmailAsync("director@subr.edu");
                 if (director != null)
                 {
@@ -133,7 +123,7 @@ namespace Podium.Infrastructure.Data
                 // 6. SEED RANDOM INTERESTS
                 // ==========================================
 
-                var allBandIds = await context.Bands.Select(b => b.BandId).ToListAsync();
+                var allBandIds = await context.Bands.Select(b => b.Id).ToListAsync();
 
                 foreach (var student in createdStudents)
                 {
@@ -145,11 +135,11 @@ namespace Podium.Infrastructure.Data
 
                     foreach (var bandId in pickedBandIds)
                     {
-                        if (!context.StudentInterests.Any(si => si.StudentId == student.StudentId && si.BandId == bandId))
+                        if (!context.StudentInterests.Any(si => si.StudentId == student.Id && si.BandId == bandId))
                         {
                             context.StudentInterests.Add(new StudentInterest
                             {
-                                StudentId = student.StudentId,
+                                StudentId = student.Id,
                                 BandId = bandId,
                                 IsInterested = true,
                                 InterestedDate = DateTime.UtcNow.AddDays(-random.Next(1, 90)), // Interest added 1-90 days ago
@@ -180,12 +170,12 @@ namespace Podium.Infrastructure.Data
                         band.DirectorApplicationUserId = user.Id;
 
                         // Also ensure the Director is in the BandStaff table (Safety Check)
-                        if (!context.BandStaff.Any(bs => bs.BandId == band.BandId && bs.ApplicationUserId == user.Id))
+                        if (!context.BandStaff.Any(bs => bs.BandId == band.Id && bs.ApplicationUserId == user.Id))
                         {
                             context.BandStaff.Add(new BandStaff
                             {
                                 ApplicationUserId = user.Id,
-                                BandId = band.BandId,
+                                BandId = band.Id,
                                 FirstName = user.FirstName,
                                 LastName = user.LastName,
                                 Role = Roles.Director,
@@ -208,6 +198,47 @@ namespace Podium.Infrastructure.Data
         }
 
         // --- HELPER METHODS ---
+
+        private static async Task SeedAdminUserAsync(UserManager<ApplicationUser> userManager)
+        {
+            var adminEmail = "admin@podium.com";
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+            if (adminUser == null)
+            {
+                adminUser = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "System",
+                    LastName = "Admin",
+                    EmailConfirmed = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await userManager.CreateAsync(adminUser, "Admin123!");
+
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, Roles.Admin);
+                    // IMPORTANT: Give Admin the Guardian role so they can access the Dashboard in tests
+                    await userManager.AddToRoleAsync(adminUser, Roles.Guardian);
+                }
+            }
+        }
+
+        private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
+        {
+            string[] roleNames = { Roles.Admin, Roles.Director, Roles.Recruiter, Roles.Student, Roles.Guardian };
+            foreach (var roleName in roleNames)
+            {
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
+            }
+        }
 
         private static async Task CreateStaffUser(UserManager<ApplicationUser> userManager, ApplicationDbContext context, string email, string fName, string lName, string role, int bandId, string title, string password)
         {
@@ -251,21 +282,13 @@ namespace Podium.Infrastructure.Data
                 await context.SaveChangesAsync();
             }
         }
-        
+
 
         private static async Task<Student?> CreateStudentUser(UserManager<ApplicationUser> userManager, ApplicationDbContext context, string email, string fName, string lName, string instrument, string state, int gradYear, string password)
         {
             if (await userManager.FindByEmailAsync(email) == null)
             {
-                var user = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email,
-                    FirstName = fName,
-                    LastName = lName,
-                    IsActive = true,
-                    EmailConfirmed = true
-                };
+                var user = new ApplicationUser { UserName = email, Email = email, FirstName = fName, LastName = lName, IsActive = true, EmailConfirmed = true };
                 await userManager.CreateAsync(user, password);
                 await userManager.AddToRoleAsync(user, Roles.Student);
 
@@ -278,11 +301,10 @@ namespace Podium.Infrastructure.Data
                     Instrument = instrument,
                     PrimaryInstrument = instrument,
                     GraduationYear = gradYear,
-                    HighSchool = "Test High School",
                     State = state,
-                    GPA = 3.0m + (decimal)(new Random().NextDouble()), // Random GPA 3.0 - 4.0
-                    PhoneNumber = "555-" + new Random().Next(1000, 9999),
-                    LastActivityDate = DateTime.UtcNow
+                    LastActivityDate = DateTime.UtcNow,
+                    HighSchool = "Test HS", // Added default to avoid null errors
+                    GPA = 3.5m // Added default
                 };
                 context.Students.Add(student);
                 await context.SaveChangesAsync();
@@ -295,27 +317,11 @@ namespace Podium.Infrastructure.Data
         {
             if (await userManager.FindByEmailAsync(email) == null)
             {
-                var user = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email,
-                    FirstName = fName,
-                    LastName = lName,
-                    IsActive = true,
-                    EmailConfirmed = true
-                };
+                var user = new ApplicationUser { UserName = email, Email = email, FirstName = fName, LastName = lName, IsActive = true, EmailConfirmed = true };
                 await userManager.CreateAsync(user, password);
                 await userManager.AddToRoleAsync(user, Roles.Guardian);
 
-                var guardian = new Guardian
-                {
-                    ApplicationUserId = user.Id,
-                    FirstName = fName,
-                    LastName = lName,
-                    Email = email,
-                    PhoneNumber = "555-8888",
-                    EmailNotificationsEnabled = true
-                };
+                var guardian = new Guardian { ApplicationUserId = user.Id, FirstName = fName, LastName = lName, Email = email, EmailNotificationsEnabled = true };
                 context.Guardians.Add(guardian);
                 await context.SaveChangesAsync();
 
@@ -323,17 +329,11 @@ namespace Podium.Infrastructure.Data
                 {
                     context.StudentGuardians.Add(new StudentGuardian
                     {
-                        StudentId = linkedStudent.StudentId,
-                        GuardianId = guardian.GuardianId,
+                        StudentId = linkedStudent.Id,
+                        GuardianId = guardian.Id,
                         RelationshipType = relationship,
                         IsVerified = true,
-                        IsActive = true,
-                        CanViewActivity = true,
-                        CanApproveContacts = true,
-                        CanRespondToOffers = true,
-                        CanViewProfile = true,
-                        CanManageNotifications = true,
-                        ReceivesNotifications = true
+                        IsActive = true
                     });
                     await context.SaveChangesAsync();
                 }

@@ -3,13 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
 {
-    /// <summary>
-    /// Tracks when recruiters view student profiles for analytics.
-    /// </summary>
-    public class ProfileView
+    public class ProfileView : BaseEntity
     {
-        [Key]
-        public int ProfileViewId { get; set; }
+      
 
         [Required]
         public int StudentId { get; set; }
@@ -17,11 +13,10 @@ namespace Podium.Core.Entities
         [Required]
         public int BandId { get; set; }
 
-        [Required]
         [MaxLength(450)]
-        public string ViewedByApplicationUserId { get; set; } = string.Empty;
+        public string? ViewerUserId { get; set; } = string.Empty;
 
-        public DateTime ViewedDate { get; set; } = DateTime.UtcNow;
+        public DateTime ViewedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         [ForeignKey(nameof(StudentId))]
@@ -29,5 +24,8 @@ namespace Podium.Core.Entities
 
         [ForeignKey(nameof(BandId))]
         public virtual Band Band { get; set; } = null!;
+
+        [ForeignKey(nameof(ViewerUserId))]
+        public virtual ApplicationUser? ViewerUser { get; set; }
     }
 }

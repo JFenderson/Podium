@@ -40,7 +40,7 @@ namespace Podium.API.Controllers
                 .Include(bs => bs.ApplicationUser)
                 .Select(bs => new BandStaffDto
                 {
-                    BandStaffId = bs.BandStaffId,
+                    BandStaffId = bs.Id,
                     ApplicationUserId = bs.ApplicationUserId,
                     FirstName = bs.FirstName,
                     LastName = bs.LastName,
@@ -79,7 +79,7 @@ namespace Podium.API.Controllers
 
             return Ok(new BandStaffDto
             {
-                BandStaffId = staff.BandStaffId,
+                BandStaffId = staff.Id,
                 ApplicationUserId = staff.ApplicationUserId,
                 FirstName = staff.FirstName,
                 LastName = staff.LastName,
@@ -193,7 +193,7 @@ namespace Podium.API.Controllers
                 nameof(GetMyInfo),
                 new BandStaffDto
                 {
-                    BandStaffId = staff.BandStaffId,
+                    BandStaffId = staff.Id,
                     ApplicationUserId = staff.ApplicationUserId,
                     FirstName = staff.FirstName,
                     LastName = staff.LastName,

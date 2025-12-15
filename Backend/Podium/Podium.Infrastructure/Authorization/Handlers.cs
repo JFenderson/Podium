@@ -206,7 +206,7 @@ namespace Podium.Infrastructure.Authorization
                 .Include(g => g.Students)
                 .FirstOrDefaultAsync(g => g.ApplicationUserId == user.Id);
 
-            if (guardian?.Students?.Any(s => s.StudentId == studentId) == true)
+            if (guardian?.Students?.Any(s => s.Id == studentId) == true)
             {
                 context.Succeed(requirement);
             }
@@ -299,7 +299,7 @@ namespace Podium.Infrastructure.Authorization
                     if (role == Roles.Student)
                     {
                         var student = await _context.Students
-                            .FirstOrDefaultAsync(s => s.StudentId == studentId && s.ApplicationUserId == user.Id);
+                            .FirstOrDefaultAsync(s => s.Id == studentId && s.ApplicationUserId == user.Id);
                         if (student != null)
                         {
                             context.Succeed(requirement);
@@ -314,7 +314,7 @@ namespace Podium.Infrastructure.Authorization
                             .Include(g => g.Students)
                             .FirstOrDefaultAsync(g => g.ApplicationUserId == user.Id);
 
-                        if (guardian?.Students?.Any(s => s.StudentId == studentId) == true)
+                        if (guardian?.Students?.Any(s => s.Id == studentId) == true)
                         {
                             context.Succeed(requirement);
                             return;
@@ -339,7 +339,7 @@ namespace Podium.Infrastructure.Authorization
                     if (role == Roles.Student)
                     {
                         var student = await _context.Students
-                            .FirstOrDefaultAsync(s => s.StudentId == studentId && s.ApplicationUserId == user.Id);
+                            .FirstOrDefaultAsync(s => s.Id == studentId && s.ApplicationUserId == user.Id);
                         if (student != null)
                         {
                             context.Succeed(requirement);

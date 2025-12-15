@@ -3,10 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
 {
-    public class Notification
+    public class Notification : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
+
 
         [Required]
         public string UserId { get; set; } = string.Empty; // FK to ApplicationUser
@@ -30,6 +29,5 @@ namespace Podium.Core.Entities
 
         public bool IsRead { get; set; } = false;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

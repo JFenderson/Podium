@@ -6,14 +6,12 @@ namespace Podium.Core.Entities
     /// <summary>
     /// Represents a notification sent to a guardian.
     /// </summary>
-    public class GuardianNotification
+    public class GuardianNotification : BaseEntity
     {
-        [Key]
-        public int GuardianNotificationId { get; set; }
+
 
         [Required]
-        [MaxLength(450)]
-        public string GuardianApplicationUserId { get; set; } = string.Empty;
+        public int GuardianId { get; set; }
 
         public int? StudentId { get; set; }
 
@@ -29,7 +27,6 @@ namespace Podium.Core.Entities
         [MaxLength(1000)]
         public string Message { get; set; } = string.Empty;
 
-        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         public bool IsRead { get; set; } = false;
 
@@ -44,5 +41,8 @@ namespace Podium.Core.Entities
         // Navigation properties
         [ForeignKey(nameof(StudentId))]
         public virtual Student? Student { get; set; }
+
+        [ForeignKey(nameof(GuardianId))]
+        public virtual Guardian? Guardian { get; set; }
     }
 }
