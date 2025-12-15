@@ -57,9 +57,9 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "StudentOnly")]
         public async Task<ActionResult<StudentDetailsDto>> GetMyProfile()
         {
-            var result = await _studentService.GetAccessibleStudentsAsync();
+            var result = await _studentService.GetAccessibleStudentsAsync(1, 1);
             if (!result.IsSuccess) return HandleResult(result);
-            var student = result.Data?.FirstOrDefault();
+            var student = result.Data?.Items.FirstOrDefault();
             if (student == null) return NotFound("Student profile not found");
             return Ok(student);
         }

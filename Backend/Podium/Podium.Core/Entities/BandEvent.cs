@@ -43,7 +43,8 @@ namespace Podium.Core.Entities
         public string? MeetingLink { get; set; }
 
         public bool IsArchived { get; set; } = false;
-
+        // Soft Delete Property
+        public bool IsDeleted { get; set; }
 
         // Navigation properties
         [ForeignKey(nameof(BandId))]

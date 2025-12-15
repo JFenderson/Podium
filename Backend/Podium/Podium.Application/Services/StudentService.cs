@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs;
 using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
@@ -9,8 +10,8 @@ using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Authorization;
 using Podium.Infrastructure.Data;
-using System.Text.Json;
 using System.Linq;
+using System.Text.Json;
 
 namespace Podium.Application.Services;
 
@@ -170,32 +171,39 @@ public class StudentService : IStudentService
     /// <summary>
     /// Get all students the current user can access
     /// </summary>
-    public async Task<ServiceResult<IEnumerable<StudentDetailsDto>>> GetAccessibleStudentsAsync()
+    public async Task<ServiceResult<PagedResult<StudentDetailsDto>>> GetAccessibleStudentsAsync(int page = 1, int pageSize = 20)
     {
         var role = await _permissionService.GetCurrentUserRoleAsync();
         var userId = await _permissionService.GetCurrentUserIdAsync();
 
-        if (userId == null) return ServiceResult<IEnumerable<StudentDetailsDto>>.Failure("User not authenticated");
+        if (userId == null) return ServiceResult<PagedResult<StudentDetailsDto>>.Failure("User not authenticated");
 
         // Start with base query including User
         IQueryable<Student> query = _unitOfWork.Students.GetQueryable().Include(s => s.ApplicationUser);
 
+        // Apply Authorization Filters
         switch (role)
         {
             case Roles.Student:
                 query = query.Where(s => s.ApplicationUserId == userId);
                 break;
             case Roles.Guardian:
-                // Get Guardian and include Students
                 var guardianQuery = _unitOfWork.Guardians.GetQueryable()
                     .Include(g => g.Students)
-                        .ThenInclude(s => s.ApplicationUser)
                     .Where(g => g.ApplicationUserId == userId);
 
                 var guardian = await guardianQuery.FirstOrDefaultAsync();
 
                 if (guardian?.Students == null || !guardian.Students.Any())
-                    return ServiceResult<IEnumerable<StudentDetailsDto>>.Success(Enumerable.Empty<StudentDetailsDto>());
+                {
+                    return ServiceResult<PagedResult<StudentDetailsDto>>.Success(new PagedResult<StudentDetailsDto>
+                    {
+                        Items = new List<StudentDetailsDto>(),
+                        TotalCount = 0,
+                        PageNumber = page,
+                        PageSize = pageSize
+                    });
+                }
 
                 var studentIds = guardian.Students.Select(s => s.Id).ToList();
                 query = query.Where(s => studentIds.Contains(s.Id));
@@ -203,17 +211,34 @@ public class StudentService : IStudentService
             case Roles.Recruiter:
             case Roles.Director:
                 if (!await _permissionService.HasPermissionAsync(Permissions.ViewStudents))
-                    return ServiceResult<IEnumerable<StudentDetailsDto>>.Forbidden("No permission");
-                // No filter - can see all students
+                    return ServiceResult<PagedResult<StudentDetailsDto>>.Forbidden("No permission");
                 break;
             default:
-                return ServiceResult<IEnumerable<StudentDetailsDto>>.Forbidden("No permission");
+                return ServiceResult<PagedResult<StudentDetailsDto>>.Forbidden("No permission");
         }
 
-        var students = await query.ToListAsync();
-        var dtos = students.Select(MapToDetailsDto);
+        // 1. Get Total Count (before paging)
+        var totalCount = await query.CountAsync();
 
-        return ServiceResult<IEnumerable<StudentDetailsDto>>.Success(dtos);
+        // 2. Apply Pagination
+        var students = await query
+            .OrderBy(s => s.LastName) // Ensure consistent ordering for pagination
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var dtos = students.Select(MapToDetailsDto).ToList();
+
+        // 3. Return Paged Result
+        var result = new PagedResult<StudentDetailsDto>
+        {
+            Items = dtos,
+            TotalCount = totalCount,
+            PageNumber = page,
+            PageSize = pageSize
+        };
+
+        return ServiceResult<PagedResult<StudentDetailsDto>>.Success(result);
     }
 
     private StudentDetailsDto MapToDetailsDto(Student s)

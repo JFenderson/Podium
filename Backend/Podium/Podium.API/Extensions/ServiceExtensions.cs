@@ -233,6 +233,7 @@ namespace Podium.API.Extensions
             services.AddScoped<IVideoService, VideoService>();
             services.AddScoped<IDirectorService, DirectorService>();
             services.AddScoped<IGuardianService, GuardianService>();
+            services.AddScoped<IBandService, BandService>();
 
             // CORS
             services.AddCors(options =>

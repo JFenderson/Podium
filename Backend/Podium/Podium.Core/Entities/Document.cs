@@ -1,6 +1,8 @@
-﻿namespace Podium.Core.Entities;
+﻿using Podium.Core.Interfaces;
 
-public class Document : BaseEntity
+namespace Podium.Core.Entities;
+
+public class Document : BaseEntity, ISoftDelete
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -22,6 +24,7 @@ public class Document : BaseEntity
 
     // Access Control
     public bool IsPublic { get; set; } = false;
+    public bool IsDeleted { get; set; }
 
     // Navigation properties
     public virtual ApplicationUser User { get; set; } = null!;
@@ -32,5 +35,5 @@ public enum DocumentStatus
 {
     Active = 1,
     Archived = 2,
-    Deleted = 3
+    
 }

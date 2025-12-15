@@ -47,6 +47,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Student>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<ScholarshipOffer>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Video>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Document>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<BandEvent>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Band>().HasQueryFilter(e => !e.IsDeleted);
 
     }
 

@@ -32,7 +32,8 @@ namespace Podium.Core.Entities
         public decimal ScholarshipBudget { get; set; } = 0;
 
         public bool IsActive { get; set; } = true;
-
+        // Soft Delete Property
+        public bool IsDeleted { get; set; }
         // Concurrency Token
         [Timestamp]
         public byte[] RowVersion { get; set; }
