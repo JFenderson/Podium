@@ -18,10 +18,12 @@ namespace Podium.Application.Services
     public class ScholarshipService : IScholarshipService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly INotificationService _notificationService;
 
-        public ScholarshipService(IUnitOfWork unitOfWork)
+        public ScholarshipService(IUnitOfWork unitOfWork, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
+            _notificationService = notificationService;
         }
         public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
         {
@@ -88,7 +90,21 @@ namespace Podium.Application.Services
                 throw new InvalidOperationException("The budget was updated by another transaction. Please try again.");
             }
 
-            // TODO: Trigger Notification (SignalR)
+            // Trigger Notification (SignalR) if offer is Sent
+            if (offer.Status == ScholarshipStatus.Sent)
+            {
+                var student = await _unitOfWork.Students.GetByIdAsync(dto.StudentId);
+                if (student != null)
+                {
+                    await _notificationService.NotifyUserAsync(
+                        student.ApplicationUserId,
+                        "ScholarshipOffer",
+                        "New Scholarship Offer",
+                        $"You have received a scholarship offer from {band.BandName}.",
+                        offer.Id.ToString());
+                }
+            }
+
             return MapToDto(offer);
         }
 
@@ -106,7 +122,18 @@ namespace Podium.Application.Services
 
             _unitOfWork.ScholarshipOffers.Update(offer);
             await _unitOfWork.SaveChangesAsync();
-            // TODO: Notify Student
+
+            // Notify Student
+            var student = await _unitOfWork.Students.GetByIdAsync(offer.StudentId);
+            if (student != null)
+            {
+                await _notificationService.NotifyUserAsync(
+                    student.ApplicationUserId,
+                    "ScholarshipApproved",
+                    "Scholarship Approved",
+                    "Your scholarship offer has been approved.",
+                    offer.Id.ToString());
+            }
         }
 
         public async Task RespondToOfferAsync(int offerId, RespondToOfferDto dto, string userId, bool isGuardian)
@@ -159,6 +186,20 @@ namespace Podium.Application.Services
 
             _unitOfWork.ScholarshipOffers.Update(offer);
             await _unitOfWork.SaveChangesAsync();
+            // Notify Band Staff/Director of response (Accepted or Declined)
+            if (offer.Status == ScholarshipStatus.Accepted || offer.Status == ScholarshipStatus.Declined)
+            {
+                var student = await _unitOfWork.Students.GetByIdAsync(offer.StudentId);
+                string studentName = student != null ? $"{student.FirstName} {student.LastName}" : "A student";
+
+                await _notificationService.NotifyBandStaffAsync(
+                    offer.BandId,
+                    "ScholarshipResponse",
+                    "Scholarship Response",
+                    $"{studentName} has {offer.Status.ToString().ToLower()} the scholarship offer.",
+                    offer.Id.ToString());
+            }
+
             // TODO: Update Budget Committed Amount
         }
 
@@ -181,10 +222,9 @@ namespace Podium.Application.Services
 
             offer.Status = accept ? ScholarshipStatus.Accepted : ScholarshipStatus.Declined;
 
-            // Update Guardian Response Info
             offer.RespondedByGuardianUserId = guardianUserId;
             offer.RespondedByGuardian = true;
-            offer.ResponseDate = DateTime.UtcNow; // Update timestamp to finalization time
+            offer.ResponseDate = DateTime.UtcNow; 
 
             await _unitOfWork.SaveChangesAsync();
         }
@@ -260,6 +300,8 @@ namespace Podium.Application.Services
                     PendingAmount = 0
                 };
             }
+
+            
 
             // 2. Calculate Pending vs Committed based on Offer Status
             // Note: AllocatedAmount in BandBudget includes BOTH Pending and Accepted offers.

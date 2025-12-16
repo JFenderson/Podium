@@ -46,7 +46,11 @@ namespace Podium.Infrastructure.Services
         {
             // 1. Find all staff members to save to DB
             // Note: Ensure your BandStaff repository supports inclusion or direct querying
-            var staffMembers = await _unitOfWork.BandStaff.FindAsync(b => b.BandId == bandId);
+            var staffMembers = await _unitOfWork.BandStaff
+                .FindAsync(b => b.BandId == bandId && b.IsActive && b.CanViewStudents);
+
+            var userIds = staffMembers.Select(s => s.ApplicationUserId).Distinct().ToList();
+            var notifications = new List<Notification>();
 
             foreach (var staff in staffMembers)
             {
@@ -57,21 +61,29 @@ namespace Podium.Infrastructure.Services
                     Title = title,
                     Message = message,
                     RelatedEntityId = relatedId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false
                 };
                 await _unitOfWork.Notifications.AddAsync(notification);
             }
-            await _unitOfWork.SaveChangesAsync();
 
-            // 2. Send Real-time to the Group
-            await _hubContext.Clients.Group($"Band_{bandId}").SendAsync("ReceiveNotification", new
+            if (notifications.Any())
             {
-                Type = type,
-                Title = title,
-                Message = message,
-                RelatedEntityId = relatedId,
-                CreatedAt = DateTime.UtcNow
-            });
+                await _unitOfWork.Notifications.AddRangeAsync(notifications);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            if (userIds.Any())
+            {
+                await _hubContext.Clients.Users(userIds).SendAsync("ReceiveNotification", new
+                {
+                    Type = type,
+                    Title = title,
+                    Message = message,
+                    RelatedEntityId = relatedId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
         }
 
         public async Task MarkAsReadAsync(int notificationId)

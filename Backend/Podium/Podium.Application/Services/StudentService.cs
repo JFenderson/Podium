@@ -20,15 +20,18 @@ public class StudentService : IStudentService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPermissionService _permissionService;
     private readonly INotificationService _notificationService;
+    private readonly IEmailService _emailService;
 
     public StudentService(
         IUnitOfWork unitOfWork,
         IPermissionService permissionService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _permissionService = permissionService;
         _notificationService = notificationService;
+        _emailService = emailService;
     }
 
 
@@ -111,6 +114,16 @@ public class StudentService : IStudentService
         if (existingInterests.Any())
             return ServiceResult<bool>.Failure("You have already shown interest in this band");
 
+        var student = await _unitOfWork.Students.GetByIdAsync(studentId);
+        var band = await _unitOfWork.Bands.GetByIdAsync(bandId);
+
+        if (student == null || band == null)
+            return ServiceResult<bool>.Failure("Student or Band not found.");
+
+        string studentName = student != null ? $"{student.FirstName} {student.LastName}" : "A student";
+        string bandName = band.BandName;
+
+
         var interest = new StudentInterest
         {
             StudentId = studentId,
@@ -127,9 +140,108 @@ public class StudentService : IStudentService
             bandId,
             "NewInterest",
             "New Student Interest",
-            "A new student has shown interest in your band!",
+            $"{studentName} is interested in your band!",
             studentId.ToString()
         );
+
+        // Query for guardians who are Active and opted-in to notifications
+        var guardiansToNotify = await _unitOfWork.StudentGuardians.GetQueryable()
+            .Include(sg => sg.Guardian)
+            .Where(sg => sg.StudentId == studentId
+                         && sg.IsActive
+                         && sg.ReceivesNotifications)
+            .ToListAsync();
+
+        foreach (var sg in guardiansToNotify)
+        {
+            if (sg.Guardian != null && !string.IsNullOrEmpty(sg.Guardian.ApplicationUserId))
+            {
+                await _notificationService.NotifyUserAsync(
+                    sg.Guardian.ApplicationUserId,
+                    "StudentActivity", // Different type for guardian filtering if needed
+                    "Student Interest Updated",
+                    $"{student.FirstName} has shown interest in {bandName}!", // Personalized for guardian
+                    studentId.ToString()
+                );
+            }
+        }
+
+
+        // ==========================================================
+        // SCENARIO A: BAND STAFF (Recruiters)
+        // ==========================================================
+
+        // 1. In-App & Push (SignalR)
+        await _notificationService.NotifyBandStaffAsync(
+            bandId,
+            "NewInterest",
+            "New Student Interest",
+            $"{studentName} is interested in your band!",
+            studentId.ToString()
+        );
+
+        // 2. Email Notification (For active staff who can view students)
+        // We need to fetch them manually to get their Email addresses
+        var staffToEmail = await _unitOfWork.BandStaff.GetQueryable()
+            .Include(bs => bs.ApplicationUser)
+            .Where(bs => bs.BandId == bandId && bs.IsActive && bs.CanViewStudents)
+            .ToListAsync();
+
+        foreach (var staff in staffToEmail)
+        {
+            // Check if user exists and has an email
+            if (staff.ApplicationUser != null && !string.IsNullOrEmpty(staff.ApplicationUser.Email))
+            {
+                // You might want to add a check here for specific Staff Email Preferences if you add that feature later
+                await _emailService.SendEmailAsync(
+                    staff.ApplicationUser.Email,
+                    $"Podium: New Interest from {studentName}",
+                    $"Hello {staff.FirstName},<br/><br/>Good news! <strong>{studentName}</strong> has just expressed interest in {bandName}.<br/><br/>Log in to Podium to view their profile."
+                );
+            }
+        }
+
+        // ==========================================================
+        // SCENARIO B: GUARDIANS (Parents)
+        // ==========================================================
+
+        // Fetch Guardians with their preferences
+        var guardians = await _unitOfWork.StudentGuardians.GetQueryable()
+            .Include(sg => sg.Guardian)
+            .Where(sg => sg.StudentId == studentId && sg.IsActive)
+            .ToListAsync();
+
+        foreach (var link in guardians)
+        {
+            var guardian = link.Guardian;
+            if (guardian == null) continue;
+
+            // 1. In-App & Push (SignalR) - ONLY if opted in
+            if (link.ReceivesNotifications)
+            {
+                await _notificationService.NotifyUserAsync(
+                    guardian.ApplicationUserId,
+                    "StudentActivity",
+                    "Student Interest Updated",
+                    $"{student.FirstName} has shown interest in {bandName}.",
+                    studentId.ToString()
+                );
+            }
+
+            // 2. Email Notification - ONLY if EmailNotificationsEnabled is true
+            if (guardian.EmailNotificationsEnabled && !string.IsNullOrEmpty(guardian.Email))
+            {
+                await _emailService.SendEmailAsync(
+                   guardian.Email,
+                   $"Podium Update: {student.FirstName}'s Activity",
+                   $"Hello {guardian.FirstName},<br/><br/>Just letting you know that <strong>{student.FirstName}</strong> has shown interest in the <strong>{bandName}</strong> program.<br/><br/>Login to manage preferences."
+               );
+            }
+
+            // 3. SMS Notification (Placeholder)
+            // if (guardian.SmsNotificationsEnabled && _smsService != null) { ... }
+        }
+
 
         return ServiceResult<bool>.Success(true);
     }
