@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Podium.Application.Services
 {
@@ -19,11 +20,13 @@ namespace Podium.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly INotificationService _notificationService;
+        private readonly ILogger<ScholarshipService> _logger;
 
-        public ScholarshipService(IUnitOfWork unitOfWork, INotificationService notificationService)
+        public ScholarshipService(IUnitOfWork unitOfWork, INotificationService notificationService, ILogger<ScholarshipService> logger)
         {
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
+            _logger = logger;
         }
         public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
         {
@@ -450,8 +453,56 @@ namespace Podium.Application.Services
         }
 
 
-        public Task CheckExpirationsAsync() => Task.CompletedTask;
-    
-     
+        public async Task CheckExpirationsAsync()
+        {
+            // 2. Query for expired offers that are still pending/sent
+            var expiredOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => (o.Status == ScholarshipStatus.Sent || o.Status == ScholarshipStatus.PendingGuardianSignature)
+                            && o.ExpirationDate < DateTime.UtcNow)
+                .ToListAsync();
+
+            if (!expiredOffers.Any()) return;
+
+            // 3. Process Budget Refunds (Optimization: Group by Budget to minimize DB calls)
+            // When an offer expires, the money allocated to it should be returned to the budget.
+            var refundsNeeded = expiredOffers
+                .GroupBy(o => new { o.BandId, Year = o.CreatedAt.Year })
+                .Select(g => new
+                {
+                    BandId = g.Key.BandId,
+                    FiscalYear = g.Key.Year,
+                    TotalRefund = g.Sum(o => o.ScholarshipAmount)
+                })
+                .ToList();
+
+            foreach (var refund in refundsNeeded)
+            {
+                var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                    .FirstOrDefaultAsync(b => b.BandId == refund.BandId && b.FiscalYear == refund.FiscalYear);
+
+                if (budget != null)
+                {
+                    budget.AllocatedAmount -= refund.TotalRefund;
+                    budget.RemainingAmount += refund.TotalRefund;
+                    _unitOfWork.BandBudgets.Update(budget);
+                }
+            }
+
+            // 4. Update Offer Status
+            foreach (var offer in expiredOffers)
+            {
+                offer.Status = ScholarshipStatus.Expired;
+                // Optional: You could set a 'RespondedDate' or similar timestamp if you track expiration time specifically
+                _unitOfWork.ScholarshipOffers.Update(offer);
+            }
+
+            // 5. Save Changes
+            await _unitOfWork.SaveChangesAsync();
+
+            // 6. Log the result
+            _logger.LogInformation("Expired {Count} scholarship offers and refunded associated budgets.", expiredOffers.Count);
+        }
+
+
     }
 }
