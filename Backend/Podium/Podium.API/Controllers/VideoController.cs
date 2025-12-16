@@ -6,6 +6,7 @@ using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Interfaces;
 using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
 
 namespace Podium.API.Controllers
 {
@@ -18,17 +19,20 @@ namespace Podium.API.Controllers
         private readonly IVideoStorageService _storageService;
         private readonly IPermissionService _permissionService;
         private readonly ILogger<VideoController> _logger;
+        private readonly IConfiguration _configuration;
 
         public VideoController(
             IVideoService videoService,
             IVideoStorageService storageService,
             IPermissionService permissionService,
-            ILogger<VideoController> logger)
+            ILogger<VideoController> logger,
+            IConfiguration configuration)
         {
             _videoService = videoService;
             _storageService = storageService;
             _permissionService = permissionService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -206,8 +210,14 @@ namespace Podium.API.Controllers
         [AllowAnonymous] // Should be protected by a specific API Key or Secret check inside
         public async Task<IActionResult> TranscodingWebhook([FromBody] TranscodingWebhookRequest request, [FromQuery] string secret)
         {
-            // Simple security check example
-            // if (secret != _configuration["TranscodingWebhookSecret"]) return Unauthorized();
+            // 1. Fetch Expected Secret from Config
+            var expectedSecret = _configuration["Video:TranscodingSecret"];
+
+            // 2. Validate
+            if (string.IsNullOrEmpty(expectedSecret) || secret != expectedSecret)
+            {
+                return Unauthorized();
+            }
 
             await _videoService.UpdateTranscodingStatusAsync(request.JobId, request);
             return Ok();
