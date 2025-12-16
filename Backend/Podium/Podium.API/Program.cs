@@ -7,6 +7,7 @@ using Podium.Core.Entities;
 using Podium.Infrastructure.Data;
 using Podium.Infrastructure.Hubs;
 using Podium.API.Extensions;
+using Podium.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +25,9 @@ builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environmen
 // ---------------------------------------------------------
 
 var app = builder.Build();
+
+//Register Global Exception Middleware
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
