@@ -19,5 +19,7 @@ namespace Podium.Application.DTOs.Band
         // Engagement Metrics for display
         public int UpcomingEventsCount { get; set; }
         public bool HasScholarshipsAvailable { get; set; }
+
+        public List<BandStaffSummaryDto> Staff { get; set; } = new();
     }
 }

@@ -63,6 +63,7 @@ namespace Podium.Application.Services
             // 1. Fetch Band with related data for counts
             var band = await _unitOfWork.Bands.GetQueryable()
                 .Include(b => b.Events)
+                .Include(b => b.Staff)
                 .FirstOrDefaultAsync(b => b.Id == bandId && b.IsActive);
 
             if (band == null)
@@ -75,6 +76,16 @@ namespace Podium.Application.Services
             // Simple check: if budget > 0, they likely have scholarships
             var hasScholarships = band.ScholarshipBudget > 0;
 
+            var staffList = band.Staff
+                .Where(s => s.IsActive && s.CanContact)
+                .Select(s => new BandStaffSummaryDto
+                {
+                    Name = $"{s.FirstName} {s.LastName}",
+                    Title = s.Title,
+                    Role = s.Role
+                })
+                .ToList();
+
             // 3. Map to DTO
             var dto = new BandDetailDto
             {
@@ -86,7 +97,8 @@ namespace Podium.Application.Services
                 Description = band.Description,
                 Achievements = band.Achievements,
                 UpcomingEventsCount = upcomingEvents,
-                HasScholarshipsAvailable = hasScholarships
+                HasScholarshipsAvailable = hasScholarships,
+                Staff = staffList
             };
 
             return ServiceResult<BandDetailDto>.Success(dto);
