@@ -110,7 +110,7 @@ namespace Podium.Application.Authorization
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
-            return bandStaff?.Role == "Director";
+            return bandStaff?.Role == Roles.Director;
         }
 
         public async Task<bool> CanSendOffersAsync()
@@ -119,7 +119,7 @@ namespace Podium.Application.Authorization
             if (userId == null) return false;
 
             var role = await GetCurrentUserRoleAsync();
-            if (role != Roles.Recruiter && role != Roles.Director) return false;
+            if (role != Roles.BandStaff && role != Roles.Director) return false;
 
             var bandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .AsNoTracking()

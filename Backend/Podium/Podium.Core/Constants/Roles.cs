@@ -7,7 +7,7 @@
     {
         public const string Student = "Student";
         public const string Guardian = "Guardian";
-        public const string Recruiter = "Recruiter";
+        public const string BandStaff = "BandStaff";
         public const string Director = "Director";
         public const string Admin = "Admin";
 
@@ -16,7 +16,7 @@
         /// </summary>
         public static string[] GetAllRoles()
         {
-            return new[] { Student, Guardian, Recruiter, Director, Admin };
+            return new[] { Student, Guardian, BandStaff, Director, Admin };
         }
 
         /// <summary>
@@ -24,7 +24,7 @@
         /// </summary>
         public static bool IsBandStaffRole(string role)
         {
-            return role == Recruiter || role == Director;
+            return role == BandStaff || role == Director;
         }
     }
 }

@@ -1,13 +1,14 @@
-﻿using Podium.Infrastructure.Authorization;
-using Podium.Infrastructure.Data;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Podium.Application.DTOs.BandStaff;
-using Podium.Core.Entities;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs.BandStaff;
+using Podium.Core.Constants;
+using Podium.Core.Entities;
 using Podium.Core.Interfaces;
-using Microsoft.AspNetCore.Identity;
+using Podium.Infrastructure.Authorization;
+using Podium.Infrastructure.Data;
 
 namespace Podium.API.Controllers
 {
@@ -127,7 +128,7 @@ namespace Podium.API.Controllers
         }
 
         /// <summary>
-        /// Promote Recruiter to Director - Only Directors with ManageStaff permission
+        /// Promote BandStaff to Director - Only Directors with ManageStaff permission
         /// </summary>
         [HttpPost("{id}/promote")]
         [Authorize(Policy = "AdminAccess")]
@@ -139,13 +140,12 @@ namespace Podium.API.Controllers
                 return NotFound();
             }
 
-            if (staff.Role == "Director")
+            if (staff.Role == Roles.Director)
             {
                 return BadRequest("Staff member is already a Director");
             }
 
-            staff.Role = "Director";
-            // Optionally grant additional permissions when promoting
+            staff.Role = Roles.Director;
             staff.CanManageStaff = true;
 
             _unitOfWork.BandStaff.Update(staff);

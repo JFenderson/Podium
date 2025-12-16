@@ -94,17 +94,12 @@ namespace Podium.Infrastructure.Services
 
         public async Task<List<Notification>> GetRecentNotificationsAsync(string userId, int count = 20)
         {
-            // Note: Generic Repositories usually return IEnumerable. 
-            // For efficiency, we rely on the implementation to handle OrderBy/Take if exposed, 
-            // or we do client-side eval if the dataset is small (it is per user, so likely okay).
-            // A better approach is adding `GetRecentAsync` to your INotificationRepository.
-
-            var allUserNotifications = await _unitOfWork.Notifications.FindAsync(n => n.UserId == userId);
-
-            return allUserNotifications
+            // Optimized: Use GetQueryable to sort and take on the database side
+            return await _unitOfWork.Notifications.GetQueryable()
+                .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(count)
-                .ToList();
+                .ToListAsync();
         }
 
         // Implement GetUnreadCountAsync, MarkAsReadAsync, etc. using _unitOfWork

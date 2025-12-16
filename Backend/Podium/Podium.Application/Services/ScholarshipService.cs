@@ -25,6 +25,23 @@ namespace Podium.Application.Services
         }
         public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
         {
+            int currentFiscalYear = DateTime.UtcNow.Year;
+            var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                .FirstOrDefaultAsync(b => b.BandId == dto.BandId && b.FiscalYear == currentFiscalYear);
+
+            if (budget == null)
+                throw new InvalidOperationException($"No budget defined for fiscal year {currentFiscalYear}.");
+
+            // 2. Validate Budget
+            if (budget.RemainingAmount < dto.ScholarshipAmount)
+            {
+                throw new InvalidOperationException($"Insufficient budget. Remaining: ${budget.RemainingAmount:N0}");
+            }
+
+            budget.AllocatedAmount += dto.ScholarshipAmount;
+            budget.RemainingAmount -= dto.ScholarshipAmount;
+
+            _unitOfWork.BandBudgets.Update(budget);
             // 1. Fetch the Band to check/deduct budget
             // Note: In a real scenario, use dto.BandId. Using 1 here to match previous hardcoding logic.
             int bandId = dto.BandId;
@@ -33,20 +50,20 @@ namespace Podium.Application.Services
             if (band == null)
                 throw new KeyNotFoundException("Band not found.");
 
-            // 2. Validate Budget
-            if (band.ScholarshipBudget < dto.ScholarshipAmount)
-            {
-                throw new InvalidOperationException($"Insufficient scholarship budget. Remaining: ${band.ScholarshipBudget}");
-            }
+            //// 2. Validate Budget
+            //if (band.ScholarshipBudget < dto.ScholarshipAmount)
+            //{
+            //    throw new InvalidOperationException($"Insufficient scholarship budget. Remaining: ${band.ScholarshipBudget}");
+            //}
 
-            // 3. Deduct from Budget (Optimistic Concurrency will protect this)
-            band.ScholarshipBudget -= dto.ScholarshipAmount;
-            _unitOfWork.Bands.Update(band);
+            // 3. Deduct from Budget (Optimistic Concurrency will protect this) 
+            //band.ScholarshipBudget -= dto.ScholarshipAmount;
+            _unitOfWork.BandBudgets.Update(budget);
 
             var offer = new ScholarshipOffer
             {
                 StudentId = dto.StudentId,
-                BandId = bandId,
+                BandId = band.Id,
                 CreatedByUserId = userId,
                 ScholarshipAmount = dto.ScholarshipAmount,
                 Description = dto.Description,
@@ -68,7 +85,7 @@ namespace Podium.Application.Services
                 // 5. Handle Concurrency Conflict
                 // This occurs if another user modified the Band record (e.g. another deduction) 
                 // between the time we fetched 'band' and now.
-                throw new InvalidOperationException("The band's budget was updated by another transaction. Please try creating the offer again.");
+                throw new InvalidOperationException("The budget was updated by another transaction. Please try again.");
             }
 
             // TODO: Trigger Notification (SignalR)
@@ -179,15 +196,19 @@ namespace Podium.Application.Services
             if (offer == null) throw new KeyNotFoundException();
 
             // Validate Status
-            if (offer.Status == ScholarshipStatus.Accepted || offer.Status == ScholarshipStatus.Declined)
-                throw new InvalidOperationException("Cannot rescind a finalized offer.");
+            if (offer.Status == ScholarshipStatus.Accepted || offer.Status == ScholarshipStatus.Declined || offer.Status == ScholarshipStatus.Rescinded)
+                throw new InvalidOperationException($"Cannot rescind offer in status {offer.Status}.");
 
             // 3. Refund Budget (Since we deducted it upon Creation)
-            var band = await _unitOfWork.Bands.GetByIdAsync(offer.BandId);
-            if (band != null)
+            int fiscalYear = offer.CreatedAt.Year;
+            var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                .FirstOrDefaultAsync(b => b.BandId == offer.BandId && b.FiscalYear == fiscalYear);
+
+            if (budget != null)
             {
-                band.ScholarshipBudget += offer.ScholarshipAmount;
-                _unitOfWork.Bands.Update(band);
+                budget.AllocatedAmount -= offer.ScholarshipAmount;
+                budget.RemainingAmount += offer.ScholarshipAmount;
+                _unitOfWork.BandBudgets.Update(budget);
             }
 
             // 4. Update Offer
@@ -211,7 +232,7 @@ namespace Podium.Application.Services
                     DirectorId = directorId,
                     Reason = dto.Reason,
                     AmountReturned = offer.ScholarshipAmount,
-                    PreviousStatus = previousStatus.ToString()
+                    PreviousStatus = fiscalYear
                 })
             };
 
@@ -222,20 +243,46 @@ namespace Podium.Application.Services
 
         public async Task<ScholarshipBudgetDto> GetBudgetStatsAsync(int bandId)
         {
-            // Efficient Database Query for Budget using IUnitOfWork
-            var stats = await _unitOfWork.ScholarshipOffers.GetQueryable()
-                .Where(o => o.BandId == bandId)
-                .GroupBy(o => 1) // Group all to get aggregates
-                .Select(g => new ScholarshipBudgetDto
-                {
-                    TotalBudget = 50000, // This should come from a BandSettings table
-                    CommittedAmount = g.Where(o => o.Status == ScholarshipStatus.Accepted).Sum(o => o.ScholarshipAmount),
-                    PendingAmount = g.Where(o => o.Status == ScholarshipStatus.Sent || o.Status == ScholarshipStatus.PendingApproval).Sum(o => o.ScholarshipAmount),
-                })
-                .FirstOrDefaultAsync() ?? new ScholarshipBudgetDto();
+            int currentFiscalYear = DateTime.UtcNow.Year;
 
-            stats.AvailableAmount = stats.TotalBudget - stats.CommittedAmount - stats.PendingAmount;
-            return stats;
+            // 1. Fetch Budget Data from BandBudget Table
+            var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                .FirstOrDefaultAsync(b => b.BandId == bandId && b.FiscalYear == currentFiscalYear);
+
+            if (budget == null)
+            {
+                // Return zeros if no budget configured yet
+                return new ScholarshipBudgetDto
+                {
+                    TotalBudget = 0,
+                    AvailableAmount = 0,
+                    AllocatedAmount = 0,
+                    PendingAmount = 0
+                };
+            }
+
+            // 2. Calculate Pending vs Committed based on Offer Status
+            // Note: AllocatedAmount in BandBudget includes BOTH Pending and Accepted offers.
+            // We query offers to split the "Allocated" visualization for the UI.
+            var offerStats = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId && o.CreatedAt.Year == currentFiscalYear)
+                .GroupBy(o => 1)
+                .Select(g => new
+                {
+                    Committed = g.Where(o => o.Status == ScholarshipStatus.Accepted).Sum(o => (decimal?)o.ScholarshipAmount) ?? 0,
+                    Pending = g.Where(o => o.Status == ScholarshipStatus.Sent || o.Status == ScholarshipStatus.PendingApproval || o.Status == ScholarshipStatus.PendingGuardianSignature).Sum(o => (decimal?)o.ScholarshipAmount) ?? 0
+                })
+                .FirstOrDefaultAsync();
+
+            return new ScholarshipBudgetDto
+            {
+                TotalBudget = budget.TotalBudget,
+                AvailableAmount = budget.RemainingAmount,
+                // Mapped from calculated aggregation for detailed breakdown
+                CommittedAmount = offerStats?.Committed ?? 0,
+                PendingAmount = offerStats?.Pending ?? 0
+                // Note: Committed + Pending should roughly equal budget.AllocatedAmount
+            };
         }
 
         // Helper mapper
@@ -243,12 +290,22 @@ namespace Podium.Application.Services
         {
             OfferId = offer.Id,
             StudentId = offer.StudentId,
+            StudentName = offer.Student != null ? $"{offer.Student.FirstName} {offer.Student.LastName}" : "",
+            BandId = offer.BandId,
+            BandName = offer.Band != null ? offer.Band.BandName : "",
             Status = offer.Status,
             ScholarshipAmount = offer.ScholarshipAmount,
             OfferType = offer.OfferType,
             CreatedAt = offer.CreatedAt,
             ApprovedAt = offer.ApprovedAt,
+            ResponseDate = offer.ResponseDate,
             ExpirationDate = offer.ExpirationDate,
+            Notes = offer.Description,
+            Terms = offer.Terms,
+            RescindReason = offer.RescindReason,
+            CreatedByStaffName = offer.CreatedByStaff != null ? offer.CreatedByStaff.ApplicationUserId : "Unknown",
+            ApprovedByUserId = offer.ApprovedByUserId,
+            RespondedByGuardianUserId = offer.RespondedByGuardianUserId,
             RequiresGuardianApproval = offer.RequiresGuardianApproval
         };
 
@@ -310,32 +367,13 @@ namespace Podium.Application.Services
                 .OrderByDescending(so => so.CreatedAt)
                 .Skip((filters.Page - 1) * filters.PageSize)
                 .Take(filters.PageSize)
-                .Select(so => new ScholarshipOfferDto
-                {
-                    OfferId = so.Id,
-                    StudentId = so.StudentId,
-                    StudentName = so.Student.FirstName + " " + so.Student.LastName,
-                    BandId = so.BandId,
-                    BandName = so.Band.BandName,
-                    Status = so.Status,
-                    ScholarshipAmount = so.ScholarshipAmount,
-                    OfferType = so.OfferType,
-                    CreatedAt = so.CreatedAt,
-                    ApprovedAt = so.ApprovedAt,
-                    ResponseDate = so.ResponseDate,
-                    ExpirationDate = so.ExpirationDate,
-                    Notes = so.Description,
-                    Terms = so.Terms,
-                    RescindReason = so.RescindReason,
-                    CreatedByStaffName = so.CreatedByStaff != null ? so.CreatedByStaff.ApplicationUserId : "Unknown",
-                    ApprovedByUserId = so.ApprovedByUserId,
-                    RespondedByGuardianUserId = so.RespondedByGuardianUserId,
-                    RequiresGuardianApproval = so.RequiresGuardianApproval
-                })
+                .Select(so => MapToDto(so))
                 .ToListAsync();
 
             // 6. Return Overview
-            decimal totalBudget = 50000m;
+            int currentFiscalYear = DateTime.UtcNow.Year;
+            var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                .FirstOrDefaultAsync(b => b.BandId == band.Id && b.FiscalYear == currentFiscalYear);
 
             return new ScholarshipOverviewDto
             {
@@ -345,13 +383,14 @@ namespace Podium.Application.Services
                 ApprovedCount = summary?.ApprovedCount ?? 0,
                 AcceptedCount = summary?.AcceptedCount ?? 0,
                 DeclinedCount = summary?.DeclinedCount ?? 0,
-                AvailableBudget = totalBudget - (summary?.TotalAmount ?? 0m),
+                AvailableBudget = budget?.RemainingAmount ?? 0m,
                 Offers = offers,
                 CurrentPage = filters.Page,
                 PageSize = filters.PageSize,
                 TotalPages = (int)Math.Ceiling((double)(summary?.TotalCount ?? 0) / filters.PageSize)
             };
         }
+
 
         public Task CheckExpirationsAsync() => Task.CompletedTask;
     

@@ -208,7 +208,7 @@ public class StudentService : IStudentService
                 var studentIds = guardian.Students.Select(s => s.Id).ToList();
                 query = query.Where(s => studentIds.Contains(s.Id));
                 break;
-            case Roles.Recruiter:
+            case Roles.BandStaff:
             case Roles.Director:
                 if (!await _permissionService.HasPermissionAsync(Permissions.ViewStudents))
                     return ServiceResult<PagedResult<StudentDetailsDto>>.Forbidden("No permission");
@@ -280,7 +280,7 @@ public class StudentService : IStudentService
         {
             case Roles.Student: return await _permissionService.IsStudentOwnerAsync(studentId);
             case Roles.Guardian: return await _permissionService.IsGuardianOfStudentAsync(studentId);
-            case Roles.Recruiter:
+            case Roles.BandStaff:
             case Roles.Director: return await _permissionService.HasPermissionAsync(Permissions.ViewStudents);
             default: return false;
         }

@@ -249,7 +249,7 @@ namespace Podium.Infrastructure.Authorization
                 .AsNoTracking()
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == user.Id);
 
-            if (bandStaff?.Role == "Director")
+            if (bandStaff?.Role == Roles.Director)
             {
                 context.Succeed(requirement);
             }
@@ -322,7 +322,7 @@ namespace Podium.Infrastructure.Authorization
                     }
 
                     // BandStaff with ViewStudents permission - using string ApplicationUserId
-                    if (role == Roles.Recruiter || role == Roles.Director)
+                    if (role == Roles.BandStaff || role == Roles.Director)
                     {
                         var bandStaff = await _context.BandStaff
                             .FirstOrDefaultAsync(bs => bs.ApplicationUserId == user.Id);

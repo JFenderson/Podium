@@ -9,6 +9,7 @@ using Podium.Application.DTOs.Director;
 using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Student;
 using Podium.Application.Interfaces;
+using Podium.Core.Constants;
 using Podium.Infrastructure.Data;
 using System.Security.Claims;
 
@@ -18,7 +19,7 @@ namespace BandRecruitment.Controllers
     /// Controller for band director administrative functions.
     /// Provides comprehensive band management, staff oversight, analytics, and scholarship administration.
     /// </summary>
-    [Authorize(Roles = "Director")]
+    [Authorize(Roles = Roles.Director)]
     [ApiController]
     [Route("api/[controller]")]
     public class DirectorController : ControllerBase

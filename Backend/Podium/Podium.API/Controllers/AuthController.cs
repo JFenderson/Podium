@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.DTOs.Auth;
 using Podium.Application.Interfaces;
+using Podium.Core.Constants;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
 
@@ -38,7 +39,25 @@ public class AuthController : ControllerBase
             return BadRequest(new { errors = result.Errors });
         }
 
-        return Ok(result);
+        return Ok(new { message = "Registration successful. Please check your email to confirm your account." });
+    }
+
+    [HttpGet("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+        {
+            return BadRequest("User ID and Token are required");
+        }
+
+        var result = await _authService.ConfirmEmailAsync(userId, token);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return Ok(new { message = "Email confirmed successfully. You may now login." });
     }
 
     // Helper for Frontend Registration Form
@@ -50,7 +69,7 @@ public class AuthController : ControllerBase
             .Select(b => new { b.Id, b.BandName, b.State })
             .ToListAsync();
 
-        var roles = new[] { "Student", "Guardian", "Recruiter", "Director" };
+        var roles = new[] { Roles.Student, Roles.Guardian, Roles.BandStaff, Roles.Director };
 
         return Ok(new { Bands = bands, Roles = roles });
     }

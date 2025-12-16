@@ -41,7 +41,7 @@ namespace Podium.Infrastructure.Data
             if (asuBand != null)
             {
                 await CreateStaffUser(userManager, context, "director@asu.edu", "James", "Oliver", Roles.Director, asuBand.Id, "Director of Bands", commonPassword);
-                await CreateStaffUser(userManager, context, "recruiter@asu.edu", "Sarah", "Jenkins", Roles.Recruiter, asuBand.Id, "Percussion Instructor", commonPassword);
+                await CreateStaffUser(userManager, context, "recruiter@asu.edu", "Sarah", "Jenkins", Roles.BandStaff, asuBand.Id, "Percussion Instructor", commonPassword);
                 // Link Director to Band (Owner)
                 var director = await userManager.FindByEmailAsync("director@asu.edu");
                 if (director != null)
@@ -55,7 +55,7 @@ namespace Podium.Infrastructure.Data
             if (famuBand != null)
             {
                 await CreateStaffUser(userManager, context, "director@famu.edu", "William", "Foster", Roles.Director, famuBand.Id, "Director of Bands", commonPassword);
-                await CreateStaffUser(userManager, context, "recruiter@famu.edu", "Robert", "Lee", Roles.Recruiter, famuBand.Id, "Woodwind Coordinator", commonPassword);
+                await CreateStaffUser(userManager, context, "recruiter@famu.edu", "Robert", "Lee", Roles.BandStaff, famuBand.Id, "Woodwind Coordinator", commonPassword);
                 // Link Director
                 var director = await userManager.FindByEmailAsync("director@famu.edu");
                 if (director != null)
@@ -230,7 +230,7 @@ namespace Podium.Infrastructure.Data
 
         private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
         {
-            string[] roleNames = { Roles.Admin, Roles.Director, Roles.Recruiter, Roles.Student, Roles.Guardian };
+            string[] roleNames = { Roles.Admin, Roles.Director, Roles.BandStaff, Roles.Student, Roles.Guardian };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))

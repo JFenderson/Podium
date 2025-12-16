@@ -51,7 +51,7 @@ namespace Podium.Application.Services
 
             // Security check: Ensure student owns video or user is staff
             // (You might move this logic to a PermissionService later)
-            if (userRole == "Student" && video.StudentId != currentUserId)
+            if (userRole == Roles.Student && video.StudentId != currentUserId)
             {
                 throw new UnauthorizedAccessException("Cannot view this video.");
             }

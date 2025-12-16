@@ -149,9 +149,9 @@ namespace Podium.API.Extensions
                 // Role-based policies
                 options.AddPolicy("StudentOnly", policy => policy.RequireRole(Roles.Student));
                 options.AddPolicy("GuardianOnly", policy => policy.RequireRole(Roles.Guardian));
-                options.AddPolicy("RecruiterOnly", policy => policy.RequireRole(Roles.Recruiter));
+                options.AddPolicy("RecruiterOnly", policy => policy.RequireRole(Roles.BandStaff));
                 options.AddPolicy("DirectorOnly", policy => policy.RequireRole(Roles.Director));
-                options.AddPolicy("BandStaffOnly", policy => policy.RequireRole(Roles.Recruiter, Roles.Director));
+                options.AddPolicy("BandStaffOnly", policy => policy.RequireRole(Roles.BandStaff, Roles.Director));
 
                 // Permission-based policies
                 options.AddPolicy("CanViewStudents", policy =>
@@ -175,7 +175,7 @@ namespace Podium.API.Extensions
 
                 options.AddPolicy("CanCreateOffer", policy =>
                 {
-                    policy.RequireRole(Roles.Recruiter, Roles.Director);
+                    policy.RequireRole(Roles.BandStaff, Roles.Director);
                     policy.Requirements.Add(new BandStaffPermissionRequirement(Permissions.SendOffers));
                 });
 
@@ -189,7 +189,7 @@ namespace Podium.API.Extensions
             return services;
         }
 
-        public static IServiceCollection AddPodiumCoreServices(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddPodiumCoreServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
         {
             // SignalR
             services.AddSignalR();
@@ -219,7 +219,6 @@ namespace Podium.API.Extensions
             services.AddScoped<SendEmailNotificationsJob>();
 
             // Infrastructure Services
-            services.AddTransient<IEmailService, EmailService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Note: IAuthService registered twice in original, keeping both interfaces mapping to AuthService
@@ -234,6 +233,29 @@ namespace Podium.API.Extensions
             services.AddScoped<IDirectorService, DirectorService>();
             services.AddScoped<IGuardianService, GuardianService>();
             services.AddScoped<IBandService, BandService>();
+
+            // EMAIL SERVICE (Conditional Registration)
+            if (environment.IsDevelopment())
+            {
+                services.AddTransient<IEmailService, MockEmailService>();
+                Console.WriteLine("Using Mock Email Service (Check Console for output)");
+            }
+            else
+            {
+                services.AddTransient<IEmailService, EmailService>();
+            }
+
+            // CORS
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAngularApp", policy =>
+                {
+                    policy.WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:4200" })
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowCredentials();
+                });
+            });
 
             // CORS
             services.AddCors(options =>

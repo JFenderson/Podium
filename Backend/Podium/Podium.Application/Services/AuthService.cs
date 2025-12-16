@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Podium.Application.DTOs.Auth;
 using Podium.Application.DTOs;
+using Podium.Application.DTOs.Auth;
 using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
@@ -11,7 +12,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
+using System.Web;
 
 namespace Podium.Infrastructure.Services;
 
@@ -21,17 +22,20 @@ public class AuthService : IAuthService
     private readonly IConfiguration _configuration;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailService _emailService;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         IConfiguration configuration,
         RoleManager<IdentityRole> roleManager,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IEmailService emailService)
     {
         _userManager = userManager;
         _configuration = configuration;
         _roleManager = roleManager;
         _unitOfWork = unitOfWork;
+        _emailService = emailService;
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterDto dto)
@@ -49,7 +53,8 @@ public class AuthService : IAuthService
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             CreatedAt = DateTime.UtcNow,
-            IsActive = true
+            IsActive = true,
+            EmailConfirmed = false
         };
 
         var result = await _userManager.CreateAsync(user, dto.Password);
@@ -98,7 +103,7 @@ public class AuthService : IAuthService
                     await _unitOfWork.Guardians.AddAsync(guardian);
                     break;
 
-                case Roles.Recruiter:
+                case Roles.BandStaff:
                 case Roles.Director:
                     if (!dto.BandId.HasValue) throw new Exception("Band selection is required for Staff.");
                     var staff = new BandStaff
@@ -123,6 +128,28 @@ public class AuthService : IAuthService
             return new AuthResult { Success = false, Errors = new List<string> { $"Failed to create profile: {ex.Message}" } };
         }
 
+        // --- NEW: Email Verification Logic ---
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+        // Construct the callback URL (adjust domain for production/dev)
+        // Ideally, this base URL comes from AppSettings
+        var baseUrl = _configuration["App:ClientUrl"] ?? "http://localhost:4200";
+        var callbackUrl = $"{baseUrl}/auth/confirm-email?userId={user.Id}&token={HttpUtility.UrlEncode(token)}";
+
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "Confirm your email",
+            $"Please confirm your account by <a href='{callbackUrl}'>clicking here</a>.");
+
+        // Do NOT log the user in immediately. Return success but no tokens.
+        return new AuthResult
+        {
+            Success = true,
+            AccessToken = string.Empty, // No token returned
+            RefreshToken = string.Empty,
+            Errors = null
+        };
+
         return await GenerateAuthResultAsync(user);
     }
 
@@ -132,6 +159,18 @@ public class AuthService : IAuthService
         if (user == null || !user.IsActive)
         {
             return new AuthResult { Success = false, Errors = new List<string> { "Invalid email or password" } };
+        }
+
+        // Check IsActive (Banned/Deleted)
+        if (!user.IsActive)
+        {
+            return new AuthResult { Success = false, Errors = new List<string> { "Account is inactive" } };
+        }
+
+        // NEW: Check Email Confirmation
+        if (!await _userManager.IsEmailConfirmedAsync(user))
+        {
+            return new AuthResult { Success = false, Errors = new List<string> { "Email not confirmed. Please check your inbox." } };
         }
 
         var isPasswordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
@@ -144,6 +183,23 @@ public class AuthService : IAuthService
         await _userManager.UpdateAsync(user);
 
         return await GenerateAuthResultAsync(user);
+    }
+
+    public async Task<AuthResult> ConfirmEmailAsync(string userId, string token)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return new AuthResult { Success = false, Errors = new List<string> { "User not found" } };
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, token);
+        if (!result.Succeeded)
+        {
+            return new AuthResult { Success = false, Errors = result.Errors.Select(e => e.Description).ToList() };
+        }
+
+        return new AuthResult { Success = true };
     }
 
     public async Task<AuthResult> RefreshTokenAsync(RefreshTokenRequestDto dto)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Podium.Application.DTOs.Guardian;
 using Podium.Application.Interfaces;
 using Podium.Application.Services;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using System.Security.Claims;
 
@@ -12,7 +13,7 @@ namespace BandRecruitment.Controllers
     /// Controller for parent/guardian oversight of linked students.
     /// Provides monitoring, approval workflows, and notification management.
     /// </summary>
-    [Authorize(Roles = "Guardian")]
+    [Authorize(Roles = Roles.Guardian)]
     [ApiController]
     [Route("api/[controller]")]
     public class GuardianController : ControllerBase

@@ -57,7 +57,7 @@ namespace Podium.Application.Authorization
         /// </summary>
         public static bool IsRecruiter(this ControllerBase controller)
         {
-            return controller.IsInRole(Roles.Recruiter);
+            return controller.IsInRole(Roles.BandStaff);
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace Podium.Application.Authorization
         public static bool IsBandStaff(this ControllerBase controller)
         {
             var role = controller.GetCurrentUserRole();
-            return role == Roles.Recruiter || role == Roles.Director;
+            return role == Roles.BandStaff || role == Roles.Director;
         }
 
         /// <summary>

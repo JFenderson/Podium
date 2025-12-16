@@ -8,6 +8,7 @@ using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
+using SendGrid.Helpers.Mail;
 using System.Security.Claims;
 
 namespace Podium.API.Controllers
@@ -58,7 +59,7 @@ namespace Podium.API.Controllers
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
             // 2. Delegate Creation to Service
-            var createdOfferDto = await _service.CreateOfferAsync(dto, userIdClaim, userRole == "Director");
+            var createdOfferDto = await _service.CreateOfferAsync(dto, userIdClaim, userRole == Roles.Director);
 
             // =========================================================
             // NOTIFICATION LOGIC
@@ -126,8 +127,8 @@ namespace Podium.API.Controllers
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
             var isCreator = offer.CreatedByUserId == userIdClaim;
-            var isDirector = role == "Director";
-            if (!isCreator && !isDirector && role != "Student") return Forbid();
+            var isDirector = role == Roles.Director;
+            if (!isCreator && !isDirector && role != Roles.Student) return Forbid();
 
             // Update Status
             offer.Status = dto.ToScholarshipStatus();
@@ -169,13 +170,13 @@ namespace Podium.API.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            if (role == "Student")
+            if (role == Roles.Student)
             {
-                var student = await _unitOfWork.Students.GetQueryable()
-                    .FirstOrDefaultAsync(s => s.ApplicationUserId == userIdClaim && s.Id == offer.StudentId);
+                var student = await _unitOfWork.Students.FirstOrDefaultAsync(s => s.ApplicationUserId == userIdClaim && s.Id == offer.StudentId);
                 if (student == null) return Forbid();
             }
-            else if (role != "Recruiter" && role != "Director")
+            // Refactored: Use Roles constants
+            else if (role != Roles.BandStaff && role != Roles.Director)
             {
                 return Forbid();
             }
