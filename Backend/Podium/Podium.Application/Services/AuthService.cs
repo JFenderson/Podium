@@ -133,7 +133,12 @@ public class AuthService : IAuthService
 
         // Construct the callback URL (adjust domain for production/dev)
         // Ideally, this base URL comes from AppSettings
-        var baseUrl = _configuration["App:ClientUrl"] ?? "http://localhost:4200";
+        var baseUrl = _configuration["App:ClientUrl"];
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            throw new InvalidOperationException("Configuration 'App:ClientUrl' is missing.");
+        }
+
         var callbackUrl = $"{baseUrl}/auth/confirm-email?userId={user.Id}&token={HttpUtility.UrlEncode(token)}";
 
         await _emailService.SendEmailAsync(

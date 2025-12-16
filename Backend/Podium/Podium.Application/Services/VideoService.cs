@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.Video;
 using Podium.Application.Interfaces;
@@ -7,7 +8,8 @@ using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
-using Video = Podium.Core.Entities.Video; // Assuming generic interfaces live here
+using Video = Podium.Core.Entities.Video;
+using Microsoft.Extensions.Configuration;
 
 namespace Podium.Application.Services
 {
@@ -16,15 +18,18 @@ namespace Podium.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IVideoStorageService _storageService;
         private readonly ILogger<VideoService> _logger;
+        private readonly IConfiguration _configuration;
 
         public VideoService(
             IUnitOfWork unitOfWork,
             IVideoStorageService storageService,
-            ILogger<VideoService> logger)
+            ILogger<VideoService> logger,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _storageService = storageService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<List<MyVideoListItem>> GetMyVideosAsync(int studentId)
@@ -78,12 +83,18 @@ namespace Podium.Application.Services
 
         public async Task<(bool success, string message)> ValidateVideoUploadAsync(int studentId, long fileSizeBytes)
         {
-            // 1. Check storage quotas (optional)
-            // 2. Check max file size (e.g., 500MB)
-            const long maxFileSize = 500 * 1024 * 1024;
-            if (fileSizeBytes > maxFileSize)
+            // Retrieve max size from config, default to 500 if missing (or throw if you prefer strict)
+            int maxFileSizeMB = _configuration.GetValue<int>("Video:MaxFileSizeMB");
+
+            // If the config value is 0 (missing), you might want to handle it. 
+            // Here we assume it's set correctly in appsettings.
+            if (maxFileSizeMB == 0) maxFileSizeMB = 500;
+
+            long maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;
+
+            if (fileSizeBytes > maxFileSizeBytes)
             {
-                return (false, "File size exceeds 500MB limit.");
+                return (false, $"File size exceeds {maxFileSizeMB}MB limit.");
             }
 
             return (true, "Upload approved");
