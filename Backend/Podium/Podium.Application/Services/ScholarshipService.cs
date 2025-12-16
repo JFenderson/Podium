@@ -167,6 +167,22 @@ namespace Podium.Application.Services
             else
             {
                 offer.Status = ScholarshipStatus.Declined;
+
+                // Since the offer is declined, we must return the funds to the budget 
+                // from which they were originally allocated.
+                int fiscalYear = offer.CreatedAt.Year;
+
+                var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                    .FirstOrDefaultAsync(b => b.BandId == offer.BandId && b.FiscalYear == fiscalYear);
+
+                // It's possible (though rare) that the budget record was deleted or fiscal year changed logic, 
+                // so we null check.
+                if (budget != null)
+                {
+                    budget.AllocatedAmount -= offer.ScholarshipAmount;
+                    budget.RemainingAmount += offer.ScholarshipAmount;
+                    _unitOfWork.BandBudgets.Update(budget);
+                }
             }
 
             offer.ResponseDate = DateTime.UtcNow;
