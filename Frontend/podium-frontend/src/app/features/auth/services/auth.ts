@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../../../environments/environment';
 import {
   LoginDto,
   RegisterDto,
@@ -11,7 +11,7 @@ import {
   CurrentUser,
   RefreshTokenRequest,
   RegistrationOptions
-} from '../models/auth';
+} from '../../../core/models/auth';
 
 @Injectable({
   providedIn: 'root'
