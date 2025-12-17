@@ -1,12 +1,35 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
+import { NotificationService } from './core/services/notification.service';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.scss'
+  template: '<router-outlet></router-outlet>',
+  styleUrls: ['./app.component.scss']
 })
-export class App {
-  protected readonly title = signal('podium-frontend');
+export class AppComponent implements OnInit {
+  title = 'Podium - Band Recruitment Platform';
+
+  constructor(
+    private authService: AuthService,
+    private notificationService: NotificationService
+  ) {}
+
+  ngOnInit(): void {
+    // Initialize authentication state
+    this.authService.isAuthenticated$.subscribe(isAuth => {
+      if (isAuth) {
+        // Load notifications for authenticated users
+        this.notificationService.refreshNotifications();
+        
+        // Set up periodic notification refresh (every 30 seconds)
+        setInterval(() => {
+          this.notificationService.refreshNotifications();
+        }, 30000);
+      }
+    });
+  }
 }

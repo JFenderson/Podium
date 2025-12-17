@@ -8,7 +8,7 @@ export const BAND_ROUTES: Routes = [
   },
   {
     path: 'list',
-    loadComponent: () => import('./band-list/band-list/band-list.component').then(m => m.BandListComponent)
+    loadComponent: () => import('./components/band-list/band-list.component').then(m => m.BandListComponent)
   },
   {
     path: ':id',
