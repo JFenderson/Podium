@@ -51,11 +51,11 @@ export const routes: Routes = [
   },
   {
     path: 'unauthorized',
-    loadComponent: () => import('./shared/components/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
+    loadComponent: () => import('./shared/components/unauthorized/unauthorized').then(m => m.UnauthorizedComponent)
   },
   {
     path: 'not-found',
-    loadComponent: () => import('./shared/components/not-found/not-found.component').then(m => m.NotFoundComponent)
+    loadComponent: () => import('./shared/components/not-found/not-found').then(m => m.NotFoundComponent)
   },
   {
     path: '**',

@@ -83,6 +83,12 @@ export enum ContactRequestStatus {
   Expired = 'Expired'
 }
 
+export enum ApprovalStatus {
+  Pending = 'Pending',
+  Approved = 'Approved',
+  Declined = 'Declined'
+}
+
 export interface VideoUploadDto {
   studentId: number;
   title: string;

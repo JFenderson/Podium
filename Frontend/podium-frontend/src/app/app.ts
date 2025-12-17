@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthService } from './core/services/auth.service';
-import { NotificationService } from './core/services/notification.service';
+import { AuthService } from './core/services/auth';
+import { NotificationService } from './core/services/notification';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet],
   template: '<router-outlet></router-outlet>',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.scss']
 })
 export class AppComponent implements OnInit {
   title = 'Podium - Band Recruitment Platform';
