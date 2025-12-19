@@ -22,6 +22,7 @@ export interface LoginResponse {
   lastName: string;
   roles: string[];
   permissions?: string[];
+  accessToken: string;
   token: string;
   refreshToken: string;
   tokenExpiration: string | Date;

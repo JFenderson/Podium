@@ -17,6 +17,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Add auth token to request
   const token = authService.getToken();
+  let authReq = req;
   if (token) {
     req = addToken(req, token);
   }
@@ -63,35 +64,34 @@ function isPublicEndpoint(url: string): boolean {
 /**
  * Handle 401 Unauthorized errors by refreshing token
  */
-function handle401Error(
-  request: HttpRequest<unknown>, 
-  next: HttpHandlerFn, 
-  authService: AuthService
-): Observable<HttpEvent<unknown>> {
+function handle401Error(request: HttpRequest<unknown>, next: HttpHandlerFn, authService: AuthService) {
   if (!isRefreshing) {
+    // A. First request to hit 401 starts the refresh
     isRefreshing = true;
     refreshTokenSubject.next(null);
 
     return authService.refreshToken().pipe(
-      switchMap(() => {
+      switchMap((response) => {
         isRefreshing = false;
-        const newToken = authService.getToken();
-        refreshTokenSubject.next(newToken);
-        return next(addToken(request, newToken || ''));
+
+        const newToken = response.accessToken || response.token;
+
+          refreshTokenSubject.next(newToken); // Pass new token to waiting requests
+          return next(addToken(request, newToken));
       }),
-      catchError(error => {
+      catchError((err) => {
         isRefreshing = false;
-        authService.logout(); // void method - no subscribe needed
-        return throwError(() => error);
+        authService.logout(); // If refresh fails, strict logout
+        return throwError(() => err);
       })
     );
   } else {
-    // Wait for token refresh to complete
+    // B. Subsequent requests wait for the refresh to finish
     return refreshTokenSubject.pipe(
-      filter(token => token !== null),
-      take(1),
-      switchMap(token => {
-        return next(addToken(request, token || ''));
+      filter((token) => token !== null), // Wait until token is not null
+      take(1), // Take 1 and complete
+      switchMap((token) => {
+        return next(addToken(request, token!));
       })
     );
   }

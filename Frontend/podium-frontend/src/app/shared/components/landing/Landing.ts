@@ -8,12 +8,7 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatCardModule,
-    MatToolbarModule,
-    MatChipsModule
+    RouterLink
   ],
   templateUrl: './landing.html',
   styleUrls: ['./landing.scss']
