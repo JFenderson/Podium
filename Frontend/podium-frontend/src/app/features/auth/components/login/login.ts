@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../../../features/auth/services/auth';
 import { LoginRequest } from '../../../../core/models/auth';
 
 @Component({
@@ -26,22 +26,23 @@ import { LoginRequest } from '../../../../core/models/auth';
     MatCardModule,
     MatProgressSpinnerModule,
     MatIconModule,
-    MatSnackBarModule
+    MatSnackBarModule,
   ],
   templateUrl: './login.html',
-  styleUrls: ['./login.scss']
+  styleUrls: ['./login.scss'],
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   isLoading = false;
   hidePassword = true;
-error: string | null = null;
+  error: string | null = null;
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -60,14 +61,14 @@ error: string | null = null;
   private initForm(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
   /**
    * Submit login form
    */
-onSubmit(): void {
+  onSubmit(): void {
     if (this.loginForm.invalid) {
       this.markFormGroupTouched(this.loginForm);
       return;
@@ -78,44 +79,20 @@ onSubmit(): void {
 
     const { email, password } = this.loginForm.value;
 
-    console.log('Attempting login...', { email });
+    console.log('🔵 Attempting login...', { email });
 
     this.authService.login(email, password).subscribe({
       next: (response) => {
-        console.log('Login successful!', response);
-        this.isLoading = false;
+        console.log('✅ Login successful!', response);
 
-        // Get the current user to determine redirect
-        const user = this.authService.currentUserValue;
-        console.log('Current user after login:', user);
-
-        if (!user) {
-          console.error('No user found after login!');
-          this.error = 'Login failed - no user data received';
-          return;
-        }
-
-        // Redirect based on primary role
-        const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
-        console.log('Primary role:', primaryRole);
-
-        switch (primaryRole) {
-          case 'Student':
-            this.router.navigate(['/students/profile']);
-            break;
-          case 'Guardian':
-            this.router.navigate(['/guardian/dashboard']);
-            break;
-          case 'Director':
-          case 'BandStaff':
-            this.router.navigate(['/director/dashboard']);
-            break;
-          default:
-            this.router.navigate(['/dashboard']);
-        }
+        // Use setTimeout to ensure auth state is fully updated
+        setTimeout(() => {
+          this.isLoading = false;
+          this.navigateBasedOnRole();
+        }, 100);
       },
       error: (error) => {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
         this.isLoading = false;
 
         // Handle different error types
@@ -130,7 +107,17 @@ onSubmit(): void {
         } else {
           this.error = 'Login failed. Please try again.';
         }
-      }
+
+        // Only show snackbar if error message exists
+        if (this.error) {
+          this.snackBar.open(this.error, 'Close', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar'],
+          });
+        }
+      },
     });
   }
 
@@ -139,34 +126,72 @@ onSubmit(): void {
    */
   private navigateBasedOnRole(): void {
     const user = this.authService.currentUserValue;
-    
-    if (!user) {
-      this.router.navigate(['/dashboard']);
+    console.log('🔵 Current user after login:', user);
+
+    if (!user || !user.roles || user.roles.length === 0) {
+      console.log('⚠️ No user or roles found, navigating to dashboard');
+      this.navigateToRoute('/dashboard');
       return;
     }
 
     const primaryRole = user.roles[0]; // Get first role
+    console.log('🔵 Primary role:', primaryRole);
+
+    let targetRoute: string;
+
     switch (primaryRole) {
       case 'Student':
-        this.router.navigate(['/students/profile']);
+        targetRoute = '/students/profile';
         break;
       case 'Guardian':
-        this.router.navigate(['/guardian/dashboard']);
+        targetRoute = '/guardian/dashboard';
         break;
       case 'BandStaff':
       case 'Director':
-        this.router.navigate(['/director/dashboard']);
+        targetRoute = '/director/dashboard';
         break;
       default:
-        this.router.navigate(['/dashboard']);
+        targetRoute = '/dashboard';
     }
+
+    console.log('🔵 Navigating to:', targetRoute);
+    this.navigateToRoute(targetRoute);
+  }
+
+  /**
+   * Navigate to route with error handling
+   */
+  private navigateToRoute(route: string): void {
+    // Run navigation inside Angular zone
+    this.ngZone.run(() => {
+      this.router
+        .navigate([route], { replaceUrl: true })
+        .then((success) => {
+          if (success) {
+            console.log('✅ Navigation successful to:', route);
+          } else {
+            console.error('❌ Navigation failed to:', route);
+            // Try fallback
+            if (route !== '/dashboard') {
+              console.log('🔵 Attempting fallback to /dashboard');
+              this.router.navigate(['/dashboard'], { replaceUrl: true });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Navigation error:', error);
+          // Last resort - use window.location
+          console.log('🔵 Using window.location as fallback');
+          window.location.href = route;
+        });
+    });
   }
 
   /**
    * Mark all form fields as touched to show validation errors
    */
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

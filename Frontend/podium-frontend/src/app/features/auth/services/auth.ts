@@ -7,18 +7,18 @@ import {
   LoginRequest,
   RegisterRequest,
   LoginResponse,
-  CurrentUser
+  CurrentUser,
 } from '../../../core/models/auth';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  
+
   private apiUrl = `${environment.apiUrl}/Auth`;
-  
+
   private currentUserSubject = new BehaviorSubject<CurrentUser | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -42,18 +42,16 @@ export class AuthService {
 
   login(email: string, password: string): Observable<LoginResponse> {
     const request: LoginRequest = { email, password };
-    
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
-      .pipe(
-        tap(response => this.setAuthData(response))
-      );
+
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/login`, request)
+      .pipe(tap((response) => this.setAuthData(response)));
   }
 
   register(request: RegisterRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/register`, request)
-      .pipe(
-        tap(response => this.setAuthData(response))
-      );
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/register`, request)
+      .pipe(tap((response) => this.setAuthData(response)));
   }
 
   logout(): void {
@@ -61,26 +59,25 @@ export class AuthService {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
-    
+
     // Clear current user
     this.currentUserSubject.next(null);
-    
+
     // Navigate to login
     this.router.navigate(['/login']);
   }
 
   refreshToken(): Observable<LoginResponse> {
     const refreshToken = this.getRefreshToken();
-    
+
     if (!refreshToken) {
       this.logout();
       throw new Error('No refresh token available');
     }
 
-    return this.http.post<LoginResponse>(`${this.apiUrl}/refresh`, { refreshToken })
-      .pipe(
-        tap(response => this.setAuthData(response))
-      );
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/refresh`, { refreshToken })
+      .pipe(tap((response) => this.setAuthData(response)));
   }
 
   isAuthenticated(): boolean {
@@ -107,7 +104,7 @@ export class AuthService {
 
   hasAnyRole(roles: string[]): boolean {
     const user = this.currentUserValue;
-    return user ? roles.some(role => user.roles?.includes(role)) : false;
+    return user ? roles.some((role) => user.roles?.includes(role)) : false;
   }
 
   hasPermission(permission: string): boolean {
@@ -117,12 +114,12 @@ export class AuthService {
 
   hasAnyPermission(permissions: string[]): boolean {
     const user = this.currentUserValue;
-    return user ? permissions.some(perm => user.permissions?.includes(perm)) : false;
+    return user ? permissions.some((perm) => user.permissions?.includes(perm)) : false;
   }
 
   hasAllPermissions(permissions: string[]): boolean {
     const user = this.currentUserValue;
-    return user ? permissions.every(perm => user.permissions?.includes(perm)) : false;
+    return user ? permissions.every((perm) => user.permissions?.includes(perm)) : false;
   }
 
   getCurrentUser(): Observable<CurrentUser> {
@@ -130,24 +127,23 @@ export class AuthService {
   }
 
   updateProfile(data: any): Observable<CurrentUser> {
-    return this.http.put<CurrentUser>(`${this.apiUrl}/profile`, data)
-      .pipe(
-        tap(user => {
-          // Update current user with new profile data
-          const currentUser = this.currentUserValue;
-          if (currentUser) {
-            const updatedUser = { ...currentUser, ...user };
-            this.currentUserSubject.next(updatedUser);
-            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-          }
-        })
-      );
+    return this.http.put<CurrentUser>(`${this.apiUrl}/profile`, data).pipe(
+      tap((user) => {
+        // Update current user with new profile data
+        const currentUser = this.currentUserValue;
+        if (currentUser) {
+          const updatedUser = { ...currentUser, ...user };
+          this.currentUserSubject.next(updatedUser);
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }
+      })
+    );
   }
 
   changePassword(currentPassword: string, newPassword: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/change-password`, {
       currentPassword,
-      newPassword
+      newPassword,
     });
   }
 
@@ -158,47 +154,77 @@ export class AuthService {
   resetPassword(token: string, newPassword: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/reset-password`, {
       token,
-      newPassword
+      newPassword,
     });
   }
 
   // ============================================
   // PRIVATE HELPER METHOD - THIS WAS MISSING
   // ============================================
-  private setAuthData(response: LoginResponse): void {
-    console.log('setAuthData called with:', response);
+  private setAuthData(response: any): void {
+    console.log('🔵 setAuthData called with:', response);
+
+    // Backend returns 'accessToken' but we need 'token'
+    const token = response.token || response.accessToken;
+    const refreshToken = response.refreshToken;
+
     // Store tokens
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('refreshToken', response.refreshToken);
-console.log('Tokens stored in localStorage');
-    // Create CurrentUser object from LoginResponse
+    localStorage.setItem('token', token);
+    localStorage.setItem('refreshToken', refreshToken);
+    console.log('✅ Tokens stored');
+
+    // Decode JWT to extract user info
+    let decodedToken: any = {};
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      decodedToken = JSON.parse(jsonPayload);
+      console.log('✅ Decoded JWT:', decodedToken);
+    } catch (error) {
+      console.error('❌ Error decoding JWT:', error);
+    }
+
+    // Extract user info from JWT claims
+    const fullName = decodedToken.unique_name || '';
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const role = decodedToken.role || '';
+    const roles = Array.isArray(role) ? role : role ? [role] : [];
+
+    // Create CurrentUser object
     const currentUser: CurrentUser = {
-      userId: response.userId,
-      email: response.email,
-      firstName: response.firstName,
-      lastName: response.lastName,
-      roles: response.roles || [],
+      userId: response.userId || decodedToken.nameid,
+      email: response.email || decodedToken.email || decodedToken.sub,
+      firstName: firstName,
+      lastName: lastName,
+      roles: roles, // Now populated from JWT!
       permissions: response.permissions || [],
-      token: response.token,
-      refreshToken: response.refreshToken,
-      tokenExpiration: new Date(response.tokenExpiration),
-      
-      // Optional IDs based on roles
+      token: token,
+      refreshToken: refreshToken,
+      tokenExpiration: new Date(response.expiresAt || decodedToken.exp * 1000),
       studentId: response.studentId,
       guardianId: response.guardianId,
       bandStaffId: response.bandStaffId,
       directorId: response.directorId,
-      bandId: response.bandId
+      bandId: response.bandId,
     };
 
-      console.log('Created currentUser object:', currentUser);
+    console.log('✅ Created currentUser:', currentUser);
 
-  // Store user object
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-  console.log('Stored currentUser in localStorage');
-  
-  // Update BehaviorSubject
-  this.currentUserSubject.next(currentUser);
-  console.log('Updated currentUserSubject');
+    // Store user
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+    // Update BehaviorSubject
+    this.currentUserSubject.next(currentUser);
+    console.log('✅ Auth state updated');
   }
 }

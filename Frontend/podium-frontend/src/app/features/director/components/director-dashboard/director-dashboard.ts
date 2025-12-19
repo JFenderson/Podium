@@ -3,19 +3,35 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DirectorService } from '../../services/director';
 import { BandStaffService } from '../../../band-staff/services/band-staff';
-import { AuthService } from '../../../../features/auth/services/auth';
+import { AuthService } from '../../../auth/services/auth';
 import { 
   DirectorDashboardDto, 
   BandStatisticsDto,
   DirectorActivityDto 
 } from '../../../../core/models/director';
 import { Roles } from '../../../../core/models/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-director-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
-  templateUrl: './director-dashboard.html'
+  imports: [
+    CommonModule,
+    RouterLink,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatChipsModule,
+    MatDividerModule
+  ],
+  templateUrl: './director-dashboard.html',
+  styleUrls: ['./director-dashboard.scss']
 })
 export class DirectorDashboardComponent implements OnInit {
   private directorService = inject(DirectorService);
@@ -96,26 +112,26 @@ export class DirectorDashboardComponent implements OnInit {
 
   getActivityIcon(type: string): string {
     const icons: { [key: string]: string } = {
-      'OfferCreated': 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-      'OfferSent': 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
-      'OfferAccepted': 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      'OfferDeclined': 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
-      'StudentRated': 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
-      'StaffAdded': 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
-      'default': 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+      'OfferCreated': 'mail',
+      'OfferSent': 'send',
+      'OfferAccepted': 'check_circle',
+      'OfferDeclined': 'cancel',
+      'StudentRated': 'star',
+      'StaffAdded': 'person_add',
+      'default': 'info'
     };
     return icons[type] || icons['default'];
   }
 
-  getActivityColor(type: string): string {
-    const colors: { [key: string]: string } = {
-      'OfferCreated': 'bg-blue-100 text-blue-600',
-      'OfferSent': 'bg-indigo-100 text-indigo-600',
-      'OfferAccepted': 'bg-green-100 text-green-600',
-      'OfferDeclined': 'bg-red-100 text-red-600',
-      'StudentRated': 'bg-yellow-100 text-yellow-600',
-      'StaffAdded': 'bg-purple-100 text-purple-600',
-      'default': 'bg-gray-100 text-gray-600'
+  getActivityColor(type: string): 'primary' | 'accent' | 'warn' | undefined {
+    const colors: { [key: string]: 'primary' | 'accent' | 'warn' | undefined } = {
+      'OfferCreated': 'primary',
+      'OfferSent': 'primary',
+      'OfferAccepted': 'accent',
+      'OfferDeclined': 'warn',
+      'StudentRated': 'accent',
+      'StaffAdded': 'primary',
+      'default': undefined
     };
     return colors[type] || colors['default'];
   }
