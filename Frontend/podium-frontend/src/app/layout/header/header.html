@@ -1,1 +1,22 @@
-<p>header works!</p>
+<header class="bg-primary text-white shadow-md h-16 flex items-center justify-between px-6">
+  <div class="flex items-center gap-4">
+    <button class="md:hidden p-2 hover:bg-primary-dark rounded-full transition-colors">
+      <span class="material-icons">menu</span>
+    </button>
+    
+    <a href="/" class="text-xl font-bold tracking-wide flex items-center gap-2">
+      <span class="material-icons">podium</span>
+      Podium
+    </a>
+  </div>
+
+  <div class="flex items-center gap-4">
+    <button class="p-2 hover:bg-primary-dark rounded-full transition-colors" aria-label="Notifications">
+      <span class="material-icons text-white">notifications</span>
+    </button>
+    
+    <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center border-2 border-white cursor-pointer hover:bg-primary-dark transition-colors">
+      <span class="material-icons text-sm">person</span>
+    </div>
+  </div>
+</header>

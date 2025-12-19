@@ -1,74 +1,95 @@
-<div class="login-container">
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>
-        <h1>Welcome to Podium</h1>
-      </mat-card-title>
-      <mat-card-subtitle>Sign in to your account</mat-card-subtitle>
-    </mat-card-header>
+<div class="min-h-screen flex items-center justify-center bg-background p-4">
+  <div class="w-full max-w-md bg-surface rounded-lg shadow-lg p-8">
+    
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-text-primary">Welcome to Podium</h1>
+      <p class="text-text-secondary mt-2">Sign in to your account</p>
+    </div>
 
-    <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-        <!-- Email Field -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      
+      <div class="space-y-1">
+        <label for="email" class="block text-sm font-medium text-text-primary">Email</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span class="material-icons text-text-secondary text-xl">email</span>
+          </div>
           <input 
-            matInput 
+            id="email"
             type="email" 
             formControlName="email" 
             placeholder="Enter your email"
-            autocomplete="email">
-          <mat-icon matPrefix>email</mat-icon>
-          <mat-error *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
-            {{ getEmailError() }}
-          </mat-error>
-        </mat-form-field>
+            autocomplete="email"
+            class="block w-full pl-10 pr-3 py-2 border border-border rounded-md leading-5 bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out"
+            [class.border-warn]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+          >
+        </div>
+        <p *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="text-warn text-xs mt-1">
+          {{ getEmailError() }}
+        </p>
+      </div>
 
-        <!-- Password Field -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
+      <div class="space-y-1">
+        <label for="password" class="block text-sm font-medium text-text-primary">Password</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span class="material-icons text-text-secondary text-xl">lock</span>
+          </div>
           <input 
-            matInput 
+            id="password"
             [type]="hidePassword ? 'password' : 'text'" 
             formControlName="password"
             placeholder="Enter your password"
-            autocomplete="current-password">
-          <mat-icon matPrefix>lock</mat-icon>
+            autocomplete="current-password"
+            class="block w-full pl-10 pr-10 py-2 border border-border rounded-md leading-5 bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out"
+            [class.border-warn]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+          >
           <button 
-            mat-icon-button 
-            matSuffix 
             type="button"
             (click)="hidePassword = !hidePassword"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-text-secondary hover:text-text-primary focus:outline-none"
             [attr.aria-label]="'Hide password'" 
             [attr.aria-pressed]="hidePassword">
-            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <span class="material-icons text-xl">{{ hidePassword ? 'visibility_off' : 'visibility' }}</span>
           </button>
-          <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-            {{ getPasswordError() }}
-          </mat-error>
-        </mat-form-field>
-
-        <!-- Forgot Password Link -->
-        <div class="forgot-password">
-          <a routerLink="/auth/forgot-password">Forgot password?</a>
         </div>
+        <p *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="text-warn text-xs mt-1">
+          {{ getPasswordError() }}
+        </p>
+      </div>
 
-        <!-- Submit Button -->
-        <button 
-          mat-raised-button 
-          color="primary" 
-          type="submit" 
-          class="full-width submit-button"
-          [disabled]="isLoading">
-          <mat-spinner *ngIf="isLoading" diameter="20" class="button-spinner"></mat-spinner>
-          <span *ngIf="!isLoading">Sign In</span>
-        </button>
+      <div class="flex justify-end">
+        <a routerLink="/auth/forgot-password" class="text-sm font-medium text-primary hover:text-primary-dark hover:underline transition-colors">
+          Forgot password?
+        </a>
+      </div>
 
-        <!-- Register Link -->
-        <div class="register-link">
-          <p>Don't have an account? <a routerLink="/auth/register">Register here</a></p>
-        </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
+      <button 
+        type="submit" 
+        [disabled]="isLoading"
+        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">
+        
+        <ng-container *ngIf="isLoading; else signInText">
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Signing in...
+        </ng-container>
+        <ng-template #signInText>
+          Sign In
+        </ng-template>
+      </button>
+
+      <div class="text-center text-sm">
+        <p class="text-text-secondary">
+          Don't have an account? 
+          <a routerLink="/auth/register" class="font-medium text-primary hover:text-primary-dark hover:underline transition-colors">
+            Register here
+          </a>
+        </p>
+      </div>
+
+    </form>
+  </div>
 </div>

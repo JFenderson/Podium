@@ -1,1 +1,40 @@
-<p>sidebar works!</p>
+<aside class="flex flex-col h-full bg-surface text-text-primary">
+  <div class="p-4">
+    <p class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Menu</p>
+    <nav class="space-y-1">
+      <a href="/dashboard" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">dashboard</span>
+        Dashboard
+      </a>
+      <a href="/students" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">school</span>
+        Students
+      </a>
+      <a href="/bands" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">music_note</span>
+        Bands
+      </a>
+      <a href="/scholarships" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">card_giftcard</span>
+        Scholarships
+      </a>
+      <a href="/videos" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">video_library</span>
+        Videos
+      </a>
+    </nav>
+  </div>
+
+  <div class="mt-auto p-4 border-t border-border">
+    <nav class="space-y-1">
+      <a href="/profile" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-primary-light/10 hover:text-primary transition-colors group">
+        <span class="material-icons text-text-secondary group-hover:text-primary">settings</span>
+        Settings
+      </a>
+      <button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-warn hover:bg-warn/10 transition-colors">
+        <span class="material-icons">logout</span>
+        Logout
+      </button>
+    </nav>
+  </div>
+</aside>

@@ -12,7 +12,7 @@ export const routes: Routes = [
   // Login page - no guard needed
   {
     path: 'login',
-    loadComponent: () => import('./features/auth/components/login/login').then(m => m.LoginComponent)
+    loadComponent: () => import('./features/auth/components/login/login.component').then(m => m.LoginComponent)
   },
   // Register page - no guard needed
   {

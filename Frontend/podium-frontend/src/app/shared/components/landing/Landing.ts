@@ -10,8 +10,8 @@ import { RouterLink } from '@angular/router';
     CommonModule,
     RouterLink
   ],
-  templateUrl: './landing.html',
-  styleUrls: ['./landing.scss']
+  templateUrl: './landing.component.html',
+  styleUrls: ['./landing.component.scss']
 })
 export class LandingComponent {
   features = [

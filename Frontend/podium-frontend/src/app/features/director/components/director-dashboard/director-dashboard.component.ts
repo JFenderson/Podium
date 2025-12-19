@@ -2,35 +2,26 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { DirectorService } from '../../services/director.service';
-import { BandStaffService } from '../../../band-staff/services/band-staff.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { 
   DirectorDashboardDto, 
   BandStatisticsDto,
-  DirectorActivityDto 
+  DirectorActivityType
 } from '../../../../core/models/director.models';
 import { Roles } from '../../../../core/models/common.models';
-
 
 @Component({
   selector: 'app-director-dashboard',
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatChipsModule,
-    MatDividerModule
+    RouterLink
   ],
   templateUrl: './director-dashboard.component.html',
   styleUrls: ['./director-dashboard.component.scss']
 })
 export class DirectorDashboardComponent implements OnInit {
   private directorService = inject(DirectorService);
-  private bandStaffService = inject(BandStaffService);
   private authService = inject(AuthService);
 
   dashboard: DirectorDashboardDto | null = null;
@@ -47,7 +38,6 @@ export class DirectorDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.isDirector = this.authService.hasRole(Roles.Director);
-    
     if (!this.isDirector) {
       this.error = 'Access denied. Director role required.';
       return;
@@ -82,7 +72,6 @@ export class DirectorDashboardComponent implements OnInit {
 
   loadStatistics(bandId: number): void {
     this.isStatsLoading = true;
-
     this.directorService.getBandStatistics(bandId).subscribe({
       next: (statistics: BandStatisticsDto) => {
         this.statistics = statistics;
@@ -97,62 +86,30 @@ export class DirectorDashboardComponent implements OnInit {
 
   prepareChartData(): void {
     if (!this.dashboard) return;
-
-    // Prepare offer status data
     this.offerStatusData = this.dashboard.offersByStatus || [];
-
-    // Prepare instrument distribution data
     this.instrumentData = this.dashboard.studentsByInstrument || [];
   }
 
   getActivityIcon(type: string): string {
     const icons: { [key: string]: string } = {
-      'OfferCreated': 'mail',
-      'OfferSent': 'send',
-      'OfferAccepted': 'check_circle',
-      'OfferDeclined': 'cancel',
-      'StudentRated': 'star',
-      'StaffAdded': 'person_add',
+      [DirectorActivityType.OfferCreated]: 'mail',
+      [DirectorActivityType.OfferSent]: 'send',
+      [DirectorActivityType.OfferAccepted]: 'check_circle',
+      [DirectorActivityType.OfferDeclined]: 'cancel',
+      [DirectorActivityType.StudentRated]: 'star',
+      [DirectorActivityType.StaffAdded]: 'person_add',
       'default': 'info'
     };
     return icons[type] || icons['default'];
   }
 
-  getActivityColor(type: string): 'primary' | 'accent' | 'warn' | undefined {
-    const colors: { [key: string]: 'primary' | 'accent' | 'warn' | undefined } = {
-      'OfferCreated': 'primary',
-      'OfferSent': 'primary',
-      'OfferAccepted': 'accent',
-      'OfferDeclined': 'warn',
-      'StudentRated': 'accent',
-      'StaffAdded': 'primary',
-      'default': undefined
-    };
-    return colors[type] || colors['default'];
-  }
-
-  getOfferStatusColor(status: string): string {
-    const colors: { [key: string]: string } = {
-      'Draft': 'bg-gray-500',
-      'Sent': 'bg-blue-500',
-      'Accepted': 'bg-green-500',
-      'Declined': 'bg-red-500',
-      'Expired': 'bg-yellow-500',
-      'Withdrawn': 'bg-orange-500'
-    };
-    return colors[status] || 'bg-gray-500';
-  }
-
   refresh(): void {
     this.loadDashboard();
-    if (this.bandId) {
-      this.loadStatistics(this.bandId);
-    }
+    if (this.bandId) this.loadStatistics(this.bandId);
   }
 
   exportData(): void {
     if (!this.bandId) return;
-
     this.directorService.exportDashboardData(this.bandId, 'excel').subscribe({
       next: (blob: Blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -166,9 +123,7 @@ export class DirectorDashboardComponent implements OnInit {
       },
       error: (error: any) => {
         this.error = 'Failed to export data. Please try again.';
-        console.error('Error exporting data:', error);
       }
     });
   }
 }
-

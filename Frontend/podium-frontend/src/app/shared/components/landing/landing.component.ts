@@ -2,21 +2,15 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
-
 @Component({
   selector: 'app-landing',
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
-    MatButtonModule,
-    MatIconModule,
-    MatCardModule,
-    MatToolbarModule,
-    MatChipsModule
+    RouterLink
   ],
-  templateUrl: './landing.html',
-  styleUrls: ['./landing.scss']
+  templateUrl: './landing.component.html',
+  styleUrls: ['./landing.component.scss']
 })
 export class LandingComponent {
   features = [
@@ -24,7 +18,6 @@ export class LandingComponent {
       icon: 'person',
       title: 'For Students',
       description: 'Showcase your talent with audition videos, connect with college band programs, and receive scholarship offers.',
-      color: 'primary',
       items: [
         'Upload audition videos',
         'Build your profile',
@@ -35,7 +28,6 @@ export class LandingComponent {
       icon: 'verified',
       title: 'For Recruiters',
       description: 'Discover talented musicians, review audition videos, send scholarship offers, and build your band program.',
-      color: 'accent',
       items: [
         'Search and filter students',
         'Rate student performances',
@@ -46,7 +38,6 @@ export class LandingComponent {
       icon: 'shield',
       title: 'Guardian Oversight',
       description: 'Parents and guardians can monitor student activities and approve scholarship offers for minors.',
-      color: 'warn',
       items: [
         'Monitor student activities',
         'Approve scholarship offers',

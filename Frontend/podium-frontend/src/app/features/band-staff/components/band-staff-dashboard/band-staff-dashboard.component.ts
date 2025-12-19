@@ -12,7 +12,8 @@ import { Roles, Permissions } from '../../../../core/models/common.models';
   selector: 'app-band-staff-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink],
-  templateUrl: './band-staff-dashboard.component.html'
+  templateUrl: './band-staff-dashboard.component.html',
+  styleUrls: ['./band-staff-dashboard.component.scss']
 })
 export class BandStaffDashboardComponent implements OnInit {
   private bandStaffService = inject(BandStaffService);
@@ -23,7 +24,6 @@ export class BandStaffDashboardComponent implements OnInit {
   profile: BandStaffDto | null = null;
   recentStudents: any[] = [];
   myOffers: any[] = [];
-  myRatings: any[] = [];
   
   isLoading = false;
   error: string | null = null;
@@ -78,19 +78,15 @@ export class BandStaffDashboardComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
-    // Load recent students (if permission)
     if (this.canViewStudents) {
       this.studentService.getStudents({ pageSize: 5, pageNumber: 1 }).subscribe({
         next: (result: any) => {
           this.recentStudents = result.items;
         },
-        error: (error: any) => {
-          console.error('Error loading students:', error);
-        }
+        error: (error: any) => console.error('Error loading students:', error)
       });
     }
 
-    // Load offers (if permission)
     if (this.canSendOffers) {
       this.scholarshipService.getOffers({ pageSize: 5, pageNumber: 1 }).subscribe({
         next: (result: any) => {
@@ -108,7 +104,6 @@ export class BandStaffDashboardComponent implements OnInit {
       this.isLoading = false;
     }
 
-    // Load staff stats
     const currentUser = this.authService.currentUserValue;
     if (currentUser?.bandStaffId) {
       this.bandStaffService.getStaffStats(currentUser.bandStaffId).subscribe({
@@ -116,29 +111,27 @@ export class BandStaffDashboardComponent implements OnInit {
           this.totalStudentsViewed = stats.totalStudentsViewed || 0;
           this.totalRatingsGiven = stats.totalRatingsGiven || 0;
         },
-        error: (error: any) => {
-          console.error('Error loading stats:', error);
-        }
+        error: (error: any) => console.error('Error loading stats:', error)
       });
     }
   }
 
   getOfferStatusColor(status: string): string {
     const colors: { [key: string]: string } = {
-      'Draft': 'bg-gray-100 text-gray-800',
+      'Draft': 'bg-gray-100 text-text-secondary',
       'Sent': 'bg-blue-100 text-blue-800',
       'Accepted': 'bg-green-100 text-green-800',
       'Declined': 'bg-red-100 text-red-800',
       'Expired': 'bg-yellow-100 text-yellow-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-text-secondary';
   }
 
   getRatingStars(rating: number): string {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
     let stars = '★'.repeat(fullStars);
-    if (hasHalfStar) stars += '⯨';
+    if (hasHalfStar) stars += '⯨'; // You might want to replace this with half-star icon logic in HTML if using Material Icons
     stars += '☆'.repeat(5 - fullStars - (hasHalfStar ? 1 : 0));
     return stars;
   }

@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optional: Keep your custom scrollbar */
+/* Custom scrollbar */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f5f5f5;
+    background: #f5f5f5; /* Matches colors.background */
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #ccc;
@@ -17,7 +17,9 @@
   }
 }
 
-/* Global resets if needed (Tailwind 'base' handles most) */
+/* Global resets */
 html, body {
-  @apply h-full bg-background text-text-primary font-sans;
+  @apply h-full font-sans;
+  background-color: #f5f5f5; /* Matches colors.background */
+  color: #333333; /* Matches colors.text.primary */
 }
