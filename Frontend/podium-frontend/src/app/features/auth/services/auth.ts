@@ -24,6 +24,7 @@ export class AuthService {
   
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasValidToken());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  setAuthData: any;
 
   constructor(
     private http: HttpClient,
@@ -86,10 +87,7 @@ export class AuthService {
    */
   login(dto: LoginDto): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.API_URL}/login`, dto).pipe(
-      tap(response => {
-        this.setSession(response);
-        this.loadCurrentUser();
-      }),
+      tap(response => this.setAuthData(response)),
       catchError(this.handleError)
     );
   }
@@ -127,9 +125,7 @@ export class AuthService {
     const request: RefreshTokenRequest = { refreshToken };
     
     return this.http.post<LoginResponse>(`${this.API_URL}/refresh`, request).pipe(
-      tap(response => {
-        this.setSession(response);
-      }),
+      tap(response => this.setAuthData(response)),
       catchError(error => {
         this.clearSession();
         return throwError(() => error);
@@ -140,15 +136,9 @@ export class AuthService {
   /**
    * Get current user from backend
    */
-  getCurrentUser(): Observable<CurrentUser> {
-    return this.http.get<CurrentUser>(`${this.API_URL}/me`).pipe(
-      tap(user => {
-        this.setUserInStorage(user);
-        this.currentUserSubject.next(user);
-      }),
-      catchError(this.handleError)
-    );
-  }
+getCurrentUser(): Observable<CurrentUser> {
+  return this.http.get<CurrentUser>(`${this.API_URL}/me`);
+}
 
   /**
    * Load current user data
@@ -254,17 +244,17 @@ export class AuthService {
   /**
    * Check if user has specific role
    */
-  hasRole(role: string): boolean {
-    const user = this.currentUserValue;
-    return user?.role === role;
-  }
+hasRole(role: string): boolean {
+  const user = this.currentUserValue;
+  return user?.roles.includes(role) || false;
+}
 
   /**
    * Check if user has any of the specified roles
    */
   hasAnyRole(roles: string[]): boolean {
     const user = this.currentUserValue;
-    return user ? roles.includes(user.role) : false;
+    return user ? roles.some(role => user.roles.includes(role)) : false;
   }
 
   /**

@@ -45,11 +45,13 @@ export interface GuardianPendingApprovalDto {
   studentName: string;
   bandId: number;
   bandName: string;
-  offerType: string;
+  offerType?: string;
   amount?: number;
   description: string;
   expiresAt?: Date;
   sentAt: Date;
+  offerDetails: string;
+  requestedAt: Date;
 }
 
 export interface GuardianActivityDto {
@@ -70,7 +72,7 @@ export enum GuardianActivityType {
   ApprovalDenied = 'ApprovalDenied',
   ContactRequested = 'ContactRequested',
   VideoUploaded = 'VideoUploaded',
-  InterestShown = 'InterestShown'
+  InterestShown = 'InterestShown',
 }
 
 export interface GuardianApprovalDto {
@@ -95,7 +97,7 @@ export interface GuardianApprovalRequestDto {
 export enum ApprovalStatus {
   Pending = 'Pending',
   Approved = 'Approved',
-  Declined = 'Declined'
+  Declined = 'Declined',
 }
 
 export interface StudentGuardianDto {

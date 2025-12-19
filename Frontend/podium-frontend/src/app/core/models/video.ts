@@ -53,15 +53,7 @@ export enum VideoQuality {
   Mobile = '360p'
 }
 
-export enum VideoStatus {
-  Pending = 'Pending',
-  Uploading = 'Uploading',
-  Processing = 'Processing',
-  Completed = 'Completed',
-  Failed = 'Failed',
-  Deleted = 'Deleted'
-}
-
+export type VideoStatus = 'Pending' | 'Uploading' | 'Processing' | 'Completed' | 'Failed' | 'Deleted';
 export interface VideoUploadDto {
   studentId: number;
   title: string;
@@ -76,6 +68,9 @@ export interface VideoUploadProgressDto {
   totalBytes: number;
   percentage: number;
   status: UploadStatus;
+  type: 'progress' | 'complete';
+  data?: VideoDto;
+  progress: number; 
 }
 
 export enum UploadStatus {

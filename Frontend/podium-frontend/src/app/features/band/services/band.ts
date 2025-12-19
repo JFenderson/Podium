@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '../../core/services/api';
+import { ApiService } from '../../../core/services/api';
 import {
   BandSummaryDto,
   BandDetailDto,
   BandFilterDto,
   BandStatsDto
-} from '../../core/models/band';
+} from '../../../core/models/band';
 
 @Injectable({
   providedIn: 'root'

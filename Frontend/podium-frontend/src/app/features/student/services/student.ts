@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '../../core/services/api';
+import { ApiService } from '../../../core/services/api';
 import {
   StudentDetailsDto,
   UpdateStudentDto,
@@ -8,8 +8,8 @@ import {
   InterestDto,
   PagedResult,
   StudentFilterDto
-} from '../../core/models/student';
-import { RatingDto, ServiceResult } from '../../core/models/common';
+} from '../../../core/models/student';
+import { RatingDto, ServiceResult } from '../../../core/models/common';
 
 @Injectable({
   providedIn: 'root'

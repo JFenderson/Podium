@@ -1,0 +1,244 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Create Scholarship Offer</h1>
+      <p class="mt-2 text-gray-600">Make a scholarship offer to a prospective student</p>
+    </div>
+
+    <!-- Access Denied -->
+    <div *ngIf="error && !canSendOffers" class="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div class="flex">
+        <svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+        <p class="ml-3 text-sm text-red-800">{{ error }}</p>
+      </div>
+    </div>
+
+    <!-- Loading Students -->
+    <div *ngIf="isLoading && canSendOffers" class="flex justify-center items-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+
+    <!-- Create Form -->
+    <div *ngIf="!isLoading && canSendOffers" class="bg-white rounded-lg shadow-sm p-6">
+      <form [formGroup]="offerForm" (ngSubmit)="createOffer()">
+        <!-- Student Selection -->
+        <div class="mb-6">
+          <label for="studentId" class="block text-sm font-medium text-gray-700 mb-2">
+            Student *
+          </label>
+          <select
+            id="studentId"
+            formControlName="studentId"
+            (change)="onStudentChange($event)"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            [class.border-red-500]="offerForm.get('studentId')?.invalid && offerForm.get('studentId')?.touched"
+          >
+            <option [value]="null">Select a student</option>
+            <option *ngFor="let student of students" [value]="student.studentId">
+              {{ student.firstName }} {{ student.lastName }} - {{ student.primaryInstrument }} ({{ student.graduationYear }})
+            </option>
+          </select>
+          <p *ngIf="offerForm.get('studentId')?.invalid && offerForm.get('studentId')?.touched" 
+             class="mt-1 text-sm text-red-600">
+            Please select a student
+          </p>
+        </div>
+
+        <!-- Offer Type -->
+        <div class="mb-6">
+          <label for="offerType" class="block text-sm font-medium text-gray-700 mb-2">
+            Offer Type *
+          </label>
+          <select
+            id="offerType"
+            formControlName="offerType"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            [class.border-red-500]="offerForm.get('offerType')?.invalid && offerForm.get('offerType')?.touched"
+          >
+            <option value="">Select offer type</option>
+            <option *ngFor="let type of offerTypes" [value]="type">{{ type }}</option>
+          </select>
+          <p *ngIf="offerForm.get('offerType')?.invalid && offerForm.get('offerType')?.touched" 
+             class="mt-1 text-sm text-red-600">
+            Please select an offer type
+          </p>
+        </div>
+
+        <!-- Amount & Duration Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <!-- Amount -->
+          <div>
+            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
+              Amount *
+            </label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+              <input
+                type="number"
+                id="amount"
+                formControlName="amount"
+                min="0"
+                step="100"
+                placeholder="0.00"
+                class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                [class.border-red-500]="offerForm.get('amount')?.invalid && offerForm.get('amount')?.touched"
+              />
+            </div>
+            <p *ngIf="offerForm.get('amount')?.invalid && offerForm.get('amount')?.touched" 
+               class="mt-1 text-sm text-red-600">
+              Amount must be greater than or equal to 0
+            </p>
+          </div>
+
+          <!-- Duration -->
+          <div>
+            <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">
+              Duration
+            </label>
+            <select
+              id="duration"
+              formControlName="duration"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">Select duration</option>
+              <option *ngFor="let dur of durations" [value]="dur">{{ dur }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-6">
+          <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+            Description
+          </label>
+          <textarea
+            id="description"
+            formControlName="description"
+            rows="4"
+            placeholder="Provide details about the scholarship offer, requirements, or special conditions..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          ></textarea>
+          <p class="mt-1 text-xs text-gray-500">
+            {{ offerForm.get('description')?.value?.length || 0 }} / 2000 characters
+          </p>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div class="mb-6">
+          <label for="terms" class="block text-sm font-medium text-gray-700 mb-2">
+            Terms & Conditions
+          </label>
+          <textarea
+            id="terms"
+            formControlName="terms"
+            rows="6"
+            placeholder="Enter the complete terms and conditions of the scholarship offer..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          ></textarea>
+          <p class="mt-1 text-xs text-gray-500">
+            {{ offerForm.get('terms')?.value?.length || 0 }} / 5000 characters
+          </p>
+        </div>
+
+        <!-- Expiration Date -->
+        <div class="mb-6">
+          <label for="expiresAt" class="block text-sm font-medium text-gray-700 mb-2">
+            Expiration Date
+          </label>
+          <input
+            type="date"
+            id="expiresAt"
+            formControlName="expiresAt"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          <p class="mt-1 text-xs text-gray-500">
+            Default: 30 days from today
+          </p>
+        </div>
+
+        <!-- Guardian Approval Required -->
+        <div class="mb-6">
+          <label class="flex items-center">
+            <input
+              type="checkbox"
+              formControlName="requiresGuardianApproval"
+              class="rounded text-indigo-600 focus:ring-indigo-500"
+            />
+            <span class="ml-2 text-sm text-gray-700">
+              Requires guardian approval (for students under 18)
+            </span>
+          </label>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="error && canSendOffers" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="flex">
+            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+            <p class="ml-3 text-sm text-red-800">{{ error }}</p>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-4">
+          <button
+            type="submit"
+            [disabled]="isSubmitting || offerForm.invalid"
+            class="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <span *ngIf="!isSubmitting">Create Offer</span>
+            <span *ngIf="isSubmitting" class="flex items-center justify-center">
+              <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Creating...
+            </span>
+          </button>
+          
+          <button
+            type="button"
+            (click)="saveDraft()"
+            [disabled]="isSubmitting"
+            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Save Draft
+          </button>
+          
+          <button
+            type="button"
+            (click)="cancel()"
+            class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Information Panel -->
+    <div *ngIf="canSendOffers" class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <div class="flex">
+        <svg class="h-6 w-6 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+        </svg>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-blue-800">Scholarship Offer Guidelines</h3>
+          <div class="mt-2 text-sm text-blue-700">
+            <ul class="list-disc list-inside space-y-1">
+              <li>Offers are created as drafts and can be edited before sending</li>
+              <li>Students under 18 require guardian approval before accepting offers</li>
+              <li>Once sent, offers cannot be modified (only withdrawn)</li>
+              <li>Set a reasonable expiration date to encourage timely responses</li>
+              <li>Include clear terms and conditions to avoid confusion</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

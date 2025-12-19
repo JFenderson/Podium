@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { RoleGuard } from '../../core/guards/role.guard';
+import { roleGuard } from '../../core/guards/role.guard';
 import { Roles, Permissions } from '../../core/models/common';
 
 export const SCHOLARSHIP_ROUTES: Routes = [
@@ -14,13 +14,13 @@ export const SCHOLARSHIP_ROUTES: Routes = [
   },
   {
     path: 'my-offers',
-    canActivate: [RoleGuard],
+    canActivate: [roleGuard],
     data: { roles: [Roles.Student] },
     loadComponent: () => import('./components/my-offers/my-offers').then(m => m.MyOffersComponent)
   },
   {
     path: 'create',
-    canActivate: [RoleGuard],
+    canActivate: [roleGuard],
     data: { permissions: [Permissions.SendOffers] },
     loadComponent: () => import('./components/create-offer/create-offer').then(m => m.CreateOfferComponent)
   },

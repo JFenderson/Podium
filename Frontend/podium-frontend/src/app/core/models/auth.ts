@@ -40,15 +40,24 @@ export interface AuthResult {
 }
 
 export interface CurrentUser {
-  id: string;
+  userId: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: string;
-  permissions?: string[];
-  bandId?: number;
+  roles: string[];
+  permissions: string[];
+  
+  // Add these
   studentId?: number;
-  createdAt: Date;
+  guardianId?: number;
+  bandStaffId?: number;  
+  directorId?: number;
+  bandId?: number;
+  
+  token: string;
+  refreshToken: string;
+  tokenExpiration: Date;
+
 }
 
 export interface RegistrationOptions {

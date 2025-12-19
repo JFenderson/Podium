@@ -1,0 +1,236 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Upload Audition Video</h1>
+      <p class="mt-2 text-gray-600">Share your performance with college band recruiters</p>
+    </div>
+
+    <!-- Access Denied -->
+    <div *ngIf="error && !isStudent" class="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div class="flex">
+        <svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+        <p class="ml-3 text-sm text-red-800">{{ error }}</p>
+      </div>
+    </div>
+
+    <div *ngIf="isStudent" class="space-y-6">
+      <!-- Upload Guidelines -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex">
+          <svg class="h-6 w-6 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800">Video Guidelines</h3>
+            <div class="mt-2 text-sm text-blue-700">
+              <ul class="list-disc list-inside space-y-1">
+                <li>Maximum file size: <strong>{{ getMaxFileSizeFormatted() }}</strong></li>
+                <li>Maximum duration: <strong>{{ getMaxDurationFormatted() }} minutes</strong></li>
+                <li>Supported formats: <strong>{{ allowedFormats.join(', ') }}</strong></li>
+                <li>Record in landscape orientation for best results</li>
+                <li>Ensure good lighting and clear audio</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Form -->
+      <div class="bg-white rounded-lg shadow-sm p-6">
+        <form [formGroup]="uploadForm" (ngSubmit)="uploadVideo()">
+          <!-- File Upload Area -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Video File *
+            </label>
+
+            <!-- File Input (Hidden) -->
+            <input
+              #fileInput
+              type="file"
+              accept="video/*"
+              (change)="onFileSelected($event)"
+              class="hidden"
+              [disabled]="isUploading"
+            />
+
+            <!-- Drop Zone / Selected File -->
+            <div *ngIf="!selectedFile" 
+                 class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer"
+                 (click)="fileInput.click()">
+              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p class="mt-2 text-sm text-gray-600">
+                <span class="text-indigo-600 font-medium">Click to upload</span> or drag and drop
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                {{ allowedFormats.join(', ').toUpperCase() }} up to {{ getMaxFileSizeFormatted() }}
+              </p>
+            </div>
+
+            <!-- Selected File Display -->
+            <div *ngIf="selectedFile" class="border-2 border-indigo-500 rounded-lg p-4 bg-indigo-50">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center flex-1 min-w-0">
+                  <svg class="h-10 w-10 text-indigo-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                  </svg>
+                  <div class="ml-4 flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ selectedFile.name }}</p>
+                    <p class="text-xs text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+                  </div>
+                </div>
+                <button
+                  *ngIf="!isUploading"
+                  type="button"
+                  (click)="removeFile()"
+                  class="ml-4 p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Validation Errors -->
+            <div *ngIf="validationErrors.length > 0" class="mt-2 space-y-1">
+              <p *ngFor="let error of validationErrors" class="text-sm text-red-600 flex items-start">
+                <svg class="h-4 w-4 mt-0.5 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+                {{ error }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Title -->
+          <div class="mb-6">
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+              Video Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              formControlName="title"
+              placeholder="e.g., Fall 2024 Trumpet Audition"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              [class.border-red-500]="uploadForm.get('title')?.invalid && uploadForm.get('title')?.touched"
+              [disabled]="isUploading"
+            />
+            <p class="mt-1 text-xs text-gray-500">
+              {{ uploadForm.get('title')?.value?.length || 0 }} / 200 characters
+            </p>
+          </div>
+
+          <!-- Description -->
+          <div class="mb-6">
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              id="description"
+              formControlName="description"
+              rows="4"
+              placeholder="Describe your performance, the pieces you're playing, or any other relevant details..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              [disabled]="isUploading"
+            ></textarea>
+            <p class="mt-1 text-xs text-gray-500">
+              {{ uploadForm.get('description')?.value?.length || 0 }} / 1000 characters
+            </p>
+          </div>
+
+          <!-- Visibility -->
+          <div class="mb-6">
+            <label class="flex items-center">
+              <input
+                type="checkbox"
+                formControlName="isPublic"
+                class="rounded text-indigo-600 focus:ring-indigo-500"
+                [disabled]="isUploading"
+              />
+              <span class="ml-2 text-sm text-gray-700">
+                Make this video public (visible to all recruiters)
+              </span>
+            </label>
+          </div>
+
+          <!-- Upload Progress -->
+          <div *ngIf="isUploading" class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700">Uploading...</span>
+              <span class="text-sm font-medium text-indigo-600">{{ uploadProgress }}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div 
+                class="bg-indigo-600 h-3 rounded-full transition-all duration-300 ease-out"
+                [style.width.%]="uploadProgress">
+              </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 text-center">
+              Please don't close this window while uploading
+            </p>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="error && isStudent" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex">
+              <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+              <p class="ml-3 text-sm text-red-800">{{ error }}</p>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-4">
+            <button
+              type="submit"
+              [disabled]="isUploading || !selectedFile || uploadForm.invalid"
+              class="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span *ngIf="!isUploading">Upload Video</span>
+              <span *ngIf="isUploading" class="flex items-center justify-center">
+                <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Uploading {{ uploadProgress }}%
+              </span>
+            </button>
+            <button
+              type="button"
+              (click)="cancel()"
+              class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Processing Info -->
+      <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <div class="flex">
+          <svg class="h-6 w-6 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-gray-900">What happens after upload?</h3>
+            <div class="mt-2 text-sm text-gray-600 space-y-1">
+              <p>• Your video will be processed and converted to multiple quality levels (360p, 720p, 1080p)</p>
+              <p>• Processing usually takes 5-15 minutes depending on video length</p>
+              <p>• You'll be notified when your video is ready</p>
+              <p>• Recruiters can view your video once processing is complete</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

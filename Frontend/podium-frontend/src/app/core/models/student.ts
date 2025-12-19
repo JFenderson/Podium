@@ -21,6 +21,22 @@ export interface StudentDetailsDto {
   ratingCount?: number;
   createdAt: Date;
   updatedAt: Date;
+  bio: string;
+  secondaryInstruments: string[];
+  yearsOfExperience?: number;
+  city?: string;
+  state?: string;
+  zipcode?: string;
+  hasGuardian?: boolean;
+  profileViews?: number;
+   achievements?: string[]; 
+  interests?: StudentInterestDto[]; 
+}
+
+export interface StudentInterestDto {
+  bandId: number;
+  bandName: string;
+  interestedAt: Date;
 }
 
 export interface UpdateStudentDto {

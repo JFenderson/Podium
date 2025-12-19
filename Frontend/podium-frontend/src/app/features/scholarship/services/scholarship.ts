@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '../../core/services/api';
+import { ApiService } from '../../../core/services/api';
 import {
   ScholarshipOfferDto,
   CreateScholarshipOfferDto,
@@ -9,8 +9,8 @@ import {
   GuardianApprovalDto,
   ScholarshipFilterDto,
   ScholarshipSummaryDto
-} from '../../core/models/scholarship';
-import { PagedResult } from '../../core/models/student';
+} from '../../../core/models/scholarship';
+import { PagedResult } from '../../../core/models/student';
 
 @Injectable({
   providedIn: 'root'

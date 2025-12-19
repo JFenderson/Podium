@@ -20,6 +20,7 @@ export interface ScholarshipOfferDto {
   createdByName?: string;
   createdAt: Date;
   updatedAt: Date;
+  duration?: string;
 }
 
 export interface CreateScholarshipOfferDto {
@@ -28,7 +29,7 @@ export interface CreateScholarshipOfferDto {
   offerType: OfferType;
   amount?: number;
   description: string;
-  expiresAt?: Date;
+  expiresAt?: string | Date;
   requiresGuardianApproval: boolean;
 }
 
@@ -90,3 +91,4 @@ export interface ScholarshipSummaryDto {
   sentAt?: Date;
   expiresAt?: Date;
 }
+

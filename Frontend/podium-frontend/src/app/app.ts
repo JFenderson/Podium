@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthService } from './core/services/auth';
+import { AuthService } from './features/auth/services/auth';
 import { NotificationService } from './core/services/notification';
 
 @Component({

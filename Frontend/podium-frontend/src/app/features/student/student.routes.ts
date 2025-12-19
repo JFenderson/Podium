@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from '../../core/guards/auth.guard';
-import { RoleGuard } from '../../core/guards/role.guard';
+import { authGuard } from '../../core/guards/auth.guard';
+import { roleGuard } from '../../core/guards/role.guard';
 import { Roles, Permissions } from '../../core/models/common';
 
 export const STUDENT_ROUTES: Routes = [
@@ -20,7 +20,7 @@ export const STUDENT_ROUTES: Routes = [
   },
   {
     path: 'profile',
-    canActivate: [RoleGuard],
+    canActivate: [roleGuard],
     data: { roles: [Roles.Student] },
     loadComponent: () => import('./components/student-profile/student-profile').then(m => m.StudentProfileComponent)
   },

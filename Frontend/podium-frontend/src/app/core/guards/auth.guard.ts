@@ -1,33 +1,15 @@
-import { Injectable } from '@angular/core';
-import { Router, UrlTree } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, take } from 'rxjs/operators';
-import { AuthService } from '../services/auth';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { AuthService } from '../../features/auth/services/auth';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AuthGuard  {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+export const authGuard = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
 
-  canActivate(): Observable<boolean | UrlTree> {
-    return this.authService.isAuthenticated$.pipe(
-      take(1),
-      map(isAuthenticated => {
-        if (isAuthenticated) {
-          return true;
-        }
-        
-        // Redirect to login with return URL
-        return this.router.createUrlTree(['/auth/login']);
-      })
-    );
+  if (authService.isAuthenticated) {
+    return true;
   }
 
-  canActivateChild(): Observable<boolean | UrlTree> {
-    return this.canActivate();
-  }
-}
+  router.navigate(['/login']);
+  return false;
+};

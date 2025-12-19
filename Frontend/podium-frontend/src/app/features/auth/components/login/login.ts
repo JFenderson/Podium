@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-import { AuthService } from '../../../../core/services/auth';
+import { AuthService } from '../../services/auth';
 import { LoginDto } from '../../../../core/models/auth';
 
 @Component({
@@ -107,7 +107,8 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    switch (user.role) {
+    const primaryRole = user.roles[0]; // Get first role
+switch (primaryRole) {
       case 'Student':
         this.router.navigate(['/students/profile']);
         break;

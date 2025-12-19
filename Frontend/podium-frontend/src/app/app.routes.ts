@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './core/guards/auth.guard';
-import { RoleGuard } from './core/guards/role.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { Roles } from './core/models/common';
 
 export const routes: Routes = [
@@ -15,12 +15,12 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    canActivate: [AuthGuard],
+    canActivate: [authGuard],
     loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES)
   },
   {
     path: 'students',
-    canActivate: [AuthGuard],
+    canActivate: [authGuard],
     loadChildren: () => import('./features/student/student.routes').then(m => m.STUDENT_ROUTES)
   },
   {
@@ -29,24 +29,24 @@ export const routes: Routes = [
   },
   {
     path: 'scholarships',
-    canActivate: [AuthGuard],
+    canActivate: [authGuard],
     loadChildren: () => import('./features/scholarship/scholarship.routes').then(m => m.SCHOLARSHIP_ROUTES)
   },
   {
     path: 'guardian',
-    canActivate: [AuthGuard, RoleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: [Roles.Guardian] },
     loadChildren: () => import('./features/guardian/guardian.routes').then(m => m.GUARDIAN_ROUTES)
   },
   {
     path: 'director',
-    canActivate: [AuthGuard, RoleGuard],
+    canActivate: [authGuard, roleGuard],
     data: { roles: [Roles.Director, Roles.BandStaff] },
     loadChildren: () => import('./features/director/director.routes').then(m => m.DIRECTOR_ROUTES)
   },
   {
     path: 'profile',
-    canActivate: [AuthGuard],
+    canActivate: [authGuard],
     loadChildren: () => import('./features/profile/profile.routes').then(m => m.PROFILE_ROUTES)
   },
   {

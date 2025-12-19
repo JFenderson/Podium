@@ -7,6 +7,16 @@ export interface ServiceResult<T> {
   resultType: ServiceResultType;
 }
 
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 export enum ServiceResultType {
   Success = 'Success',
   NotFound = 'NotFound',
