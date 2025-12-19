@@ -1,42 +1,37 @@
-// Authentication DTOs matching backend
+// Auth Models - Complete and Updated
+// File: src/app/core/models/auth.models.ts
 
-export interface RegisterDto {
-  firstName: string;
-  lastName: string;
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
   email: string;
   password: string;
   confirmPassword: string;
-  role: string;
-  phoneNumber?: string;
-  bandId?: number; // For BandStaff/Director roles
-  studentIds?: number[]; // For Guardian role
-}
-
-export interface LoginDto {
-  email: string;
-  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;  // 'Student', 'Guardian', 'BandStaff', 'Director'
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
   userId: string;
   email: string;
-}
-
-export interface RefreshTokenRequest {
+  firstName: string;
+  lastName: string;
+  roles: string[];
+  permissions?: string[];
+  token: string;
   refreshToken: string;
-}
-
-export interface AuthResult {
-  success: boolean;
-  errors?: string[];
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-  userId?: string;
-  email?: string;
+  tokenExpiration: string | Date;
+  
+  // Optional role-specific IDs
+  studentId?: number;
+  guardianId?: number;
+  bandStaffId?: number;
+  directorId?: number;
+  bandId?: number;
 }
 
 export interface CurrentUser {
@@ -46,27 +41,32 @@ export interface CurrentUser {
   lastName: string;
   roles: string[];
   permissions: string[];
-  
-  // Add these
-  studentId?: number;
-  guardianId?: number;
-  bandStaffId?: number;  
-  directorId?: number;
-  bandId?: number;
-  
   token: string;
   refreshToken: string;
   tokenExpiration: Date;
-
+  
+  // Optional role-specific IDs
+  studentId?: number;
+  guardianId?: number;
+  bandStaffId?: number;
+  directorId?: number;
+  bandId?: number;
 }
 
-export interface RegistrationOptions {
-  bands: BandOption[];
-  roles: string[];
+export interface RefreshTokenRequest {
+  refreshToken: string;
 }
 
-export interface BandOption {
-  id: number;
-  bandName: string;
-  state: string;
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
 }

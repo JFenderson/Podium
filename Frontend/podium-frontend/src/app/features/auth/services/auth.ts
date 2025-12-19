@@ -1,288 +1,204 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { tap, catchError, map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import {
-  LoginDto,
-  RegisterDto,
+  LoginRequest,
+  RegisterRequest,
   LoginResponse,
-  CurrentUser,
-  RefreshTokenRequest,
-  RegistrationOptions
+  CurrentUser
 } from '../../../core/models/auth';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = `${environment.apiUrl}/Auth`;
+  private http = inject(HttpClient);
+  private router = inject(Router);
   
-  private currentUserSubject = new BehaviorSubject<CurrentUser | null>(this.getUserFromStorage());
+  private apiUrl = `${environment.apiUrl}/Auth`;
+  
+  private currentUserSubject = new BehaviorSubject<CurrentUser | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
-  
-  private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasValidToken());
-  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
-  setAuthData: any;
 
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {
-    // Check token validity on service initialization
-    this.checkTokenValidity();
+  constructor() {
+    // Load user from localStorage on service initialization
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        this.currentUserSubject.next(user);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('currentUser');
+      }
+    }
   }
 
-  /**
-   * Get current user value
-   */
   get currentUserValue(): CurrentUser | null {
     return this.currentUserSubject.value;
   }
 
-  /**
-   * Check if user is authenticated
-   */
-  get isAuthenticated(): boolean {
-    return this.isAuthenticatedSubject.value;
-  }
-
-  /**
-   * Register a new user
-   */
-  register(dto: RegisterDto): Observable<any> {
-    return this.http.post(`${this.API_URL}/register`, dto).pipe(
-      tap(response => {
-        if (environment.enableDebugLogging) {
-          console.log('Registration successful:', response);
-        }
-      }),
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Get registration options (bands, roles)
-   */
-  getRegistrationOptions(): Observable<RegistrationOptions> {
-    return this.http.get<RegistrationOptions>(`${this.API_URL}/registration-options`).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Confirm email
-   */
-  confirmEmail(userId: string, token: string): Observable<any> {
-    return this.http.get(`${this.API_URL}/confirm-email`, {
-      params: { userId, token }
-    }).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Login user
-   */
-  login(dto: LoginDto): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.API_URL}/login`, dto).pipe(
-      tap(response => this.setAuthData(response)),
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Logout user
-   */
-  logout(): Observable<any> {
-    const refreshToken = this.getRefreshToken();
+  login(email: string, password: string): Observable<LoginResponse> {
+    const request: LoginRequest = { email, password };
     
-    if (!refreshToken) {
-      this.clearSession();
-      return new Observable(observer => observer.complete());
-    }
-
-    return this.http.post(`${this.API_URL}/logout`, { refreshToken }).pipe(
-      tap(() => this.clearSession()),
-      catchError(error => {
-        this.clearSession();
-        return throwError(() => error);
-      })
-    );
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, request)
+      .pipe(
+        tap(response => this.setAuthData(response))
+      );
   }
 
-  /**
-   * Refresh access token
-   */
+  register(request: RegisterRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/register`, request)
+      .pipe(
+        tap(response => this.setAuthData(response))
+      );
+  }
+
+  logout(): void {
+    // Clear local storage
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    
+    // Clear current user
+    this.currentUserSubject.next(null);
+    
+    // Navigate to login
+    this.router.navigate(['/login']);
+  }
+
   refreshToken(): Observable<LoginResponse> {
     const refreshToken = this.getRefreshToken();
     
     if (!refreshToken) {
-      return throwError(() => new Error('No refresh token available'));
+      this.logout();
+      throw new Error('No refresh token available');
     }
 
-    const request: RefreshTokenRequest = { refreshToken };
-    
-    return this.http.post<LoginResponse>(`${this.API_URL}/refresh`, request).pipe(
-      tap(response => this.setAuthData(response)),
-      catchError(error => {
-        this.clearSession();
-        return throwError(() => error);
-      })
-    );
+    return this.http.post<LoginResponse>(`${this.apiUrl}/refresh`, { refreshToken })
+      .pipe(
+        tap(response => this.setAuthData(response))
+      );
   }
 
-  /**
-   * Get current user from backend
-   */
-getCurrentUser(): Observable<CurrentUser> {
-  return this.http.get<CurrentUser>(`${this.API_URL}/me`);
-}
+  isAuthenticated(): boolean {
+    const user = this.currentUserValue;
+    if (!user) return false;
 
-  /**
-   * Load current user data
-   */
-  private loadCurrentUser(): void {
-    if (this.hasValidToken()) {
-      this.getCurrentUser().subscribe({
-        error: (error) => {
-          console.error('Failed to load current user:', error);
-          this.clearSession();
-        }
-      });
-    }
+    // Check if token is expired
+    const tokenExpiration = new Date(user.tokenExpiration);
+    return tokenExpiration > new Date();
   }
 
-  /**
-   * Set session data after login/refresh
-   */
-  private setSession(response: LoginResponse): void {
-    localStorage.setItem(environment.tokenKey, response.accessToken);
-    localStorage.setItem(environment.refreshTokenKey, response.refreshToken);
-    localStorage.setItem(environment.tokenExpiry, response.expiresAt.toString());
-    this.isAuthenticatedSubject.next(true);
-  }
-
-  /**
-   * Clear session data
-   */
-  private clearSession(): void {
-    localStorage.removeItem(environment.tokenKey);
-    localStorage.removeItem(environment.refreshTokenKey);
-    localStorage.removeItem(environment.userKey);
-    localStorage.removeItem(environment.tokenExpiry);
-    this.currentUserSubject.next(null);
-    this.isAuthenticatedSubject.next(false);
-    this.router.navigate(['/auth/login']);
-  }
-
-  /**
-   * Get access token
-   */
   getToken(): string | null {
-    return localStorage.getItem(environment.tokenKey);
+    return localStorage.getItem('token');
   }
 
-  /**
-   * Get refresh token
-   */
-  private getRefreshToken(): string | null {
-    return localStorage.getItem(environment.refreshTokenKey);
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
   }
 
-  /**
-   * Check if token is valid
-   */
-  private hasValidToken(): boolean {
-    const token = this.getToken();
-    const expiry = localStorage.getItem(environment.tokenExpiry);
-    
-    if (!token || !expiry) {
-      return false;
-    }
-
-    const expiryDate = new Date(expiry);
-    const now = new Date();
-    
-    return expiryDate > now;
+  hasRole(role: string): boolean {
+    const user = this.currentUserValue;
+    return user?.roles?.includes(role) || false;
   }
 
-  /**
-   * Check token validity and refresh if needed
-   */
-  private checkTokenValidity(): void {
-    if (this.hasValidToken()) {
-      this.isAuthenticatedSubject.next(true);
-      this.loadCurrentUser();
-    } else if (this.getRefreshToken()) {
-      // Try to refresh token
-      this.refreshToken().subscribe({
-        next: () => this.loadCurrentUser(),
-        error: () => this.clearSession()
-      });
-    } else {
-      this.clearSession();
-    }
-  }
-
-  /**
-   * Store user in local storage
-   */
-  private setUserInStorage(user: CurrentUser): void {
-    localStorage.setItem(environment.userKey, JSON.stringify(user));
-  }
-
-  /**
-   * Get user from local storage
-   */
-  private getUserFromStorage(): CurrentUser | null {
-    const userJson = localStorage.getItem(environment.userKey);
-    return userJson ? JSON.parse(userJson) : null;
-  }
-
-  /**
-   * Check if user has specific role
-   */
-hasRole(role: string): boolean {
-  const user = this.currentUserValue;
-  return user?.roles.includes(role) || false;
-}
-
-  /**
-   * Check if user has any of the specified roles
-   */
   hasAnyRole(roles: string[]): boolean {
     const user = this.currentUserValue;
-    return user ? roles.some(role => user.roles.includes(role)) : false;
+    return user ? roles.some(role => user.roles?.includes(role)) : false;
   }
 
-  /**
-   * Check if user has specific permission
-   */
   hasPermission(permission: string): boolean {
     const user = this.currentUserValue;
-    return user?.permissions?.includes(permission) ?? false;
+    return user?.permissions?.includes(permission) || false;
   }
 
-  /**
-   * Handle HTTP errors
-   */
-  private handleError(error: any): Observable<never> {
-    let errorMessage = 'An error occurred';
-    
-    if (error.error instanceof ErrorEvent) {
-      // Client-side error
-      errorMessage = error.error.message;
-    } else {
-      // Server-side error
-      errorMessage = error.error?.message || error.message || error.statusText;
-    }
+  hasAnyPermission(permissions: string[]): boolean {
+    const user = this.currentUserValue;
+    return user ? permissions.some(perm => user.permissions?.includes(perm)) : false;
+  }
 
-    if (environment.enableDebugLogging) {
-      console.error('Auth Service Error:', error);
-    }
+  hasAllPermissions(permissions: string[]): boolean {
+    const user = this.currentUserValue;
+    return user ? permissions.every(perm => user.permissions?.includes(perm)) : false;
+  }
 
-    return throwError(() => new Error(errorMessage));
+  getCurrentUser(): Observable<CurrentUser> {
+    return this.http.get<CurrentUser>(`${this.apiUrl}/me`);
+  }
+
+  updateProfile(data: any): Observable<CurrentUser> {
+    return this.http.put<CurrentUser>(`${this.apiUrl}/profile`, data)
+      .pipe(
+        tap(user => {
+          // Update current user with new profile data
+          const currentUser = this.currentUserValue;
+          if (currentUser) {
+            const updatedUser = { ...currentUser, ...user };
+            this.currentUserSubject.next(updatedUser);
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          }
+        })
+      );
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/change-password`, {
+      currentPassword,
+      newPassword
+    });
+  }
+
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/reset-password`, {
+      token,
+      newPassword
+    });
+  }
+
+  // ============================================
+  // PRIVATE HELPER METHOD - THIS WAS MISSING
+  // ============================================
+  private setAuthData(response: LoginResponse): void {
+    console.log('setAuthData called with:', response);
+    // Store tokens
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('refreshToken', response.refreshToken);
+console.log('Tokens stored in localStorage');
+    // Create CurrentUser object from LoginResponse
+    const currentUser: CurrentUser = {
+      userId: response.userId,
+      email: response.email,
+      firstName: response.firstName,
+      lastName: response.lastName,
+      roles: response.roles || [],
+      permissions: response.permissions || [],
+      token: response.token,
+      refreshToken: response.refreshToken,
+      tokenExpiration: new Date(response.tokenExpiration),
+      
+      // Optional IDs based on roles
+      studentId: response.studentId,
+      guardianId: response.guardianId,
+      bandStaffId: response.bandStaffId,
+      directorId: response.directorId,
+      bandId: response.bandId
+    };
+
+      console.log('Created currentUser object:', currentUser);
+
+  // Store user object
+  localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  console.log('Stored currentUser in localStorage');
+  
+  // Update BehaviorSubject
+  this.currentUserSubject.next(currentUser);
+  console.log('Updated currentUserSubject');
   }
 }

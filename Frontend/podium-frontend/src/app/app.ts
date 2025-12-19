@@ -1,35 +1,35 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from './features/auth/services/auth';
-import { NotificationService } from './core/services/notification';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: '<router-outlet></router-outlet>',
-  styleUrls: ['./app.scss']
+  imports: [RouterOutlet, CommonModule],
+  template: `<router-outlet></router-outlet>`,
+  styles: []
 })
-export class AppComponent implements OnInit {
-  title = 'Podium - Band Recruitment Platform';
-
-  constructor(
-    private authService: AuthService,
-    private notificationService: NotificationService
-  ) {}
+export class AppComponent implements OnInit, OnDestroy {
+  private authService = inject(AuthService);
+  private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
-    // Initialize authentication state
-    this.authService.isAuthenticated$.subscribe(isAuth => {
-      if (isAuth) {
-        // Load notifications for authenticated users
-        this.notificationService.refreshNotifications();
-        
-        // Set up periodic notification refresh (every 30 seconds)
-        setInterval(() => {
-          this.notificationService.refreshNotifications();
-        }, 30000);
-      }
-    });
+    // Subscribe to authentication state changes
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user) {
+          console.log('User authenticated:', user.email);
+        } else {
+          console.log('User not authenticated');
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

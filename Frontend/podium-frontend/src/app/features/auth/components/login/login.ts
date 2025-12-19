@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { AuthService } from '../../services/auth';
-import { LoginDto } from '../../../../core/models/auth';
+import { LoginRequest } from '../../../../core/models/auth';
 
 @Component({
   selector: 'app-login',
@@ -35,6 +35,7 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   isLoading = false;
   hidePassword = true;
+error: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -45,7 +46,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     // Redirect if already logged in
-    if (this.authService.isAuthenticated) {
+    if (this.authService.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
       return;
     }
@@ -66,32 +67,69 @@ export class LoginComponent implements OnInit {
   /**
    * Submit login form
    */
-  onSubmit(): void {
+onSubmit(): void {
     if (this.loginForm.invalid) {
       this.markFormGroupTouched(this.loginForm);
       return;
     }
 
     this.isLoading = true;
-    const loginDto: LoginDto = this.loginForm.value;
+    this.error = null;
 
-    this.authService.login(loginDto).subscribe({
+    const { email, password } = this.loginForm.value;
+
+    console.log('Attempting login...', { email });
+
+    this.authService.login(email, password).subscribe({
       next: (response) => {
-        this.snackBar.open('Login successful!', 'Close', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
+        console.log('Login successful!', response);
+        this.isLoading = false;
 
-        // Navigate based on user role
-        this.navigateBasedOnRole();
+        // Get the current user to determine redirect
+        const user = this.authService.currentUserValue;
+        console.log('Current user after login:', user);
+
+        if (!user) {
+          console.error('No user found after login!');
+          this.error = 'Login failed - no user data received';
+          return;
+        }
+
+        // Redirect based on primary role
+        const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : null;
+        console.log('Primary role:', primaryRole);
+
+        switch (primaryRole) {
+          case 'Student':
+            this.router.navigate(['/students/profile']);
+            break;
+          case 'Guardian':
+            this.router.navigate(['/guardian/dashboard']);
+            break;
+          case 'Director':
+          case 'BandStaff':
+            this.router.navigate(['/director/dashboard']);
+            break;
+          default:
+            this.router.navigate(['/dashboard']);
+        }
       },
       error: (error) => {
+        console.error('Login error:', error);
         this.isLoading = false;
-        const errorMessage = error.message || 'Login failed. Please check your credentials.';
-        this.snackBar.open(errorMessage, 'Close', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
+
+        // Handle different error types
+        if (error.status === 0) {
+          this.error = 'Cannot connect to server. Please check your connection.';
+        } else if (error.status === 401) {
+          this.error = 'Invalid email or password';
+        } else if (error.error?.message) {
+          this.error = error.error.message;
+        } else if (error.message) {
+          this.error = error.message;
+        } else {
+          this.error = 'Login failed. Please try again.';
+        }
       }
     });
   }
@@ -108,7 +146,7 @@ export class LoginComponent implements OnInit {
     }
 
     const primaryRole = user.roles[0]; // Get first role
-switch (primaryRole) {
+    switch (primaryRole) {
       case 'Student':
         this.router.navigate(['/students/profile']);
         break;
@@ -136,6 +174,15 @@ switch (primaryRole) {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  // Helper methods for template
+  get emailControl() {
+    return this.loginForm.get('email');
+  }
+
+  get passwordControl() {
+    return this.loginForm.get('password');
   }
 
   /**

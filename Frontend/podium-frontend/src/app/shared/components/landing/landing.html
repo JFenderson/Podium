@@ -1,0 +1,226 @@
+<div class="landing-container">
+  <!-- Toolbar / Header -->
+  <mat-toolbar color="primary" class="mat-elevation-z6">
+    <div class="toolbar-content">
+      <div class="logo-section">
+        <mat-icon class="logo-icon">music_note</mat-icon>
+        <span class="logo-text">Podium</span>
+      </div>
+      
+      <span class="spacer"></span>
+      
+      <nav class="nav-links">
+        <a mat-button routerLink="/bands">Browse Bands</a>
+        <a mat-button routerLink="/login">Sign In</a>
+        <a mat-raised-button color="accent" routerLink="/register">Get Started</a>
+      </nav>
+    </div>
+  </mat-toolbar>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <mat-chip-set class="status-chip">
+        <mat-chip selected>
+          <mat-icon>check_circle</mat-icon>
+          Connecting Musicians Since 2024
+        </mat-chip>
+      </mat-chip-set>
+
+      <h1 class="hero-title">
+        Connect Student Musicians<br>
+        <span class="gradient-text">with College Marching Bands</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        The premier platform connecting high school musicians with college marching band programs,
+        with special emphasis on <strong>HBCU recruitment</strong>.
+      </p>
+
+      <div class="hero-actions">
+        <button mat-raised-button color="primary" routerLink="/register" class="hero-button">
+          <mat-icon>rocket_launch</mat-icon>
+          Get Started Free
+        </button>
+        <button mat-stroked-button color="primary" routerLink="/bands" class="hero-button">
+          Browse Bands
+        </button>
+      </div>
+
+      <div class="trust-badges">
+        <div class="badge">
+          <mat-icon color="accent">check_circle</mat-icon>
+          <span>100% Free for Students</span>
+        </div>
+        <div class="badge">
+          <mat-icon color="accent">check_circle</mat-icon>
+          <span>Guardian Oversight</span>
+        </div>
+        <div class="badge">
+          <mat-icon color="accent">check_circle</mat-icon>
+          <span>Secure Platform</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section">
+    <div class="section-header">
+      <h2>Everything You Need to Succeed</h2>
+      <p>Comprehensive tools for students, recruiters, and guardians</p>
+    </div>
+
+    <div class="features-grid">
+      <mat-card *ngFor="let feature of features" class="feature-card" [class]="'feature-card-' + feature.color">
+        <mat-card-header>
+          <div mat-card-avatar class="feature-icon" [class]="'icon-' + feature.color">
+            <mat-icon>{{ feature.icon }}</mat-icon>
+          </div>
+          <mat-card-title>{{ feature.title }}</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <p class="feature-description">{{ feature.description }}</p>
+          
+          <ul class="feature-list">
+            <li *ngFor="let item of feature.items">
+              <mat-icon [color]="feature.color">check_circle</mat-icon>
+              <span>{{ item }}</span>
+            </li>
+          </ul>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <mat-icon color="primary">school</mat-icon>
+        <h3>500+</h3>
+        <p>College Programs</p>
+      </div>
+      <div class="stat-item">
+        <mat-icon color="accent">person</mat-icon>
+        <h3>10,000+</h3>
+        <p>Student Musicians</p>
+      </div>
+      <div class="stat-item">
+        <mat-icon color="warn">emoji_events</mat-icon>
+        <h3>$5M+</h3>
+        <p>In Scholarships</p>
+      </div>
+      <div class="stat-item">
+        <mat-icon color="primary">verified</mat-icon>
+        <h3>95%</h3>
+        <p>Success Rate</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works-section">
+    <div class="section-header">
+      <h2>How It Works</h2>
+      <p>Get started in three simple steps</p>
+    </div>
+
+    <div class="steps-grid">
+      <mat-card class="step-card">
+        <div class="step-number">1</div>
+        <mat-card-header>
+          <mat-card-title>Create Your Profile</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-icon color="primary">account_circle</mat-icon>
+          <p>Sign up and build your musician profile with your background, achievements, and audition videos.</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="step-card">
+        <div class="step-number">2</div>
+        <mat-card-header>
+          <mat-card-title>Get Discovered</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-icon color="accent">search</mat-icon>
+          <p>College recruiters find you based on your talent, instrument, and preferences.</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="step-card">
+        <div class="step-number">3</div>
+        <mat-card-header>
+          <mat-card-title>Receive Offers</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-icon color="warn">card_giftcard</mat-icon>
+          <p>Review and accept scholarship offers from your dream college marching bands.</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section mat-elevation-z4">
+    <div class="cta-content">
+      <h2>Ready to Get Started?</h2>
+      <p>Join thousands of students and recruiters on Podium today.</p>
+      
+      <div class="cta-actions">
+        <button mat-raised-button color="accent" routerLink="/register" class="cta-button">
+          <mat-icon>person_add</mat-icon>
+          Create Free Account
+        </button>
+        <button mat-stroked-button class="cta-button cta-button-outline" routerLink="/login">
+          Sign In
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-section">
+        <div class="footer-logo">
+          <mat-icon>music_note</mat-icon>
+          <span>Podium</span>
+        </div>
+        <p>Connecting high school musicians with college marching band programs.</p>
+        <p class="copyright">© 2024 Podium. All rights reserved.</p>
+      </div>
+
+      <div class="footer-section">
+        <h3>Platform</h3>
+        <a mat-button routerLink="/bands">Browse Bands</a>
+        <a mat-button routerLink="/register">Sign Up</a>
+        <a mat-button routerLink="/login">Sign In</a>
+      </div>
+
+      <div class="footer-section">
+        <h3>Support</h3>
+        <a mat-button href="#">Help Center</a>
+        <a mat-button href="#">Privacy Policy</a>
+        <a mat-button href="#">Terms of Service</a>
+      </div>
+
+      <div class="footer-section">
+        <h3>Connect</h3>
+        <div class="social-links">
+          <button mat-icon-button>
+            <mat-icon>facebook</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>X</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>email</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>

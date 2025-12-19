@@ -2,19 +2,38 @@ using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Podium.API.Extensions;
+using Podium.API.Extensions;
 using Podium.API.Jobs;
+using Podium.API.Middleware;
 using Podium.Core.Entities;
 using Podium.Infrastructure.Data;
 using Podium.Infrastructure.Hubs;
-using Podium.API.Extensions;
-using Podium.API.Middleware;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularDev", policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:4200",      // Angular dev server
+            "http://localhost:4201"       // Backup port
+        )
+        .AllowAnyMethod()                 // GET, POST, PUT, DELETE, etc.
+        .AllowAnyHeader()                 // Authorization, Content-Type, etc.
+        .AllowCredentials();              // Allow cookies/credentials
+    });
+});
 
 // ---------------------------------------------------------
 // REFACTORED: Custom Extension Methods
@@ -23,6 +42,8 @@ builder.Services.AddPodiumSwagger();
 builder.Services.AddPodiumIdentity(builder.Configuration);
 builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
 // ---------------------------------------------------------
+
+
 
 var app = builder.Build();
 
@@ -109,7 +130,7 @@ using (var scope = app.Services.CreateScope())
 
 app.MapHub<NotificationHub>("/notificationHub");
 app.UseHttpsRedirection();
-app.UseCors("AllowAngularApp");
+app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
 
