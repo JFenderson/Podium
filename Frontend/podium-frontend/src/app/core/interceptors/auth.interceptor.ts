@@ -1,7 +1,7 @@
 import { HttpInterceptorFn, HttpErrorResponse, HttpEvent, HttpRequest, HttpHandlerFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
-import { AuthService } from '../../features/auth/services/auth';
+import { AuthService } from '../../features/auth/services/auth.service';
 
 // Shared state for token refresh (outside the interceptor function)
 let isRefreshing = false;

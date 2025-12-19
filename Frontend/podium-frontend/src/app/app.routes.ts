@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
-import { Roles } from './core/models/common';
+import { Roles } from './core/models/common.models';
 
 export const routes: Routes = [
   // Root path - redirect to login if not authenticated
   {
     path: '',
-    loadComponent: () => import('./shared/components/landing/landing').then(m => m.LandingComponent)
+    loadComponent: () => import('./shared/components/landing/landing.component').then(m => m.LandingComponent)
   },
   // Login page - no guard needed
   {
@@ -17,7 +17,7 @@ export const routes: Routes = [
   // Register page - no guard needed
   {
     path: 'register',
-    loadComponent: () => import('./features/auth/components/register/register').then(m => m.RegisterComponent)
+    loadComponent: () => import('./features/auth/components/register/register.component').then(m => m.RegisterComponent)
   },
   // Auth routes (login, register, forgot password, etc)
   {
@@ -70,12 +70,12 @@ export const routes: Routes = [
   // Unauthorized page
   {
     path: 'unauthorized',
-    loadComponent: () => import('./shared/components/unauthorized/unauthorized').then(m => m.UnauthorizedComponent)
+    loadComponent: () => import('./shared/components/unauthorized/unauthorized.component').then(m => m.UnauthorizedComponent)
   },
   // Not found page
   {
     path: 'not-found',
-    loadComponent: () => import('./shared/components/not-found/not-found').then(m => m.NotFoundComponent)
+    loadComponent: () => import('./shared/components/not-found/not-found.component').then(m => m.NotFoundComponent)
   },
   // Catch all - redirect to not found
   {

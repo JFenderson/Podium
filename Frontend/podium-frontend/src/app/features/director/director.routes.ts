@@ -8,6 +8,6 @@ export const DIRECTOR_ROUTES: Routes = [
   },
   {
     path: 'dashboard',
-    loadComponent: () => import('./components/director-dashboard/director-dashboard').then(m => m.DirectorDashboardComponent)
+    loadComponent: () => import('./components/director-dashboard/director-dashboard.component').then(m => m.DirectorDashboardComponent)
   }
 ];

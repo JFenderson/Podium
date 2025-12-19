@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from '../../core/guards/role.guard';
-import { Roles, Permissions } from '../../core/models/common';
+import { Roles, Permissions } from '../../core/models/common.models';
 
 export const SCHOLARSHIP_ROUTES: Routes = [
   {
@@ -10,22 +10,22 @@ export const SCHOLARSHIP_ROUTES: Routes = [
   },
   {
     path: 'list',
-    loadComponent: () => import('./components/scholarship-list/scholarship-list').then(m => m.ScholarshipListComponent)
+    loadComponent: () => import('./components/scholarship-list/scholarship-list.component').then(m => m.ScholarshipListComponent)
   },
   {
     path: 'my-offers',
     canActivate: [roleGuard],
     data: { roles: [Roles.Student] },
-    loadComponent: () => import('./components/my-offers/my-offers').then(m => m.MyOffersComponent)
+    loadComponent: () => import('./components/my-offers/my-offers.component').then(m => m.MyOffersComponent)
   },
   {
     path: 'create',
     canActivate: [roleGuard],
     data: { permissions: [Permissions.SendOffers] },
-    loadComponent: () => import('./components/create-offer/create-offer').then(m => m.CreateOfferComponent)
+    loadComponent: () => import('./components/create-offer/create-offer.component').then(m => m.CreateOfferComponent)
   },
   {
     path: ':id',
-    loadComponent: () => import('./components/offer-detail/offer-detail').then(m => m.OfferDetailComponent)
+    loadComponent: () => import('./components/offer-detail/offer-detail.component').then(m => m.OfferDetailComponent)
   }
 ];

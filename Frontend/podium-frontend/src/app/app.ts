@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
-import { AuthService } from './features/auth/services/auth';
+import { AuthService } from './features/auth/services/auth.service';
 
 @Component({
   selector: 'app-root',

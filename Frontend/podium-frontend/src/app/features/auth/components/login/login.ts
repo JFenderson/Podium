@@ -10,8 +10,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
-import { AuthService } from '../../../../features/auth/services/auth';
-import { LoginRequest } from '../../../../core/models/auth';
+import { AuthService } from '../../../auth/services/auth.service';
+import { LoginRequest } from '../../../../core/models/auth.models';
 
 @Component({
   selector: 'app-login',
@@ -28,8 +28,8 @@ import { LoginRequest } from '../../../../core/models/auth';
     MatIconModule,
     MatSnackBarModule,
   ],
-  templateUrl: './login.html',
-  styleUrls: ['./login.scss'],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss'],
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;

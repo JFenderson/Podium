@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '../../../core/services/api';
+import { ApiService } from '../../../core/services/api.service';
 import {
   EventDto,
   CreateEventDto,
@@ -10,8 +10,8 @@ import {
   EventSummaryDto,
   EventFilterDto,
   UpcomingEventsDto
-} from '../../../core/models/event';
-import { PagedResult } from '../../../core/models/student';
+} from '../../../core/models/event.models';
+import { PagedResult } from '../../../core/models/student.models';
 
 @Injectable({
   providedIn: 'root'

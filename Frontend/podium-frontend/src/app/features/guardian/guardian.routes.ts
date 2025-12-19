@@ -8,6 +8,6 @@ export const GUARDIAN_ROUTES: Routes = [
   },
   {
     path: 'dashboard',
-    loadComponent: () => import('./components/guardian-dashboard/guardian-dashboard').then(m => m.GuardianDashboardComponent)
+    loadComponent: () => import('./components/guardian-dashboard/guardian-dashboard.component').then(m => m.GuardianDashboardComponent)
   }
 ];

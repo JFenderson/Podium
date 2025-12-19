@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, ActivatedRouteSnapshot } from '@angular/router';
-import { AuthService } from '../../features/auth/services/auth';
-import { CurrentUser } from '../models/auth';
+import { AuthService } from '../../features/auth/services/auth.service';
+import { CurrentUser } from '../models/auth.models';
 
 export const roleGuard = (route: ActivatedRouteSnapshot) => {
   const authService = inject(AuthService);
