@@ -1,15 +1,29 @@
-import { Injectable, inject } from '@angular/core';
-import { ToastrService } from 'ngx-toastr';
+import { Injectable, signal } from '@angular/core';
+
+export interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
-  private toastr = inject(ToastrService);
+  toasts = signal<Toast[]>([]);
+  private nextId = 0;
 
-  success(message: string) {
-    this.toastr.success(message, 'Success');
+  show(message: string, type: Toast['type'] = 'info', duration = 3000) {
+    const id = this.nextId++;
+    this.toasts.update(toasts => [...toasts, { id, message, type }]);
+    
+    setTimeout(() => this.remove(id), duration);
   }
 
-  error(message: string) {
-    this.toastr.error(message, 'Error');
+  remove(id: number) {
+    this.toasts.update(toasts => toasts.filter(t => t.id !== id));
   }
+
+  success(message: string) { this.show(message, 'success'); }
+  error(message: string) { this.show(message, 'error'); }
+  info(message: string) { this.show(message, 'info'); }
+  warning(message: string) { this.show(message, 'warning'); }
 }

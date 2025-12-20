@@ -104,7 +104,7 @@
               <p class="text-xs text-text-secondary mt-0.5">{{ activity.timestamp | date:'short' }}</p>
             </div>
           </div>
-          <div *ngIf="dashboard.recentActivity?.length === 0" class="text-center py-6 text-text-secondary">
+          <div *ngIf="dashboard.recentActivity.length === 0" class="text-center py-6 text-text-secondary">
             No recent activity found.
           </div>
         </div>

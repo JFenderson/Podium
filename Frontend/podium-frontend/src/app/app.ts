@@ -6,12 +6,14 @@ import { AuthService } from './features/auth/services/auth.service';
 import { Header } from './layout/header/header';
 import { Footer } from './layout/footer/footer';
 import { Sidebar } from './layout/sidebar/sidebar';
+import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule, Header, Footer, Sidebar],
-  template: `<router-outlet></router-outlet>`,
+  imports: [RouterOutlet, CommonModule, Header, Footer, Sidebar, ToastContainerComponent],
+  template: `<router-outlet></router-outlet>
+  <app-toast-container />`,
   styles: []
 })
 export class AppComponent implements OnInit, OnDestroy {

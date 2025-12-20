@@ -9,7 +9,7 @@
     height: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f5f5f5; /* Matches colors.background */
+    background: #f5f5f5;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #ccc;
@@ -20,6 +20,6 @@
 /* Global resets */
 html, body {
   @apply h-full font-sans;
-  background-color: #f5f5f5; /* Matches colors.background */
-  color: #333333; /* Matches colors.text.primary */
+  background-color: #f5f5f5;
+  color: #333333;
 }
