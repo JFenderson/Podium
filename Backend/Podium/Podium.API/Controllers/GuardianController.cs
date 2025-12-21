@@ -64,8 +64,8 @@ namespace BandRecruitment.Controllers
         /// Authorization: Guardian must be linked to the student with monitoring permissions.
         /// </summary>
         [HttpGet("student/{studentId}/activity")]
-        [ProducesResponseType(typeof(StudentActivityDto), 200)]
-        public async Task<ActionResult<StudentActivityDto>> GetStudentActivity(
+        [ProducesResponseType(typeof(LinkedStudentActivityReportDto), 200)]
+        public async Task<ActionResult<LinkedStudentActivityReportDto>> GetStudentActivity(
             int studentId,
             [FromQuery] int daysBack = 30)
         {
@@ -103,8 +103,8 @@ namespace BandRecruitment.Controllers
         /// Privacy: Only returns information the student has permitted guardians to view.
         /// </summary>
         [HttpGet("student/{studentId}/profile")]
-        [ProducesResponseType(typeof(StudentProfileDto), 200)]
-        public async Task<ActionResult<StudentProfileDto>> GetStudentProfile(int studentId)
+        [ProducesResponseType(typeof(LinkedStudentProfileViewDto), 200)]
+        public async Task<ActionResult<LinkedStudentProfileViewDto>> GetStudentProfile(int studentId)
         {
             try
             {

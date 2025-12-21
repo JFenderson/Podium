@@ -13,7 +13,7 @@ namespace Podium.Application.DTOs.Guardian
     /// </summary>
     public class GuardianDashboardDto
     {
-        public List<StudentSummaryDto> LinkedStudents { get; set; } = new();
+        public List<LinkedStudentDashboardDto> LinkedStudents { get; set; } = new();
 
         // Aggregate statistics across all students
         public int TotalPendingApprovals { get; set; }

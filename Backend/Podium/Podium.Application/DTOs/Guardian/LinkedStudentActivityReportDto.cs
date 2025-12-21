@@ -7,7 +7,7 @@ namespace Podium.Application.DTOs.Guardian
     /// Detailed activity history for a student over a specified time period.
     /// Includes all tracked activity types: videos, interests, offers, events, and contacts.
     /// </summary>
-    public class StudentActivityDto
+    public class LinkedStudentActivityReportDto
     {
         public int StudentId { get; set; }
         public string StudentName { get; set; } = string.Empty;

@@ -46,6 +46,11 @@ public class StudentService : IStudentService
         // But we need the User data, so we access the Queryable/Set if possible.
         var student = await _unitOfWork.Students.GetQueryable()
             .Include(s => s.ApplicationUser)
+            .Include(s => s.Videos)
+            .Include(s => s.StudentRatings)
+            .Include(s => s.Guardians)
+            .Include(s => s.StudentInterests)
+            .ThenInclude(si => si.Band) // Required for BandName
             .FirstOrDefaultAsync(s => s.Id == studentId);
 
         if (student == null)
@@ -72,9 +77,9 @@ public class StudentService : IStudentService
         // Update Fields
         student.FirstName = dto.FirstName;
         student.LastName = dto.LastName;
-        student.Bio = dto.Bio;
-        student.Instrument = dto.Instrument;
-        student.PrimaryInstrument = dto.Instrument; // Sync redundancy
+        student.Bio = dto.BioDescription;
+        student.PrimaryInstrument = dto.PrimaryInstrument; // Updated to match changes
+        student.SecondaryInstruments = dto.SecondaryInstruments; // Updated to match changes
 
         student.PhoneNumber = dto.PhoneNumber;
         student.State = dto.State;
@@ -88,10 +93,10 @@ public class StudentService : IStudentService
 
         // Serialize Lists to JSON
         if (dto.SecondaryInstruments != null)
-            student.SecondaryInstruments = JsonSerializer.Serialize(dto.SecondaryInstruments);
+            student.SecondaryInstruments = dto.SecondaryInstruments;
 
         if (dto.Achievements != null)
-            student.Achievements = JsonSerializer.Serialize(dto.Achievements);
+            student.Achievements = dto.Achievements;
 
         _unitOfWork.Students.Update(student);
         await _unitOfWork.SaveChangesAsync();
@@ -355,11 +360,20 @@ public class StudentService : IStudentService
 
     private StudentDetailsDto MapToDetailsDto(Student s)
     {
-        List<string> secondary = new();
-        List<string> achievements = new();
+        
 
-        try { if (!string.IsNullOrEmpty(s.SecondaryInstruments)) secondary = JsonSerializer.Deserialize<List<string>>(s.SecondaryInstruments) ?? new(); } catch { }
-        try { if (!string.IsNullOrEmpty(s.Achievements)) achievements = JsonSerializer.Deserialize<List<string>>(s.Achievements) ?? new(); } catch { }
+        // Calculate Ratings
+        double avgRating = 0;
+        int ratingCount = 0;
+        if (s.StudentRatings != null && s.StudentRatings.Any())
+        {
+            avgRating = s.StudentRatings.Average(r => r.Rating);
+            ratingCount = s.StudentRatings.Count;
+        }
+
+        // Get Primary Video
+        var primaryVideo = s.Videos?.FirstOrDefault(v => v.IsPrimary && !v.IsDeleted)
+                           ?? s.Videos?.FirstOrDefault(v => !v.IsDeleted);
 
         return new StudentDetailsDto
         {
@@ -367,18 +381,46 @@ public class StudentService : IStudentService
             FirstName = s.FirstName,
             LastName = s.LastName,
             Email = s.ApplicationUser?.Email ?? s.Email,
-            Instrument = s.Instrument,
+
+            PrimaryInstrument = s.PrimaryInstrument,
             Bio = s.Bio,
             GPA = s.GPA,
+
+            // Personal
             PhoneNumber = s.PhoneNumber,
+            DateOfBirth = null, // Add s.DateOfBirth to Entity if needed
             State = s.State,
+            City = null,        // Add s.City to Entity if needed
+            Zipcode = null,     // Add s.Zipcode to Entity if needed
+
+            // Academic
             HighSchool = s.HighSchool,
             GraduationYear = s.GraduationYear,
             IntendedMajor = s.IntendedMajor,
             SkillLevel = s.SkillLevel,
             SchoolType = s.SchoolType,
-            SecondaryInstruments = secondary,
-            Achievements = achievements
+            YearsExperience = s.YearsExperience,
+
+            // Lists
+            SecondaryInstruments = s.SecondaryInstruments,
+            Achievements = s.Achievements,
+            Interests = s.StudentInterests?.Select(si => new StudentInterestDetailDto
+            {
+                BandId = si.BandId,
+                BandName = si.Band?.BandName ?? "Unknown Band", // Requires .Include(s => s.StudentInterests).ThenInclude(si => si.Band)
+                InterestedAt = si.InterestedDate
+            }).ToList() ?? new(),
+
+            // Metrics
+            VideoUrl = primaryVideo?.Url,
+            VideoThumbnailUrl = primaryVideo?.ThumbnailUrl,
+            AverageRating = avgRating,
+            RatingCount = ratingCount,
+            ProfileViews = 0, // Implement ProfileView logic if needed
+            HasGuardian = s.Guardians.Any(),
+
+            CreatedAt = s.CreatedAt,
+            UpdatedAt = s.UpdatedAt
         };
     }
 

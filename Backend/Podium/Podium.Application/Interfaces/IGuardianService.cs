@@ -9,8 +9,8 @@ namespace Podium.Application.Interfaces
     {
         Task<List<LinkedStudentDto>> GetLinkedStudentsAsync(string guardianUserId);
         Task<bool> CanAccessStudentAsync(string guardianUserId, int studentId);
-        Task<StudentActivityDto> GetStudentActivityAsync(int studentId, int daysBack);
-        Task<StudentProfileDto> GetStudentProfileAsync(int studentId);
+        Task<LinkedStudentActivityReportDto> GetStudentActivityAsync(int studentId, int daysBack);
+        Task<LinkedStudentProfileViewDto> GetStudentProfileAsync(int studentId);
         Task<List<ContactRequestDto>> GetContactRequestsAsync(string guardianUserId, int? studentId, string? status);
         Task<bool> CanManageContactRequestAsync(string guardianUserId, int requestId);
         Task<ContactRequestDto> ApproveContactRequestAsync(int requestId, string guardianUserId, string? notes);

@@ -83,7 +83,7 @@ public class AuthService : IAuthService
                         FirstName = dto.FirstName,
                         LastName = dto.LastName,
                         Email = dto.Email,
-                        Instrument = dto.Instrument ?? "Unknown",
+                        PrimaryInstrument = dto.Instrument ?? "Unknown",
                         GraduationYear = dto.GraduationYear ?? DateTime.Now.Year + 1,
                         HighSchool = dto.HighSchool,
                         PhoneNumber = dto.PhoneNumber

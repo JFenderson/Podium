@@ -1,10 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Podium.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Podium.Infrastructure.Data.Configurations
@@ -17,11 +19,32 @@ namespace Podium.Infrastructure.Data.Configurations
 
             builder.Property(s => s.GPA).HasColumnType("decimal(3,2)"); // 0.00 - 4.00
 
+            builder.Property(s => s.SecondaryInstruments)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null), // List -> String
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>() // String -> List
+                )
+                .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                    (c1, c2) => c1.SequenceEqual(c2),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()));
+
+            // 2. Achievements (Assuming you want this one too based on your snippet)
+            builder.Property(s => s.Achievements)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
+                )
+                .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                    (c1, c2) => c1.SequenceEqual(c2),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()));
+
             // Indexes for frequent searches
             builder.HasIndex(s => s.ApplicationUserId);
-            builder.HasIndex(s => s.Instrument);
+            builder.HasIndex(s => s.PrimaryInstrument);
             builder.HasIndex(s => s.GraduationYear);
-            builder.HasIndex(s => new { s.State, s.Instrument }); // Common Recruiter Filter
+            builder.HasIndex(s => new { s.State, s.PrimaryInstrument }); // Common Recruiter Filter
 
             builder.HasOne(s => s.ApplicationUser)
                    .WithMany()

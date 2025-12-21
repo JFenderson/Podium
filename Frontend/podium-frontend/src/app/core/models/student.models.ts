@@ -1,42 +1,52 @@
-// Student DTOs matching backend
+// Student DTOs matching Backend definitions strictly
 
 export interface StudentDetailsDto {
   studentId: number;
   firstName: string;
   lastName: string;
   email: string;
+  
+  // Bio & Description
+  bio?: string;
+  bioDescription?: string; // Backend getter alias for Bio
+  
+  // Contact & Location
   phoneNumber?: string;
+  city?: string;
+  state?: string;
+  zipcode?: string;
+  
+  // Personal & Academic
   dateOfBirth?: Date;
   graduationYear?: number;
   highSchool?: string;
   gpa?: number;
-  instruments?: string[];
+  intendedMajor?: string;
+  schoolType?: string;
+  
+  // Musical
   primaryInstrument?: string;
+  secondaryInstruments: string[]; // Backend sends List<string>
+  skillLevel?: string;
+  achievements: string[];         // Backend sends List<string>
+  awards?: string[];              // Backend getter alias for Achievements
+
+  // Engagement / Metrics
   videoUrl?: string;
   videoThumbnailUrl?: string;
-  bioDescription?: string;
-  awards?: string[];
-  interestedBands?: number[];
   averageRating?: number;
   ratingCount?: number;
+  profileViews?: number;
+  hasGuardian: boolean;
+  
+  // Lists
+  // NOTE: Backend InterestDto only contains { studentId, bandId }. 
+  // It does not currently return BandName or Date.
+  interests: InterestDto[]; 
+  
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
-  bio: string;
-  secondaryInstruments: string[];
-  yearsOfExperience?: number;
-  city?: string;
-  state?: string;
-  zipcode?: string;
-  hasGuardian?: boolean;
-  profileViews?: number;
-   achievements?: string[]; 
-  interests?: StudentInterestDto[]; 
-}
-
-export interface StudentInterestDto {
-  bandId: number;
-  bandName: string;
-  interestedAt: Date;
 }
 
 export interface UpdateStudentDto {
@@ -44,15 +54,34 @@ export interface UpdateStudentDto {
   lastName?: string;
   phoneNumber?: string;
   dateOfBirth?: Date;
+  
+  bioDescription?: string; // Backend maps this to Bio
+  
+  // Academic
   graduationYear?: number;
   highSchool?: string;
   gpa?: number;
-  instruments?: string[];
+  intendedMajor?: string;
+  schoolType?: string;
+  
+  // Musical
   primaryInstrument?: string;
-  bioDescription?: string;
+  skillLevel?: string;
+  
+  // Backend DTO defines this as 'string?', but usually frontend handles arrays.
+  // If your backend requires a JSON string, you must JSON.stringify() this array before sending.
+  secondaryInstruments?: string | string[]; 
+  
   awards?: string[];
+  achievements?: string[];
+
+  // Location
+  state?: string;
+  city?: string;
+  zipcode?: string;
 }
 
+// Matches Backend Podium.Application.DTOs.Student.StudentSummaryDto
 export interface StudentSummaryDto {
   studentId: number;
   firstName: string;
@@ -65,19 +94,36 @@ export interface StudentSummaryDto {
   ratingCount?: number;
 }
 
+// Matches Backend Podium.Application.DTOs.Student.InterestDto
 export interface InterestDto {
   studentId: number;
   bandId: number;
 }
 
-export interface PagedResult<T> {
-  items: T[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
+// Matches Backend Podium.Application.DTOs.Student.InterestedStudentDto
+export interface InterestedStudentDto {
+  studentId: number;
+  name: string;
+  email: string;
+  phone?: string;
+  primaryInstrument: string;
+  skillLevel: string;
+  graduationYear?: number;
+  highSchool: string;
+  state: string;
+  interestedDate: Date;
+  
+  // Engagement
+  videosUploaded: number;
+  eventsAttended: number;
+  hasBeenContacted: boolean;
+  lastContactDate?: Date;
+  hasOffer: boolean;
+  offerStatus?: string;
+  
+  // Guardian Info
+  hasGuardianLinked: boolean;
+  requiresGuardianApproval: boolean;
 }
 
 export interface StudentFilterDto {
@@ -88,4 +134,23 @@ export interface StudentFilterDto {
   state?: string;
   pageNumber?: number;
   pageSize?: number;
+}
+
+export interface InterestedStudentFilterDto {
+  instrument?: string;
+  skillLevel?: string;
+  graduationYear?: number;
+  interestedAfter?: Date;
+  page: number;
+  pageSize: number;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 }

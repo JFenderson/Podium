@@ -29,7 +29,7 @@ namespace Podium.Core.Entities
         public string Email { get; set; } = string.Empty;
 
         [StringLength(100)]
-        public string? Instrument { get; set; }
+        public string? PrimaryInstrument { get; set; }
 
         [StringLength(1000)]
         public string? Bio { get; set; }
@@ -41,13 +41,12 @@ namespace Podium.Core.Entities
         public string? PhoneNumber { get; set; }
         public bool RequiresGuardianApproval { get; set; } = true;  // For minors
         public DateTime? LastActivityDate { get; set; }
-        public string? SecondaryInstruments { get; set; }  // JSON string
-        public string? Achievements { get; set; }  // JSON string
+        public List<string> SecondaryInstruments { get; set; } = new();
+        public List<string>? Achievements { get; set; } = new();  // JSON string
   
         public string? IntendedMajor { get; set; }
-        public string? PrimaryInstrument { get; set; }
         public string? SkillLevel { get; set; }
-        public int YearsExperience { get; set; }
+        public int? YearsExperience { get; set; }
         public int GraduationYear { get; set; }
         public string? HighSchool { get; set; }
         public string? State { get; set; }
@@ -67,7 +66,7 @@ namespace Podium.Core.Entities
         public virtual ICollection<ScholarshipOffer> ScholarshipOffers { get; set; } = new List<ScholarshipOffer>();
         public virtual ICollection<ContactLog> ContactLogs { get; set; } = new List<ContactLog>();
         public virtual ICollection<Guardian> Guardians { get; set; } = new List<Guardian>();
-
+        public virtual ICollection<StudentRating> StudentRatings { get; set; } = new List<StudentRating>();
         public virtual ICollection<StudentGuardian>? StudentGuardianLinks { get; set; }
     }
 }

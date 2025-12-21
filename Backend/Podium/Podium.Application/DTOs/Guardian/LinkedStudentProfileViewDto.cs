@@ -10,7 +10,7 @@ namespace Podium.Application.DTOs.Guardian
     /// Student profile with information guardian has permission to view.
     /// Respects student privacy settings.
     /// </summary>
-    public class StudentProfileDto
+    public class LinkedStudentProfileViewDto
     {
         public int StudentId { get; set; }
         public string Name { get; set; } = string.Empty;

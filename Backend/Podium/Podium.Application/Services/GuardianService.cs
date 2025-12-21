@@ -63,11 +63,11 @@ namespace Podium.Application.Services
                 .Include(s => s.ContactRequests)
                 .Include(s => s.ScholarshipOffers)
                 .Include(s => s.StudentInterests)
-                .Select(s => new StudentSummaryDto
+                .Select(s => new LinkedStudentDashboardDto
                 {
                     StudentId = s.Id,
                     StudentName = s.FirstName + " " + s.LastName,
-                    PrimaryInstrument = s.Instrument ?? string.Empty,
+                    PrimaryInstrument = s.PrimaryInstrument ?? string.Empty,
                     GraduationYear = s.GraduationYear,
                     PendingContactRequests = s.ContactRequests.Count(cr => cr.Status == "Pending"),
                     ActiveScholarshipOffers = s.ScholarshipOffers.Count(so => so.Status == ScholarshipStatus.Sent),
@@ -209,7 +209,7 @@ namespace Podium.Application.Services
                 .AnyAsync(sg => sg.GuardianId == guardianId.Id && sg.StudentId == studentId && sg.IsActive);
         }
 
-        public async Task<StudentActivityDto> GetStudentActivityAsync(int studentId, int daysBack)
+        public async Task<LinkedStudentActivityReportDto> GetStudentActivityAsync(int studentId, int daysBack)
         {
             var startDate = DateTime.UtcNow.AddDays(-daysBack);
             var student = await _unitOfWork.Students.GetByIdAsync(studentId);
@@ -260,7 +260,7 @@ namespace Podium.Application.Services
                 ContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == si.BandId).OrderBy(cl => cl.CreatedAt).Select(cl => (DateTime?)cl.CreatedAt).FirstOrDefault()
             }).ToList();
 
-            return new StudentActivityDto
+            return new LinkedStudentActivityReportDto
             {
                 StudentId = studentId,
                 StudentName = student.FirstName + " " + student.LastName,
@@ -279,7 +279,7 @@ namespace Podium.Application.Services
             };
         }
 
-        public async Task<StudentProfileDto> GetStudentProfileAsync(int studentId)
+        public async Task<LinkedStudentProfileViewDto> GetStudentProfileAsync(int studentId)
         {
             var student = await _unitOfWork.Students.GetQueryable()
                 .Include(s => s.Videos)
@@ -290,7 +290,7 @@ namespace Podium.Application.Services
             if (student == null) throw new KeyNotFoundException($"Student {studentId} not found");
 
             // Mapping logic (JSON deserialization etc) remains same
-            return new StudentProfileDto
+            return new LinkedStudentProfileViewDto
             {
                 StudentId = student.Id,
                 Name = student.FirstName + " " + student.LastName,
