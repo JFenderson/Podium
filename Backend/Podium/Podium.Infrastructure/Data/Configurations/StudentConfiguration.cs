@@ -18,22 +18,26 @@ namespace Podium.Infrastructure.Data.Configurations
             builder.HasKey(s => s.Id);
 
             builder.Property(s => s.GPA).HasColumnType("decimal(3,2)"); // 0.00 - 4.00
-
+                                                                        // 1. SecondaryInstruments
             builder.Property(s => s.SecondaryInstruments)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null), // List -> String
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>() // String -> List
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => string.IsNullOrEmpty(v)
+                        ? new List<string>() // Handle empty strings safely
+                        : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
                 )
                 .Metadata.SetValueComparer(new ValueComparer<List<string>>(
                     (c1, c2) => c1.SequenceEqual(c2),
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                     c => c.ToList()));
 
-            // 2. Achievements (Assuming you want this one too based on your snippet)
+            // 2. Achievements 
             builder.Property(s => s.Achievements)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
+                    v => string.IsNullOrEmpty(v)
+                        ? new List<string>()
+                        : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null) ?? new List<string>()
                 )
                 .Metadata.SetValueComparer(new ValueComparer<List<string>>(
                     (c1, c2) => c1.SequenceEqual(c2),

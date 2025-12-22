@@ -6,7 +6,7 @@
       <p class="text-text-secondary mt-2">Sign in to your account</p>
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+    <form *ngIf="loginForm" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
       
       <div class="space-y-1">
         <label for="email" class="block text-sm font-medium text-text-primary">Email</label>

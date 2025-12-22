@@ -15,6 +15,7 @@ export interface GuardianDto {
 
 export interface GuardianLinkedStudentDto {
   studentId: number;
+  studentName: string;
   firstName: string;
   lastName: string;
   email?: string;
@@ -23,6 +24,13 @@ export interface GuardianLinkedStudentDto {
   primaryInstrument?: string;
   pendingOffers: number;
   pendingApprovals: number;
+
+  pendingContactRequests: number;
+  activeScholarshipOffers: number;
+  bandsInterested: number;
+  lastActivityDate: Date;
+  hasExpiringOffers: boolean;
+  hasUrgentApprovals: boolean;
 }
 
 export interface LinkStudentDto {
@@ -37,6 +45,8 @@ export interface GuardianDashboardDto {
   recentActivity: GuardianActivityDto[];
   totalOffers: number;
   pendingOffersCount: number;
+  priorityAlerts: PriorityAlertDto[];
+  recentActivities: GuardianRecentActivityDto[];
 }
 
 export interface GuardianPendingApprovalDto {
@@ -51,6 +61,7 @@ export interface GuardianPendingApprovalDto {
   expiresAt?: Date;
   sentAt: Date;
   offerDetails: string;
+  dateReceived: Date;
   requestedAt: Date;
 }
 
@@ -110,4 +121,82 @@ export interface StudentGuardianDto {
   isPrimary: boolean;
 }
 
+export interface GuardianScholarshipDto {
+  offerId: number;
+  bandId: number;
+  bandName: string;
+  scholarshipAmount: number;
+  status: string; // 'Sent', 'Accepted', 'Declined', 'expired'
+  offerType: string;
+  createdAt: Date;
+  expirationDate: Date;
+  terms?: string;
+  requiresGuardianApproval: boolean;
+}
+
+export interface StudentProfileViewDto {
+  studentId: number;
+  name: string;
+  email: string;
+  primaryInstrument: string;
+  graduationYear: number;
+  highSchool: string;
+  avatarUrl?: string;
+  videosUploaded: number;
+  bandsInterested: number;
+  eventsAttended: number;
+}
+
+export interface StudentActivityReportDto {
+  studentId: number;
+  studentName: string;
+  videosUploaded: any[]; // Define VideoActivityDto if needed
+  interestShown: InterestActivityDto[];
+  offersReceived: OfferActivityDto[];
+  eventsAttended: EventActivityDto[];
+  contactsMade: any[];
+}
+
+export interface InterestActivityDto {
+  bandName: string;
+  university: string;
+  interestDate: Date;
+}
+
+export interface OfferActivityDto {
+  bandName: string;
+  amount: number;
+  offerDate: Date;
+  status: string;
+}
+
+export interface EventActivityDto {
+  eventName: string;
+  bandName: string;
+  eventDate: Date;
+  didAttend: boolean;
+}
+
+export interface PriorityAlertDto {
+  alertType: string; // 'ExpiringOffer' | 'UrgentApproval'
+  message: string;
+  studentId: number;
+  studentName: string;
+  deadline: Date;
+  actionUrl: string;
+  severity: 'High' | 'Medium' | 'Low';
+}
+
+export interface GuardianRecentActivityDto {
+  title: string;
+  description: string;
+  timestamp: Date;
+  iconType: string;
+}
+
+export interface GuardianApprovalDto {
+  offerId: number;
+  approved: boolean;
+  notes?: string;
+}
 

@@ -1,13 +1,16 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GuardianService } from '../../services/guardian.service';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-link-student',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './link-student.component.html',
-  styleUrls: ['./link-student.component.scss']
+  // styleUrls: ['./link-student.component.css']
 })
 export class LinkStudentComponent {
   linkForm: FormGroup;

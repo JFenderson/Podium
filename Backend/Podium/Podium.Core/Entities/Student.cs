@@ -40,7 +40,7 @@ namespace Podium.Core.Entities
         [StringLength(20)]
         public string? PhoneNumber { get; set; }
         public bool RequiresGuardianApproval { get; set; } = true;  // For minors
-        public DateTime? LastActivityDate { get; set; }
+        public DateTime LastActivityDate { get; set; }
         public List<string> SecondaryInstruments { get; set; } = new();
         public List<string>? Achievements { get; set; } = new();  // JSON string
   
@@ -53,6 +53,9 @@ namespace Podium.Core.Entities
         public string? SchoolType { get; set; }
 
         public bool IsDeleted { get; set; }
+
+        [MaxLength(10)]
+        public string GuardianInviteCode { get; set; } = string.Empty;
 
         // Navigation property
         [ForeignKey(nameof(ApplicationUserId))]

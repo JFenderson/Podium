@@ -10,6 +10,7 @@ using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Student;
 using Podium.Application.Interfaces;
 using Podium.Core.Constants;
+using Podium.Core.Interfaces;
 using Podium.Infrastructure.Data;
 using System.Security.Claims;
 
@@ -27,19 +28,22 @@ namespace BandRecruitment.Controllers
         private readonly IDirectorService _directorService;
         private readonly IAuditService _auditService;
         private readonly ILogger<DirectorController> _logger;
-
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IPermissionService _permissionService;
 
         public DirectorController(
             IDirectorService directorService,
             IAuditService auditService,
             ILogger<DirectorController> logger,
-            ApplicationDbContext context,
-            IPermissionService permissionService)
+            IPermissionService permissionService,
+            IUnitOfWork unitOfWork)
         {
             _directorService = directorService;
             _auditService = auditService;
             _logger = logger;
 
+            _permissionService = permissionService;
+            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -528,6 +532,139 @@ namespace BandRecruitment.Controllers
                 _logger.LogError(ex, "Error retrieving events");
                 return StatusCode(500, "An error occurred while retrieving events");
             }
+        }
+
+        // ==========================================
+        // SPECIFIC ANALYTICS ENDPOINTS
+        // ==========================================
+
+        [HttpGet("band/{bandId}/offer-stats")]
+        public async Task<ActionResult<OfferStatsDto>> GetOfferStats(int bandId)
+        {
+            var offers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId)
+                .Select(o => o.Status)
+                .ToListAsync();
+
+            var stats = new OfferStatsDto
+            {
+                TotalOffers = offers.Count,
+                Pending = offers.Count(s => s == ScholarshipStatus.Sent || s == ScholarshipStatus.PendingApproval || s == ScholarshipStatus.PendingGuardianSignature),
+                Accepted = offers.Count(s => s == ScholarshipStatus.Accepted),
+                Declined = offers.Count(s => s == ScholarshipStatus.Declined),
+                Expired = offers.Count(s => s == ScholarshipStatus.Expired)
+            };
+
+            var responses = stats.Accepted + stats.Declined;
+            stats.AcceptanceRate = stats.TotalOffers > 0 ? Math.Round((decimal)stats.Accepted / stats.TotalOffers * 100, 1) : 0;
+            stats.ResponseRate = stats.TotalOffers > 0 ? Math.Round((decimal)responses / stats.TotalOffers * 100, 1) : 0;
+
+            return Ok(stats);
+        }
+
+        [HttpGet("band/{bandId}/engagement")]
+        public async Task<ActionResult<DirectorEngagementMetricsDto>> GetEngagementMetrics(int bandId)
+        {
+            // 1. Get totals
+            var totalInterests = await _unitOfWork.StudentInterests.GetQueryable().CountAsync(si => si.BandId == bandId);
+
+            // Assuming you have an AuditLog for views. If not, return 0 or mock data.
+            var totalViews = await _unitOfWork.AuditLogs.GetQueryable()
+                .CountAsync(a => a.ActionType == "ViewBand" && a.MetadataJson.Contains(bandId.ToString()));
+
+            // 2. Get Daily Activity (Last 7 days)
+            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+
+            // Grouping interests by date
+            var dailyInterests = await _unitOfWork.StudentInterests.GetQueryable()
+                .Where(si => si.BandId == bandId && si.InterestedDate >= sevenDaysAgo)
+                .GroupBy(si => si.InterestedDate.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            // Merge into a complete list
+            var dailyActivity = new List<DailyEngagementDto>();
+            for (int i = 0; i < 7; i++)
+            {
+                var date = DateTime.UtcNow.AddDays(-i).Date;
+                var interestCount = dailyInterests.FirstOrDefault(d => d.Date == date)?.Count ?? 0;
+
+                dailyActivity.Add(new DailyEngagementDto
+                {
+                    Date = date,
+                    Interests = interestCount,
+                    Views = 0 // Populate if you have daily view logs
+                });
+            }
+
+            return Ok(new DirectorEngagementMetricsDto
+            {
+                TotalProfileViews = totalViews,
+                TotalInterests = totalInterests,
+                TotalVideoWatches = 0, // or calculated value
+                DailyActivity = dailyActivity.OrderBy(d => d.Date).ToList()
+            });
+        }
+
+        [HttpGet("band/{bandId}/staff-performance")]
+        public async Task<ActionResult<List<RecruiterPerformanceDto>>> GetStaffPerformance(int bandId)
+        {
+            var stats = await _unitOfWork.BandStaff.GetQueryable()
+                .Where(bs => bs.BandId == bandId)
+                .Select(bs => new RecruiterPerformanceDto
+                {
+                    StaffId = bs.Id,
+                    Name = bs.FirstName + " " + bs.LastName,
+                    ContactsInitiated = bs.TotalContactsInitiated,
+                    OffersSent = bs.TotalOffersCreated,
+                    SuccessfulPlacements = bs.SuccessfulPlacements,
+                    ConversionRate = bs.TotalOffersCreated > 0
+                        ? (decimal)bs.SuccessfulPlacements / bs.TotalOffersCreated * 100
+                        : 0
+                })
+                .OrderByDescending(x => x.OffersSent)
+                .ToListAsync();
+
+            return Ok(stats);
+        }
+
+        [HttpGet("band/{bandId}/scholarship-budget")]
+        public async Task<ActionResult<BandBudgetDto>> GetScholarshipBudget(int bandId)
+        {
+            int currentYear = DateTime.UtcNow.Year;
+            var budget = await _unitOfWork.BandBudgets.GetQueryable()
+                .FirstOrDefaultAsync(b => b.BandId == bandId && b.FiscalYear == currentYear);
+
+            if (budget == null) return NotFound("Budget not found for current fiscal year.");
+
+            // Calculate pending amount (Sent but not yet Accepted/Declined)
+            var pendingAmount = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId &&
+                           (o.Status == ScholarshipStatus.Sent || o.Status == ScholarshipStatus.PendingGuardianSignature))
+                .SumAsync(o => o.ScholarshipAmount);
+
+            return Ok(new BandBudgetDto
+            {
+                TotalBudget = budget.TotalBudget,
+                Allocated = budget.AllocatedAmount,
+                Remaining = budget.RemainingAmount,
+                PendingCommitment = pendingAmount,
+                FiscalYear = currentYear
+            });
+        }
+
+        [HttpGet("band/{bandId}/conversion-funnel")]
+        public async Task<ActionResult<ConversionFunnelDto>> GetConversionFunnel(int bandId)
+        {
+            var funnel = new ConversionFunnelDto
+            {
+                TotalInterests = await _unitOfWork.StudentInterests.GetQueryable().CountAsync(si => si.BandId == bandId),
+                Contacted = await _unitOfWork.ContactLogs.GetQueryable().Select(c => c.StudentId).Distinct().CountAsync(), // Approximate count of distinct students contacted
+                OffersSent = await _unitOfWork.ScholarshipOffers.GetQueryable().CountAsync(o => o.BandId == bandId),
+                OffersAccepted = await _unitOfWork.ScholarshipOffers.GetQueryable().CountAsync(o => o.BandId == bandId && o.Status == ScholarshipStatus.Accepted)
+            };
+
+            return Ok(funnel);
         }
     }
 }

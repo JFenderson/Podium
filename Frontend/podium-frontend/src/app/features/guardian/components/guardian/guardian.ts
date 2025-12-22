@@ -1,16 +1,16 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService } from '../../features/auth/services/auth.service'; // Adjust path as needed
+import { AuthService } from '../../../../features/auth/services/auth.service'; // Adjust path as needed
 
 @Component({
   selector: 'app-guardian',
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
-  templateUrl: './guardian-layout.html',
+  templateUrl: './guardian.html',
   styles: []
 })
-export class GuardianLayoutComponent {
+export class Guardian {
   private authService = inject(AuthService);
   
   isMobileMenuOpen = false;

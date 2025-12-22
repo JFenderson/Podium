@@ -59,24 +59,25 @@ namespace Podium.Application.Services
             var expiringThreshold = now.AddDays(7);
 
             var studentSummaries = await _unitOfWork.Students.GetQueryable()
-                .Where(s => studentIds.Contains(s.Id))
-                .Include(s => s.ContactRequests)
-                .Include(s => s.ScholarshipOffers)
-                .Include(s => s.StudentInterests)
-                .Select(s => new LinkedStudentDashboardDto
-                {
-                    StudentId = s.Id,
-                    StudentName = s.FirstName + " " + s.LastName,
-                    PrimaryInstrument = s.PrimaryInstrument ?? string.Empty,
-                    GraduationYear = s.GraduationYear,
-                    PendingContactRequests = s.ContactRequests.Count(cr => cr.Status == "Pending"),
-                    ActiveScholarshipOffers = s.ScholarshipOffers.Count(so => so.Status == ScholarshipStatus.Sent),
-                    BandsInterested = s.StudentInterests.Count,
-                    LastActivityDate = s.LastActivityDate,
-                    HasExpiringOffers = s.ScholarshipOffers.Any(so => so.Status == ScholarshipStatus.Sent && so.ExpirationDate <= expiringThreshold),
-                    HasUrgentApprovals = s.ContactRequests.Any(cr => cr.Status == "Pending" && cr.IsUrgent)
-                })
-                .ToListAsync();
+         .Where(s => studentIds.Contains(s.Id))
+         .Include(s => s.ContactRequests)
+         .Include(s => s.ScholarshipOffers)
+         .Include(s => s.StudentInterests)
+         // FIX: Use the correct DTO class name here
+         .Select(s => new GuardianLinkedStudentDto
+         {
+             StudentId = s.Id,
+             StudentName = s.FirstName + " " + s.LastName,
+             PrimaryInstrument = s.PrimaryInstrument ?? string.Empty,
+             GraduationYear = s.GraduationYear,
+             PendingContactRequests = s.ContactRequests.Count(cr => cr.Status == "Pending"),
+             ActiveScholarshipOffers = s.ScholarshipOffers.Count(so => so.Status == ScholarshipStatus.Sent),
+             BandsInterested = s.StudentInterests.Count,
+             LastActivityDate = s.LastActivityDate,
+             HasExpiringOffers = s.ScholarshipOffers.Any(so => so.Status == ScholarshipStatus.Sent && so.ExpirationDate <= expiringThreshold),
+             HasUrgentApprovals = s.ContactRequests.Any(cr => cr.Status == "Pending" && cr.IsUrgent)
+         })
+         .ToListAsync();
 
             var totalPendingApprovals = await _unitOfWork.ContactRequests.GetQueryable()
                 .CountAsync(cr => studentIds.Contains(cr.StudentId) && cr.Status == "Pending");
@@ -524,6 +525,12 @@ namespace Podium.Application.Services
                 return ServiceResult<bool>.Failure("Student email not found in the system.");
             }
 
+            if (string.IsNullOrEmpty(dto.VerificationCode) ||
+        !string.Equals(student.GuardianInviteCode, dto.VerificationCode, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<bool>.Failure("Invalid invite code. Please get the correct code from your student.");
+            }
+
             // 2. Check if link already exists
             var existingLink = await _unitOfWork.StudentGuardians.GetQueryable()
                 .FirstOrDefaultAsync(sg => sg.GuardianId == guardian.Id && sg.StudentId == student.Id);
@@ -535,32 +542,31 @@ namespace Podium.Application.Services
 
                 // Reactivate if previously unlinked
                 existingLink.IsActive = true;
+                existingLink.IsVerified = true;
                 existingLink.RelationshipType = dto.Relationship;
                 _unitOfWork.StudentGuardians.Update(existingLink);
+
                 await _unitOfWork.SaveChangesAsync();
                 return ServiceResult<bool>.Success(true);
             }
-
-            // 3. Create new link
-            // NOTE: Depending on your business logic, you might want to set IsVerified = false 
-            // and require the student to approve it first. 
-            var newLink = new StudentGuardian
+            else
             {
-                GuardianId = guardian.Id,
-                StudentId = student.Id,
-                RelationshipType = dto.Relationship,
-                IsActive = true,
-                IsVerified = true, // Set to false if you want to implement student approval flow
-                LinkedDate = DateTime.UtcNow,
-
-                // Default Permissions
-                CanViewActivity = true,
-                ReceivesNotifications = true,
-                CanApproveContacts = true,
-                CanRespondToOffers = true
-            };
-
-            await _unitOfWork.StudentGuardians.AddAsync(newLink);
+                var newLink = new StudentGuardian
+                {
+                    GuardianId = guardian.Id,
+                    StudentId = student.Id,
+                    RelationshipType = dto.Relationship,
+                    IsActive = true,
+                    IsVerified = true, // Auto-verify
+                    LinkedDate = DateTime.UtcNow,
+                    // Default Permissions
+                    CanViewActivity = true,
+                    ReceivesNotifications = true,
+                    CanApproveContacts = true,
+                    CanRespondToOffers = true
+                };
+                await _unitOfWork.StudentGuardians.AddAsync(newLink);
+            }
             await _unitOfWork.SaveChangesAsync();
 
             return ServiceResult<bool>.Success(true);

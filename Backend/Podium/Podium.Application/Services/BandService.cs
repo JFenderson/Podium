@@ -80,7 +80,9 @@ namespace Podium.Application.Services
                 .Where(s => s.IsActive && s.CanContact)
                 .Select(s => new BandStaffSummaryDto
                 {
-                    Name = $"{s.FirstName} {s.LastName}",
+                    Id = s.Id,
+                    UserId = s.ApplicationUserId,
+                    FullName = $"{s.FirstName} {s.LastName}",
                     Title = s.Title,
                     Role = s.Role
                 })

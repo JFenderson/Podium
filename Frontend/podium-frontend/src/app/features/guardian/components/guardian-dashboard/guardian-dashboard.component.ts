@@ -15,7 +15,7 @@ import { Roles } from '../../../../core/models/common.models';
 @Component({
   selector: 'app-guardian-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './guardian-dashboard.component.html'
 })
 export class GuardianDashboardComponent implements OnInit {

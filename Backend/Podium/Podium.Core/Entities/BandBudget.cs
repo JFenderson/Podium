@@ -31,5 +31,6 @@ namespace Podium.Core.Entities
         // Navigation
         [ForeignKey(nameof(BandId))]
         public virtual Band Band { get; set; } = null!;
+        public string CreatedBy { get; set; }
     }
 }

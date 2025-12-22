@@ -37,7 +37,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<BandBudget> BandBudgets { get; set; }
-
+    public DbSet<ScholarshipOffer> ScholarshipOffers { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

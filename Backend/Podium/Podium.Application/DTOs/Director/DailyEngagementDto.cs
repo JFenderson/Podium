@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.Director
 {
-    internal class DailyEngagementDto
+    public class DailyEngagementDto
     {
+        public DateTime Date { get; set; }
+        public int Views { get; set; }
+        public int Interests { get; set; }
     }
 }

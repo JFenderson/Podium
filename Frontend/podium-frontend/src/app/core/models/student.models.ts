@@ -99,6 +99,8 @@ export interface StudentSummaryDto {
 export interface InterestDto {
   studentId: number;
   bandId: number;
+  bandName?: string;
+  interestedAt: Date;
 }
 
 // Matches Backend Podium.Application.DTOs.Student.InterestedStudentDto

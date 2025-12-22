@@ -30,6 +30,8 @@ namespace Podium.Infrastructure.Data
                 await context.SaveChangesAsync();
             }
 
+            await SeedBandBudgetsAsync(context);
+
             string commonPassword = "Password123!";
 
             // ==========================================
@@ -82,6 +84,14 @@ namespace Podium.Infrastructure.Data
             // --- E. Fixed Guardian (Martha Smith) ---
             await CreateGuardianUser(userManager, context, "mom@gmail.com", "Martha", "Smith", mainStudent, GuardianRelationshipTypes.Mother, commonPassword);
 
+            // ==========================================
+            // 7. SEED TEST DATA FOR DASHBOARD
+            // ==========================================
+            if (mainStudent != null && asuBand != null)
+            {
+                await SeedTestInteractionData(context, mainStudent, asuBand);
+            }
+
 
             // ==========================================
             // 5. SEED BULK RANDOM STUDENTS
@@ -90,114 +100,94 @@ namespace Podium.Infrastructure.Data
             // Only seed if we don't have many students yet
             if (await context.Students.CountAsync() < 10)
             {
-                var instruments = new[] { "Trumpet", "Trombone", "Saxophone", "Clarinet", "Percussion", "Tuba", "Flute", "Mellophone", "Drum Major" };
-                var states = new[] { "AL", "GA", "FL", "TX", "LA", "MS", "NC", "SC", "VA", "MD" };
-                var firstNames = new[] { "Marcus", "Keisha", "Darius", "Jasmine", "Tyrell", "Aaliyah", "Isaiah", "Ebony", "Malik", "Brianna", "Xavier", "Chloe", "Andre", "Maya", "Trey" };
-                var lastNames = new[] { "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris" };
-
-                var random = new Random();
-                var createdStudents = new List<Student>();
-
-                for (int i = 0; i < 20; i++) // Create 20 random students
-                {
-                    string fName = firstNames[random.Next(firstNames.Length)];
-                    string lName = lastNames[random.Next(lastNames.Length)];
-                    string email = $"{fName.ToLower()}.{lName.ToLower()}{i}@test.com"; // Ensure unique email
-
-                    var student = await CreateStudentUser(
-                        userManager,
-                        context,
-                        email,
-                        fName,
-                        lName,
-                        instruments[random.Next(instruments.Length)],
-                        states[random.Next(states.Length)],
-                        2024 + random.Next(3), // Grad years 2024-2026
-                        commonPassword
-                    );
-
-                    if (student != null) createdStudents.Add(student);
-                }
-
-                // ==========================================
-                // 6. SEED RANDOM INTERESTS
-                // ==========================================
-
-                var allBandIds = await context.Bands.Select(b => b.Id).ToListAsync();
-
-                foreach (var student in createdStudents)
-                {
-                    // Pick 2 to 5 random bands for this student
-                    int numberOfInterests = random.Next(2, 6);
-
-                    // Shuffle bands and take N
-                    var pickedBandIds = allBandIds.OrderBy(x => random.Next()).Take(numberOfInterests).ToList();
-
-                    foreach (var bandId in pickedBandIds)
-                    {
-                        if (!context.StudentInterests.Any(si => si.StudentId == student.Id && si.BandId == bandId))
-                        {
-                            context.StudentInterests.Add(new StudentInterest
-                            {
-                                StudentId = student.Id,
-                                BandId = bandId,
-                                IsInterested = true,
-                                InterestedDate = DateTime.UtcNow.AddDays(-random.Next(1, 90)), // Interest added 1-90 days ago
-                                Notes = "Interested in scholarship opportunities."
-                            });
-                        }
-                    }
-                }
-
-                // ==========================================
-                // 7. FIX: LINK DIRECTORS TO BANDS
-                // ==========================================
-                var directorsToLink = new Dictionary<string, string>
-                                                {
-                                                    { "Alabama State University", "director@asu.edu" },
-                                                    { "Florida A&M University", "director@famu.edu" },
-                                                    { "Southern University", "director@subr.edu" }
-                                                };
-
-                foreach (var kvp in directorsToLink)
-                {
-                    var band = await context.Bands.FirstOrDefaultAsync(b => b.UniversityName == kvp.Key);
-                    var user = await userManager.FindByEmailAsync(kvp.Value);
-
-                    // If both exist, but the link is missing or wrong, update it.
-                    if (band != null && user != null && band.DirectorApplicationUserId != user.Id)
-                    {
-                        band.DirectorApplicationUserId = user.Id;
-
-                        // Also ensure the Director is in the BandStaff table (Safety Check)
-                        if (!context.BandStaff.Any(bs => bs.BandId == band.Id && bs.ApplicationUserId == user.Id))
-                        {
-                            context.BandStaff.Add(new BandStaff
-                            {
-                                ApplicationUserId = user.Id,
-                                BandId = band.Id,
-                                FirstName = user.FirstName,
-                                LastName = user.LastName,
-                                Role = Roles.Director,
-                                Title = "Director of Bands",
-                                IsActive = true,
-                                CanViewStudents = true,
-                                CanContact = true,
-                                CanSendOffers = true,
-                                CanManageStaff = true,
-                                CanManageEvents = true,
-                                CreatedBy = "System"
-                            });
-                        }
-                    }
-                }
-
-
-                await context.SaveChangesAsync();
+                await SeedRandomStudentsAsync(userManager, context, commonPassword);
             }
         }
 
         // --- HELPER METHODS ---
+
+        private static async Task SeedBandBudgetsAsync(ApplicationDbContext context)
+        {
+            var currentYear = DateTime.UtcNow.Year;
+            var bands = await context.Bands.ToListAsync();
+
+            foreach (var band in bands)
+            {
+                if (!await context.BandBudgets.AnyAsync(bb => bb.BandId == band.Id && bb.FiscalYear == currentYear))
+                {
+                    context.BandBudgets.Add(new BandBudget
+                    {
+                        BandId = band.Id,
+                        FiscalYear = currentYear,
+                        TotalBudget = 500000m, // $500k default
+                        AllocatedAmount = 0m,
+                        RemainingAmount = 500000m,
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = "System"
+                    });
+                }
+            }
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedTestInteractionData(ApplicationDbContext context, Student student, Band band)
+        {
+            // 1. Fetch a valid Staff Member to act as the creator/recruiter
+            // We try to find the Director or any staff member for this band
+            var staffMember = await context.BandStaff
+                .FirstOrDefaultAsync(bs => bs.BandId == band.Id);
+
+            if (staffMember == null)
+            {
+                // Fallback: If no staff found (unlikely), skip seeding interaction data
+                return;
+            }
+
+            // 1. Create a Pending Scholarship Offer (So Guardian has something to Approve)
+            if (!await context.ScholarshipOffers.AnyAsync(o => o.StudentId == student.Id && o.BandId == band.Id))
+            {
+                context.ScholarshipOffers.Add(new ScholarshipOffer
+                {
+                    StudentId = student.Id,
+                    BandId = band.Id,
+                    OfferType = "Full Tuition",
+                    ScholarshipAmount = 25000m,
+                    Description = "Presidential Band Scholarship",
+                    Status = ScholarshipStatus.Sent,
+                    CreatedAt = DateTime.UtcNow.AddDays(-2),
+                    ExpirationDate = DateTime.UtcNow.AddDays(28),
+                    RequiresGuardianApproval = true,
+                    CreatedByUserId = staffMember.ApplicationUserId, // Use real user ID
+                    CreatedByStaffId = staffMember.Id
+                });
+            }
+
+            // 2. Create a Pending Contact Request
+            if (!await context.ContactRequests.AnyAsync(cr => cr.StudentId == student.Id && cr.BandId == band.Id))
+            {
+                context.ContactRequests.Add(new ContactRequest
+                {
+                    StudentId = student.Id,
+                    BandId = band.Id,
+                    Status = "Pending",
+                    RequestedDate = DateTime.UtcNow.AddDays(-1),
+                    IsUrgent = true, // To test "High Priority" badge
+                    CreatedBy = staffMember.ApplicationUserId, // Use real user ID
+                    RecruiterStaffId = staffMember.Id
+                });
+            }
+
+            // 3. Update Budget for the Offer
+            var budget = await context.BandBudgets.FirstOrDefaultAsync(b => b.BandId == band.Id && b.FiscalYear == DateTime.UtcNow.Year);
+            if (budget != null)
+            {
+                // Allocated includes pending offers in our logic
+                budget.AllocatedAmount += 25000m;
+                budget.RemainingAmount -= 25000m;
+            }
+
+            await context.SaveChangesAsync();
+        }
 
         private static async Task SeedAdminUserAsync(UserManager<ApplicationUser> userManager)
         {
@@ -258,9 +248,10 @@ namespace Podium.Infrastructure.Data
                 await userManager.AddToRoleAsync(user, role);
             }
 
-            // Ensure BandStaff Record Exists
             if (!context.BandStaff.Any(bs => bs.ApplicationUserId == user.Id && bs.BandId == bandId))
             {
+                bool isDirector = role == Roles.Director;
+
                 context.BandStaff.Add(new BandStaff
                 {
                     BandId = bandId,
@@ -269,14 +260,19 @@ namespace Podium.Infrastructure.Data
                     LastName = lName,
                     Role = role,
                     Title = title,
-                    IsActive = true, // Force Active
-                    JoinedDate = DateTime.UtcNow, // Force Date
+                    IsActive = true,
+                    JoinedDate = DateTime.UtcNow,
 
-                    // Default Permissions
+                    // Set Permissions based on Role
                     CanViewStudents = true,
                     CanContact = true,
-                    CanSendOffers = role == Roles.Director,
-                    CanManageStaff = role == Roles.Director,
+                    CanSendOffers = isDirector,
+                    CanMakeOffers = isDirector, // New
+                    CanViewFinancials = isDirector, // New
+                    CanManageStaff = isDirector,
+                    CanManageEvents = true,
+                    CanRateStudents = true,
+
                     CreatedBy = "System"
                 });
                 await context.SaveChangesAsync();
@@ -304,13 +300,23 @@ namespace Podium.Infrastructure.Data
                     State = state,
                     LastActivityDate = DateTime.UtcNow,
                     HighSchool = "Test HS", // Added default to avoid null errors
-                    GPA = 3.5m // Added default
+                    GPA = 3.5m, // Added default
+                    GuardianInviteCode = GenerateInviteCode(),
                 };
                 context.Students.Add(student);
                 await context.SaveChangesAsync();
                 return student;
             }
             return await context.Students.FirstOrDefaultAsync(s => s.Email == email);
+        }
+
+        private static string GenerateInviteCode()
+        {
+            // Simple 6-char code
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, 6)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
         private static async Task CreateGuardianUser(UserManager<ApplicationUser> userManager, ApplicationDbContext context, string email, string fName, string lName, Student? linkedStudent, string relationship, string password)
@@ -333,11 +339,73 @@ namespace Podium.Infrastructure.Data
                         GuardianId = guardian.Id,
                         RelationshipType = relationship,
                         IsVerified = true,
-                        IsActive = true
+                        IsActive = true,
+                        // Default Permissions for seeded guardian
+                        CanViewActivity = true,
+                        CanApproveContacts = true,
+                        CanRespondToOffers = true,
+                        ReceivesNotifications = true,
+                        LinkedDate = DateTime.UtcNow
                     });
                     await context.SaveChangesAsync();
                 }
             }
+        }
+
+        private static async Task SeedRandomStudentsAsync(UserManager<ApplicationUser> userManager, ApplicationDbContext context, string password)
+        {
+            var instruments = new[] { "Trumpet", "Trombone", "Saxophone", "Clarinet", "Percussion", "Tuba", "Flute", "Mellophone", "Drum Major" };
+            var states = new[] { "AL", "GA", "FL", "TX", "LA", "MS", "NC", "SC", "VA", "MD" };
+            var firstNames = new[] { "Marcus", "Keisha", "Darius", "Jasmine", "Tyrell", "Aaliyah", "Isaiah", "Ebony", "Malik", "Brianna", "Xavier", "Chloe", "Andre", "Maya", "Trey" };
+            var lastNames = new[] { "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris" };
+
+            var random = new Random();
+            var createdStudents = new List<Student>();
+
+            for (int i = 0; i < 20; i++)
+            {
+                string fName = firstNames[random.Next(firstNames.Length)];
+                string lName = lastNames[random.Next(lastNames.Length)];
+                string email = $"{fName.ToLower()}.{lName.ToLower()}{i}@test.com";
+
+                var student = await CreateStudentUser(
+                    userManager,
+                    context,
+                    email,
+                    fName,
+                    lName,
+                    instruments[random.Next(instruments.Length)],
+                    states[random.Next(states.Length)],
+                    2024 + random.Next(3),
+                    password
+                );
+
+                if (student != null) createdStudents.Add(student);
+            }
+
+            // Seed Random Interests
+            var allBandIds = await context.Bands.Select(b => b.Id).ToListAsync();
+            foreach (var student in createdStudents)
+            {
+                int numberOfInterests = random.Next(2, 6);
+                var pickedBandIds = allBandIds.OrderBy(x => random.Next()).Take(numberOfInterests).ToList();
+
+                foreach (var bandId in pickedBandIds)
+                {
+                    if (!context.StudentInterests.Any(si => si.StudentId == student.Id && si.BandId == bandId))
+                    {
+                        context.StudentInterests.Add(new StudentInterest
+                        {
+                            StudentId = student.Id,
+                            BandId = bandId,
+                            IsInterested = true,
+                            InterestedDate = DateTime.UtcNow.AddDays(-random.Next(1, 90)),
+                            Notes = "Interested in scholarship opportunities."
+                        });
+                    }
+                }
+            }
+            await context.SaveChangesAsync();
         }
 
         private static List<Band> GetBandsList()

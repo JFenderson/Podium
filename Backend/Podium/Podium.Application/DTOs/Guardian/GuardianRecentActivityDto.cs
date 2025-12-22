@@ -13,5 +13,6 @@ namespace Podium.Application.DTOs.Guardian
         public DateTime Timestamp { get; set; }
         public int StudentId { get; set; }
         public string StudentName { get; set; } = string.Empty;
+        public string IconType { get; set; } = string.Empty;
     }
 }
