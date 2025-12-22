@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs.Band;
 using Podium.Application.DTOs.BandStaff;
-using Podium.Core.Constants;
+using Podium.Core.Constants; // For Roles constant
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
-using Podium.Infrastructure.Authorization;
-using Podium.Infrastructure.Data;
+using System.Security.Claims;
 
 namespace Podium.API.Controllers
 {
@@ -31,6 +31,10 @@ namespace Podium.API.Controllers
             _userManager = userManager;
         }
 
+        // ==========================================
+        // EXISTING / ADMIN ENDPOINTS
+        // ==========================================
+
         /// <summary>
         /// Get all band staff - Only Directors with ManageStaff permission
         /// </summary>
@@ -43,15 +47,22 @@ namespace Podium.API.Controllers
                 .Select(bs => new BandStaffDto
                 {
                     BandStaffId = bs.Id,
+                    BandId = bs.BandId,
                     ApplicationUserId = bs.ApplicationUserId,
                     FirstName = bs.FirstName,
                     LastName = bs.LastName,
+                    Email = bs.ApplicationUser.Email,
                     Role = bs.Role,
+                    Title = bs.Title,
+                    IsActive = bs.IsActive,
                     CanViewStudents = bs.CanViewStudents,
                     CanRateStudents = bs.CanRateStudents,
                     CanSendOffers = bs.CanSendOffers,
                     CanManageEvents = bs.CanManageEvents,
-                    CanManageStaff = bs.CanManageStaff
+                    CanManageStaff = bs.CanManageStaff,
+                    CanContact = bs.CanContact,
+                    CanMakeOffers = bs.CanMakeOffers,
+                    CanViewFinancials = bs.CanViewFinancials
                 })
                 .ToListAsync();
 
@@ -66,92 +77,15 @@ namespace Podium.API.Controllers
         public async Task<ActionResult<BandStaffDto>> GetMyInfo()
         {
             var userId = await _permissionService.GetCurrentUserIdAsync();
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
+            if (userId == null) return Unauthorized();
 
             var staff = await _unitOfWork.BandStaff.GetQueryable()
+                .Include(bs => bs.ApplicationUser)
                 .FirstOrDefaultAsync(bs => bs.ApplicationUserId == userId);
 
-            if (staff == null)
-            {
-                return NotFound("Staff profile not found");
-            }
+            if (staff == null) return NotFound("Staff profile not found");
 
-            return Ok(new BandStaffDto
-            {
-                BandStaffId = staff.Id,
-                ApplicationUserId = staff.ApplicationUserId,
-                FirstName = staff.FirstName,
-                LastName = staff.LastName,
-                Role = staff.Role,
-                CanViewStudents = staff.CanViewStudents,
-                CanRateStudents = staff.CanRateStudents,
-                CanSendOffers = staff.CanSendOffers,
-                CanManageEvents = staff.CanManageEvents,
-                CanManageStaff = staff.CanManageStaff
-            });
-        }
-
-        /// <summary>
-        /// Update staff permissions - Only Directors with ManageStaff permission
-        /// </summary>
-        [HttpPut("{id}/permissions")]
-        [Authorize(Policy = "AdminAccess")]
-        public async Task<IActionResult> UpdatePermissions(int id, [FromBody] BandStaffPermissionsDto dto)
-        {
-            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
-            if (staff == null)
-            {
-                return NotFound();
-            }
-
-            // Prevent Directors from removing their own ManageStaff permission
-            var currentUserId = await _permissionService.GetCurrentUserIdAsync();
-            if (staff.ApplicationUserId == currentUserId && !dto.CanManageStaff)
-            {
-                return BadRequest("You cannot remove your own ManageStaff permission");
-            }
-
-            // Update permissions
-            staff.CanViewStudents = dto.CanViewStudents;
-            staff.CanRateStudents = dto.CanRateStudents;
-            staff.CanSendOffers = dto.CanSendOffers;
-            staff.CanManageEvents = dto.CanManageEvents;
-            staff.CanManageStaff = dto.CanManageStaff;
-
-            _unitOfWork.BandStaff.Update(staff);
-            await _unitOfWork.SaveChangesAsync();
-
-            return Ok(new { Message = "Permissions updated successfully" });
-        }
-
-        /// <summary>
-        /// Promote BandStaff to Director - Only Directors with ManageStaff permission
-        /// </summary>
-        [HttpPost("{id}/promote")]
-        [Authorize(Policy = "AdminAccess")]
-        public async Task<IActionResult> PromoteToDirector(int id)
-        {
-            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
-            if (staff == null)
-            {
-                return NotFound();
-            }
-
-            if (staff.Role == Roles.Director)
-            {
-                return BadRequest("Staff member is already a Director");
-            }
-
-            staff.Role = Roles.Director;
-            staff.CanManageStaff = true;
-
-            _unitOfWork.BandStaff.Update(staff);
-            await _unitOfWork.SaveChangesAsync();
-
-            return Ok(new { Message = "Staff member promoted to Director" });
+            return Ok(MapToDto(staff));
         }
 
         /// <summary>
@@ -161,94 +95,272 @@ namespace Podium.API.Controllers
         [Authorize(Policy = "AdminAccess")]
         public async Task<ActionResult<BandStaffDto>> CreateStaff([FromBody] CreateBandStaffDto dto)
         {
-            // Check if user already exists (Using UserManager instead of Context)
             var existingUser = await _userManager.FindByIdAsync(dto.ApplicationUserId);
-            if (existingUser == null)
-            {
-                return BadRequest("User not found");
-            }
+            if (existingUser == null) return BadRequest("User not found");
 
-            // Check if staff profile already exists
             var existingStaff = await _unitOfWork.BandStaff.GetQueryable()
-                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == dto.ApplicationUserId);
-            if (existingStaff != null)
-            {
-                return BadRequest("Staff profile already exists for this user");
-            }
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == dto.ApplicationUserId && bs.BandId == dto.BandId);
+
+            if (existingStaff != null) return BadRequest("Staff profile already exists for this user in this band");
 
             var staff = new BandStaff
             {
+                BandId = dto.BandId,
                 ApplicationUserId = dto.ApplicationUserId,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Role = dto.Role,
+                IsActive = true,
+                CreatedBy = User.FindFirstValue(ClaimTypes.Email) ?? "System",
+
+                // Map Permissions
                 CanViewStudents = dto.CanViewStudents,
                 CanRateStudents = dto.CanRateStudents,
                 CanSendOffers = dto.CanSendOffers,
                 CanManageEvents = dto.CanManageEvents,
-                CanManageStaff = dto.CanManageStaff
+                CanManageStaff = dto.CanManageStaff,
+                CanContact = dto.CanContact,
+                CanMakeOffers = dto.CanMakeOffers,
+                CanViewFinancials = dto.CanViewFinancials
             };
 
             await _unitOfWork.BandStaff.AddAsync(staff);
             await _unitOfWork.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetMyInfo),
-                new BandStaffDto
-                {
-                    BandStaffId = staff.Id,
-                    ApplicationUserId = staff.ApplicationUserId,
-                    FirstName = staff.FirstName,
-                    LastName = staff.LastName,
-                    Role = staff.Role,
-                    CanViewStudents = staff.CanViewStudents,
-                    CanRateStudents = staff.CanRateStudents,
-                    CanSendOffers = staff.CanSendOffers,
-                    CanManageEvents = staff.CanManageEvents,
-                    CanManageStaff = staff.CanManageStaff
-                });
+            return CreatedAtAction(nameof(GetMyInfo), MapToDto(staff));
         }
 
         /// <summary>
-        /// Get my permissions - Any authenticated BandStaff can check their own permissions
+        /// Update staff permissions - Only Directors
         /// </summary>
-        [HttpGet("my-permissions")]
-        [Authorize(Policy = "BandStaffOnly")]
-        public async Task<ActionResult<BandStaffPermissionsDto>> GetMyPermissions()
-        {
-            var permissions = await _permissionService.GetBandStaffPermissionsAsync();
-            if (permissions == null)
-            {
-                return NotFound("Staff profile not found");
-            }
-
-            return Ok(permissions);
-        }
-
-        /// <summary>
-        /// Remove staff member - Only Directors with ManageStaff permission
-        /// </summary>
-        [HttpDelete("{id}")]
+        [HttpPut("{id}/permissions")]
         [Authorize(Policy = "AdminAccess")]
-        public async Task<IActionResult> RemoveStaff(int id)
+        public async Task<IActionResult> UpdatePermissions(int id, [FromBody] BandStaffPermissionsDto dto)
         {
             var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
-            if (staff == null)
-            {
-                return NotFound();
-            }
+            if (staff == null) return NotFound();
 
-            // Prevent Directors from removing themselves
             var currentUserId = await _permissionService.GetCurrentUserIdAsync();
-            if (staff.ApplicationUserId == currentUserId)
+            if (staff.ApplicationUserId == currentUserId && !dto.CanManageStaff)
             {
-                return BadRequest("You cannot remove yourself");
+                return BadRequest("You cannot remove your own ManageStaff permission");
             }
 
-            _unitOfWork.BandStaff.Remove(staff);
+            staff.CanViewStudents = dto.CanViewStudents;
+            staff.CanRateStudents = dto.CanRateStudents;
+            staff.CanSendOffers = dto.CanSendOffers;
+            staff.CanManageEvents = dto.CanManageEvents;
+            staff.CanManageStaff = dto.CanManageStaff;
+            // Note: Add other permissions here if they exist in BandStaffPermissionsDto
+
+            _unitOfWork.BandStaff.Update(staff);
             await _unitOfWork.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { Message = "Permissions updated successfully" });
+        }
+
+        // ==========================================
+        // NEW / REQUESTED ENDPOINTS
+        // ==========================================
+
+        /// <summary>
+        /// Get a single staff member by ID
+        /// </summary>
+        [HttpGet("{id}")]
+        [Authorize(Policy = "AdminAccess")]
+        public async Task<ActionResult<BandStaffDto>> GetStaffMember(int id)
+        {
+            var staffMember = await _unitOfWork.BandStaff.GetQueryable()
+                .Include(bs => bs.ApplicationUser)
+                .FirstOrDefaultAsync(bs => bs.Id == id);
+
+            if (staffMember == null) return NotFound("Staff member not found.");
+
+            return Ok(MapToDto(staffMember));
+        }
+
+        /// <summary>
+        /// Invite a new staff member via email
+        /// </summary>
+        [HttpPost("invite")]
+        [Authorize(Policy = "AdminAccess")]
+        public async Task<IActionResult> InviteStaff([FromBody] InviteStaffDto inviteDto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            // 1. Check if user exists
+            var existingUser = await _userManager.FindByEmailAsync(inviteDto.Email);
+            if (existingUser == null)
+            {
+                return BadRequest("User does not exist. Please ask them to register for an account first.");
+            }
+
+            // 2. Check if already staff for this band
+            var existingStaff = await _unitOfWork.BandStaff.GetQueryable()
+                .FirstOrDefaultAsync(bs => bs.BandId == inviteDto.BandId && bs.ApplicationUserId == existingUser.Id);
+
+            if (existingStaff != null)
+            {
+                if (!existingStaff.IsActive)
+                {
+                    // Reactivate
+                    existingStaff.IsActive = true;
+                    existingStaff.Role = inviteDto.Role;
+                    existingStaff.Title = inviteDto.Title;
+                    existingStaff.DeactivatedDate = null;
+                    _unitOfWork.BandStaff.Update(existingStaff);
+                    await _unitOfWork.SaveChangesAsync();
+                    return Ok(new { Message = "Staff member reactivated." });
+                }
+                return BadRequest("User is already a staff member for this band.");
+            }
+
+            // 3. Create new BandStaff
+            var newStaff = new BandStaff
+            {
+                BandId = inviteDto.BandId,
+                ApplicationUserId = existingUser.Id,
+                FirstName = inviteDto.FirstName != "" ? inviteDto.FirstName : existingUser.FirstName,
+                LastName = inviteDto.LastName != "" ? inviteDto.LastName : existingUser.LastName,
+                Role = inviteDto.Role,
+                Title = inviteDto.Title ?? "Staff",
+                IsActive = true,
+                CreatedBy = User.FindFirstValue(ClaimTypes.Email) ?? "System",
+
+                // Default permissions from Invite DTO
+                CanContact = inviteDto.CanContact,
+                CanViewStudents = inviteDto.CanViewStudents,
+                CanMakeOffers = inviteDto.CanMakeOffers,
+                CanViewFinancials = inviteDto.CanViewFinancials,
+                CanRateStudents = inviteDto.CanRateStudents,
+                CanSendOffers = inviteDto.CanSendOffers,
+                CanManageEvents = inviteDto.CanManageEvents,
+                CanManageStaff = inviteDto.CanManageStaff
+            };
+
+            await _unitOfWork.BandStaff.AddAsync(newStaff);
+            await _unitOfWork.SaveChangesAsync();
+
+            return Ok(new { Message = "Staff member invited successfully", StaffId = newStaff.Id });
+        }
+
+        /// <summary>
+        /// Update staff details (Role, Title, Permissions)
+        /// </summary>
+        [HttpPut("{id}")]
+        [Authorize(Policy = "AdminAccess")]
+        public async Task<IActionResult> UpdateStaffMember(int id, [FromBody] UpdateBandStaffDto updateDto)
+        {
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
+            if (staff == null) return NotFound();
+
+            // Basic Info
+            staff.Role = updateDto.Role;
+            staff.IsActive = updateDto.IsActive;
+
+            // Map Permissions (Flat properties from DTO)
+            staff.CanContact = updateDto.CanContact;
+            staff.CanMakeOffers = updateDto.CanMakeOffers;
+            staff.CanViewFinancials = updateDto.CanViewFinancials;
+            staff.CanViewStudents = updateDto.CanViewStudents;
+            staff.CanRateStudents = updateDto.CanRateStudents;
+            staff.CanSendOffers = updateDto.CanSendOffers;
+            staff.CanManageEvents = updateDto.CanManageEvents;
+            staff.CanManageStaff = updateDto.CanManageStaff;
+
+            staff.ModifiedBy = User.FindFirstValue(ClaimTypes.Email);
+
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
+
+            return Ok(new { Message = "Staff member updated successfully" });
+        }
+
+        /// <summary>
+        /// Soft delete / Deactivate staff
+        /// </summary>
+        [HttpPost("{id}/deactivate")]
+        [Authorize(Policy = "AdminAccess")]
+        public async Task<IActionResult> DeactivateStaff(int id)
+        {
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(id);
+            if (staff == null) return NotFound();
+
+            staff.IsActive = false;
+            staff.DeactivatedDate = DateTime.UtcNow;
+            staff.ModifiedBy = User.FindFirstValue(ClaimTypes.Email);
+
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
+
+            return Ok(new { Message = "Staff member deactivated." });
+        }
+
+        /// <summary>
+        /// Search for staff members
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<BandStaffSummaryDto>>> SearchStaff([FromQuery] int bandId, [FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return BadRequest("Query is required");
+
+            var staff = await _unitOfWork.BandStaff.GetQueryable()
+                .Include(bs => bs.ApplicationUser)
+                .Where(bs => bs.BandId == bandId &&
+                            (bs.FirstName.Contains(query) ||
+                             bs.LastName.Contains(query) ||
+                             bs.ApplicationUser.Email.Contains(query)))
+                .Select(bs => new BandStaffSummaryDto
+                {
+                    Id = bs.Id,
+                    UserId = bs.ApplicationUserId,
+                    FullName = $"{bs.FirstName} {bs.LastName}",
+                    Email = bs.ApplicationUser.Email,
+                    Role = bs.Role,
+                    Title = bs.Title,
+                    IsActive = bs.IsActive
+                })
+                .ToListAsync();
+
+            return Ok(staff);
+        }
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+
+        private static BandStaffDto MapToDto(BandStaff staff)
+        {
+            return new BandStaffDto
+            {
+                BandStaffId = staff.Id,
+                BandId = staff.BandId,
+                ApplicationUserId = staff.ApplicationUserId,
+                FirstName = staff.FirstName,
+                LastName = staff.LastName,
+                Email = staff.ApplicationUser?.Email,
+                Role = staff.Role,
+                Title = staff.Title,
+                IsActive = staff.IsActive,
+                JoinedDate = staff.JoinedDate,
+                LastActivityDate = staff.LastActivityDate,
+                DeactivatedDate = staff.DeactivatedDate,
+
+                // Permissions
+                CanViewStudents = staff.CanViewStudents,
+                CanRateStudents = staff.CanRateStudents,
+                CanSendOffers = staff.CanSendOffers,
+                CanManageEvents = staff.CanManageEvents,
+                CanManageStaff = staff.CanManageStaff,
+                CanContact = staff.CanContact,
+                CanMakeOffers = staff.CanMakeOffers,
+                CanViewFinancials = staff.CanViewFinancials,
+
+                // Metrics
+                TotalContactsInitiated = staff.TotalContactsInitiated,
+                TotalOffersCreated = staff.TotalOffersCreated,
+                SuccessfulPlacements = staff.SuccessfulPlacements
+            };
         }
     }
 }
