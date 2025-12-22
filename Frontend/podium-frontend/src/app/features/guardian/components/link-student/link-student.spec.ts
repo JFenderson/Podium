@@ -1,20 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Guardian } from './guardian';
+import { LinkStudent } from './link-student.component';
 
-describe('Guardian', () => {
-  let component: Guardian;
-  let fixture: ComponentFixture<Guardian>;
+describe('LinkStudent', () => {
+  let component: LinkStudent;
+  let fixture: ComponentFixture<LinkStudent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Guardian]
+      imports: [LinkStudent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Guardian);
+    fixture = TestBed.createComponent(LinkStudent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {

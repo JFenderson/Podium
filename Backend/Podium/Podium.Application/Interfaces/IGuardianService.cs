@@ -24,5 +24,12 @@ namespace Podium.Application.Interfaces
 
         Task<ServiceResult<GuardianDashboardDto>> GetDashboardAsync();
         Task<ServiceResult<GuardianNotificationPreferencesDto>> UpdateNotificationPreferencesAsync(UpdatePreferencesRequest request);
+
+        Task<GuardianDto?> GetProfileAsync(string userId);
+        Task UpdateProfileAsync(string userId, UpdateGuardianProfileDto dto);
+        Task<ServiceResult<bool>> LinkStudentAsync(string guardianUserId, LinkStudentDto dto);
+        Task UnlinkStudentAsync(string guardianUserId, int studentId);
+        Task RequestStudentAccessAsync(string guardianUserId, string studentEmail, string relationship);
+
     }
 }

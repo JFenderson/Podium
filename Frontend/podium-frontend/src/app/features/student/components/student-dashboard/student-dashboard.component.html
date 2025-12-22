@@ -1,1 +1,139 @@
-<p>student-dashboard works!</p>
+<div class="w-full p-6" *ngIf="dashboard; else loading">
+  
+  <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Welcome back, {{ dashboard.firstName }}!</h1>
+      <p class="text-gray-500">Here is what's happening with your recruiting journey.</p>
+    </div>
+    <div class="mt-4 md:mt-0">
+      <a routerLink="/student/profile/edit" class="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition">
+        Edit Profile
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+    
+    <div class="bg-white rounded-lg shadow border-l-4 border-green-500 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs font-bold text-green-600 uppercase mb-1">Scholarship Offers</div>
+          <div class="text-xl font-bold text-gray-800">{{ dashboard.activeOffers }}</div>
+        </div>
+        <div class="text-gray-300">
+           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border-l-4 border-blue-500 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs font-bold text-blue-600 uppercase mb-1">Profile Views</div>
+          <div class="text-xl font-bold text-gray-800">{{ dashboard.totalProfileViews }}</div>
+        </div>
+        <div class="text-gray-300">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow border-l-4 border-yellow-500 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs font-bold text-yellow-600 uppercase mb-1">Pending Contacts</div>
+          <div class="text-xl font-bold text-gray-800">{{ dashboard.pendingContactRequests }}</div>
+        </div>
+        <div class="text-gray-300">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+        </div>
+      </div>
+    </div>
+
+     <div class="bg-white rounded-lg shadow border-l-4 border-indigo-500 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs font-bold text-indigo-600 uppercase mb-1">Search Appearances</div>
+          <div class="text-xl font-bold text-gray-800">{{ dashboard.searchAppearances }}</div>
+        </div>
+        <div class="text-gray-300">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <div class="lg:col-span-1 space-y-6">
+      
+      <div class="bg-white rounded-lg shadow overflow-hidden border border-cyan-200">
+        <div class="bg-cyan-600 px-4 py-3">
+          <h6 class="text-white font-bold m-0">Link Your Guardian</h6>
+        </div>
+        <div class="p-6 text-center">
+          <p class="text-sm text-gray-600 mb-4">Give this code to your parent or guardian so they can create an account and approve your scholarship offers.</p>
+          
+          <div class="flex items-center justify-between bg-gray-50 border rounded p-3 mb-3">
+            <span class="text-lg font-mono font-bold text-gray-800 mx-auto tracking-widest">{{ dashboard.guardianInviteCode }}</span>
+            <button class="p-2 text-gray-500 hover:text-cyan-600 transition" (click)="copyInviteCode(dashboard.guardianInviteCode)">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </button>
+          </div>
+          
+          <div *ngIf="copySuccess" class="bg-green-100 text-green-700 text-xs py-1 px-2 rounded inline-block">
+            Copied to clipboard!
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-4 py-3 border-b bg-gray-50">
+          <h6 class="text-blue-600 font-bold m-0">Quick Actions</h6>
+        </div>
+        <div class="p-4 flex flex-col space-y-2">
+          <a routerLink="/student/videos/upload" class="flex items-center w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-center justify-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            Upload Audition Video
+          </a>
+          <a routerLink="/student/bands/search" class="flex items-center w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-center justify-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            Find Bands
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-lg shadow overflow-hidden h-full">
+        <div class="px-4 py-3 border-b bg-gray-50">
+          <h6 class="text-blue-600 font-bold m-0">Recent Notifications</h6>
+        </div>
+        <div class="p-0">
+          <div *ngIf="dashboard.recentNotifications.length === 0" class="text-center text-gray-400 py-12">
+            No new notifications.
+          </div>
+          
+          <div class="divide-y divide-gray-100">
+            <div *ngFor="let note of dashboard.recentNotifications" class="p-4 hover:bg-gray-50 transition">
+              <div class="flex justify-between items-start">
+                <h6 class="text-sm mb-1" [ngClass]="{'font-bold text-gray-900': !note.isRead, 'text-gray-600': note.isRead}">
+                  {{ note.title }}
+                </h6>
+                <small class="text-gray-400 text-xs">{{ note.createdAt | date:'shortDate' }}</small>
+              </div>
+              <p class="text-sm text-gray-500 m-0">{{ note.message }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<ng-template #loading>
+  <div class="flex justify-center items-center h-64">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+</ng-template>

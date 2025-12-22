@@ -1,0 +1,65 @@
+<div class="link-student-container">
+  <h2>Link a Student</h2>
+  <p class="instruction-text">
+    Enter the email address the student used to register with Podium to link them to your account.
+  </p>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <form [formGroup]="linkForm" (ngSubmit)="onSubmit()">
+    
+    <div class="form-group">
+      <label for="studentEmail">Student Email Address</label>
+      <input 
+        type="email" 
+        id="studentEmail" 
+        class="form-control" 
+        formControlName="studentEmail" 
+        placeholder="student@example.com">
+      
+      <div *ngIf="linkForm.get('studentEmail')?.touched && linkForm.get('studentEmail')?.errors?.['required']" class="error-text">
+        Email is required.
+      </div>
+      <div *ngIf="linkForm.get('studentEmail')?.touched && linkForm.get('studentEmail')?.errors?.['email']" class="error-text">
+        Please enter a valid email address.
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="relationship">Your Relationship</label>
+      <select id="relationship" class="form-control" formControlName="relationship">
+        <option value="Parent">Parent</option>
+        <option value="Guardian">Legal Guardian</option>
+        <option value="Step-Parent">Step-Parent</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="form-group mb-3">
+  <label for="verificationCode" class="form-label">Student Invite Code</label>
+  <input 
+    type="text" 
+    id="verificationCode" 
+    class="form-control" 
+    formControlName="verificationCode" 
+    placeholder="e.g. STU-8X2A"
+    style="text-transform: uppercase;">
+  <small class="text-muted">Your student can find this code on their dashboard profile.</small>
+  
+  <div *ngIf="linkForm.get('verificationCode')?.touched && linkForm.get('verificationCode')?.errors?.['required']" class="text-danger small">
+    Invite code is required.
+  </div>
+</div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="linkForm.invalid || isLoading">
+      <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span *ngIf="!isLoading">Link Student</span>
+    </button>
+  </form>
+</div>

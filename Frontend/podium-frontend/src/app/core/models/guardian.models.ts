@@ -26,9 +26,9 @@ export interface GuardianLinkedStudentDto {
 }
 
 export interface LinkStudentDto {
-  guardianId: number;
-  studentId: number;
-  relationship?: string;
+  studentEmail: string;
+  relationship: string;
+  verificationCode: string; // Optional, if you implement invite codes later
 }
 
 export interface GuardianDashboardDto {
@@ -109,3 +109,5 @@ export interface StudentGuardianDto {
   relationship?: string;
   isPrimary: boolean;
 }
+
+

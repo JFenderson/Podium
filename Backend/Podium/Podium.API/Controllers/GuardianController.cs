@@ -449,6 +449,89 @@ namespace BandRecruitment.Controllers
             }
         }
 
+        /// <summary>
+        /// Get the logged-in guardian's profile.
+        /// </summary>
+        [HttpGet("profile")]
+        [ProducesResponseType(typeof(GuardianDto), 200)]
+        public async Task<ActionResult<GuardianDto>> GetProfile()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var profile = await _guardianService.GetProfileAsync(userId);
+            if (profile == null) return NotFound("Profile not found");
+
+            return Ok(profile);
+        }
+
+        /// <summary>
+        /// Update the logged-in guardian's profile.
+        /// </summary>
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuardianProfileDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _guardianService.UpdateProfileAsync(userId, dto);
+            return Ok(new { Message = "Profile updated successfully" });
+        }
+
+        /// <summary>
+        /// Link a student to this guardian account (e.g., via invite code or verification).
+        /// </summary>
+        [HttpPost("link-student")]
+        public async Task<IActionResult> LinkStudent([FromBody] LinkStudentDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var result = await _guardianService.LinkStudentAsync(userId, dto);
+
+            if (!result.IsSuccess)
+                return BadRequest(result.ErrorMessage);
+
+            await _auditService.LogActionAsync(userId, "LinkStudent", $"Linked student {dto.StudentEmail}", new { dto.StudentEmail });
+            return Ok(new { Message = "Student linked successfully" });
+        }
+
+        /// <summary>
+        /// Remove a link between this guardian and a student.
+        /// </summary>
+        [HttpDelete("unlink-student/{studentId}")]
+        public async Task<IActionResult> UnlinkStudent(int studentId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            // Verify access/ownership before deleting
+            if (!await _guardianService.CanAccessStudentAsync(userId, studentId))
+                return Forbid();
+
+            await _guardianService.UnlinkStudentAsync(userId, studentId);
+
+            await _auditService.LogActionAsync(userId, "UnlinkStudent", $"Unlinked student ID {studentId}", new { StudentId = studentId });
+            return Ok(new { Message = "Student unlinked successfully" });
+        }
+
+        /// <summary>
+        /// Request access to a student account (sends email/notification to student to approve).
+        /// </summary>
+        [HttpPost("request-access")]
+        public async Task<IActionResult> RequestAccess([FromBody] RequestAccessDto dto)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _guardianService.RequestStudentAccessAsync(userId, dto.StudentEmail, dto.Relationship);
+
+            return Ok(new { Message = "Access request sent" });
+        }
+
+       
+    
+
         private ActionResult HandleResult<T>(ServiceResult<T> result)
         {
             if (result.IsSuccess)

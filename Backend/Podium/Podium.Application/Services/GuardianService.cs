@@ -479,5 +479,143 @@ namespace Podium.Application.Services
             // ... apply filters ...
             return ServiceResult<NotificationListDto>.Success(new NotificationListDto());
         }
+
+        public async Task<GuardianDto?> GetProfileAsync(string userId)
+        {
+            var guardian = await GetGuardianEntityAsync(userId);
+            if (guardian == null) return null;
+
+            return new GuardianDto
+            {
+                GuardianId = guardian.Id,
+                FirstName = guardian.FirstName,
+                LastName = guardian.LastName,
+                Email = guardian.Email,
+                PhoneNumber = guardian.PhoneNumber,
+                EmailNotificationsEnabled = guardian.EmailNotificationsEnabled,
+                SmsNotificationsEnabled = guardian.SmsNotificationsEnabled
+            };
+        }
+
+        public async Task UpdateProfileAsync(string userId, UpdateGuardianProfileDto dto)
+        {
+            var guardian = await GetGuardianEntityAsync(userId);
+            if (guardian == null) throw new KeyNotFoundException("Guardian profile not found");
+
+            if (!string.IsNullOrEmpty(dto.FirstName)) guardian.FirstName = dto.FirstName;
+            if (!string.IsNullOrEmpty(dto.LastName)) guardian.LastName = dto.LastName;
+            if (!string.IsNullOrEmpty(dto.PhoneNumber)) guardian.PhoneNumber = dto.PhoneNumber;
+
+            _unitOfWork.Guardians.Update(guardian);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<ServiceResult<bool>> LinkStudentAsync(string guardianUserId, LinkStudentDto dto)
+        {
+            var guardian = await GetGuardianEntityAsync(guardianUserId);
+            if (guardian == null) return ServiceResult<bool>.Failure("Guardian profile not found");
+
+            // 1. Find the student by email
+            var student = await _unitOfWork.Students.GetQueryable()
+                .FirstOrDefaultAsync(s => s.Email == dto.StudentEmail);
+
+            if (student == null)
+            {
+                return ServiceResult<bool>.Failure("Student email not found in the system.");
+            }
+
+            // 2. Check if link already exists
+            var existingLink = await _unitOfWork.StudentGuardians.GetQueryable()
+                .FirstOrDefaultAsync(sg => sg.GuardianId == guardian.Id && sg.StudentId == student.Id);
+
+            if (existingLink != null)
+            {
+                if (existingLink.IsActive)
+                    return ServiceResult<bool>.Failure("You are already linked to this student.");
+
+                // Reactivate if previously unlinked
+                existingLink.IsActive = true;
+                existingLink.RelationshipType = dto.Relationship;
+                _unitOfWork.StudentGuardians.Update(existingLink);
+                await _unitOfWork.SaveChangesAsync();
+                return ServiceResult<bool>.Success(true);
+            }
+
+            // 3. Create new link
+            // NOTE: Depending on your business logic, you might want to set IsVerified = false 
+            // and require the student to approve it first. 
+            var newLink = new StudentGuardian
+            {
+                GuardianId = guardian.Id,
+                StudentId = student.Id,
+                RelationshipType = dto.Relationship,
+                IsActive = true,
+                IsVerified = true, // Set to false if you want to implement student approval flow
+                LinkedDate = DateTime.UtcNow,
+
+                // Default Permissions
+                CanViewActivity = true,
+                ReceivesNotifications = true,
+                CanApproveContacts = true,
+                CanRespondToOffers = true
+            };
+
+            await _unitOfWork.StudentGuardians.AddAsync(newLink);
+            await _unitOfWork.SaveChangesAsync();
+
+            return ServiceResult<bool>.Success(true);
+        }
+
+        public async Task UnlinkStudentAsync(string guardianUserId, int studentId)
+        {
+            var guardian = await GetGuardianEntityAsync(guardianUserId);
+            if (guardian == null) return;
+
+            var link = await _unitOfWork.StudentGuardians.GetQueryable()
+                .FirstOrDefaultAsync(sg => sg.GuardianId == guardian.Id && sg.StudentId == studentId);
+
+            if (link != null)
+            {
+                // Soft delete (or hard delete depending on preference)
+                link.IsActive = false;
+                _unitOfWork.StudentGuardians.Update(link);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
+        public async Task RequestStudentAccessAsync(string guardianUserId, string studentEmail, string relationship)
+        {
+            // Reuse logic from LinkStudentAsync or create a specific "Pending" notification
+            // For now, we can wrap LinkStudent logic but force IsVerified = false
+
+            var guardian = await GetGuardianEntityAsync(guardianUserId);
+            if (guardian == null) throw new KeyNotFoundException("Guardian not found");
+
+            var student = await _unitOfWork.Students.GetQueryable().FirstOrDefaultAsync(s => s.Email == studentEmail);
+            if (student == null) throw new KeyNotFoundException("Student not found");
+
+            var link = new StudentGuardian
+            {
+                GuardianId = guardian.Id,
+                StudentId = student.Id,
+                RelationshipType = relationship,
+                IsActive = true,
+                IsVerified = false, // Pending Approval
+                LinkedDate = DateTime.UtcNow
+            };
+
+            await _unitOfWork.StudentGuardians.AddAsync(link);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Trigger notification to Student to approve the request
+            await _notificationService.NotifyUserAsync(
+                student.ApplicationUserId,
+                "GuardianRequest",
+                "New Guardian Request",
+                $"{guardian.FirstName} {guardian.LastName} has requested access to your profile as a {relationship}.",
+                link.Id.ToString()
+            );
+        }
+
     }
 }

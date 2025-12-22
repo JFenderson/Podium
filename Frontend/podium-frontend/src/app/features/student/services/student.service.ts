@@ -7,12 +7,13 @@ import {
   StudentSummaryDto,
   InterestDto,
   PagedResult,
-  StudentFilterDto
+  StudentFilterDto,
+  StudentDashboardDto,
 } from '../../../core/models/student.models';
 import { RatingDto, ServiceResult } from '../../../core/models/common.models';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class StudentService {
   private readonly endpoint = 'Students';
@@ -87,5 +88,9 @@ export class StudentService {
    */
   deleteVideo(studentId: number, videoId: number): Observable<any> {
     return this.api.delete(`${this.endpoint}/${studentId}/video/${videoId}`);
+  }
+
+  getDashboard(): Observable<StudentDashboardDto> {
+    return this.api.get<StudentDashboardDto>('Student/dashboard');
   }
 }

@@ -1,13 +1,18 @@
 import { Routes } from '@angular/router';
+import { GuardianDashboardComponent } from './components/guardian-dashboard/guardian-dashboard.component';
+import { LinkStudentComponent } from './components/link-student/link-student.component';
+import { GuardianLayoutComponent } from '../../layout/guardian-layout/guardian-layout';
+import { GuardianProfileComponent } from './components/guardian-profile/guardian-profile.component';
 
 export const GUARDIAN_ROUTES: Routes = [
-  {
+{
     path: '',
-    redirectTo: 'dashboard',
-    pathMatch: 'full'
-  },
-  {
-    path: 'dashboard',
-    loadComponent: () => import('./components/guardian-dashboard/guardian-dashboard.component').then(m => m.GuardianDashboardComponent)
+    component: GuardianLayoutComponent, // Wraps all child routes
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: GuardianDashboardComponent },
+      { path: 'link-student', component: LinkStudentComponent },
+      { path: 'profile', component: GuardianProfileComponent }
+    ]
   }
 ];

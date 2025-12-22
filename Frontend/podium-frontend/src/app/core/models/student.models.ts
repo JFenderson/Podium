@@ -1,6 +1,7 @@
 // Student DTOs matching Backend definitions strictly
 
 export interface StudentDetailsDto {
+  yearsOfExperience: any;
   studentId: number;
   firstName: string;
   lastName: string;
@@ -153,4 +154,40 @@ export interface PagedResult<T> {
   totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
+}
+
+// src/app/core/models/student.models.ts
+
+export interface StudentDashboardDto {
+  studentId: number;
+  firstName: string;
+  lastName: string;
+  primaryInstrument: string;
+  profileImageUrl?: string;
+  guardianInviteCode: string; 
+  
+  // Stats
+  totalProfileViews: number;
+  searchAppearances: number;
+  activeOffers: number;
+  pendingContactRequests: number;
+  
+  // Recent items
+  recentNotifications: StudentNotificationDto[];
+  recentActivity: StudentActivityDto[];
+}
+
+export interface StudentNotificationDto {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  createdAt: Date;
+  isRead: boolean;
+}
+
+export interface StudentActivityDto {
+  description: string;
+  date: Date;
+  icon?: string; // e.g. 'video', 'mail', 'award'
 }

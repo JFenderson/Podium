@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { GuardianService } from '../../services/guardian.service';
-import { AuthService } from '../../../auth/services/auth.service';
+import { AuthService } from '../../../../features/auth/services/auth.service';
 import {
   GuardianDashboardDto,
   GuardianPendingApprovalDto,
@@ -55,11 +55,11 @@ export class GuardianDashboardComponent implements OnInit {
     this.error = null;
 
     this.guardianService.getDashboard().subscribe({
-      next: (dashboard: any) => {
+      next: (dashboard) => {
         this.dashboard = dashboard;
         this.isLoading = false;
       },
-      error: (error: any) => {
+      error: (error) => {
         this.error = 'Failed to load dashboard. Please try again.';
         this.isLoading = false;
         console.error('Error loading dashboard:', error);
@@ -79,23 +79,21 @@ export class GuardianDashboardComponent implements OnInit {
     this.approvalForm.reset();
   }
 
-  submitApproval(): void {
+ submitApproval(): void {
     if (!this.selectedApproval) return;
 
     this.isProcessingApproval = true;
     this.error = null;
 
-    const dto: GuardianApprovalDto = {
-      offerId: this.selectedApproval.offerId,
-      approved: this.approvalForm.value.approved,
-      notes: this.approvalForm.value.notes
-    };
+    // Convert boolean 'approved' to backend string enum
+    const responseType = this.approvalForm.value.approved ? 'Accepted' : 'Declined';
+    const notes = this.approvalForm.value.notes;
 
-    this.guardianService.approveOffer(this.selectedApproval.offerId, dto).subscribe({
+    this.guardianService.respondToScholarship(this.selectedApproval.offerId, responseType, notes).subscribe({
       next: () => {
         this.isProcessingApproval = false;
         this.closeApprovalModal();
-        this.successMessage = dto.approved 
+        this.successMessage = this.approvalForm.value.approved 
           ? 'Offer approved successfully!' 
           : 'Offer declined successfully.';
         this.loadDashboard();
@@ -107,7 +105,7 @@ export class GuardianDashboardComponent implements OnInit {
         console.error('Error processing approval:', error);
       }
     });
-  }
+}
 
   getActivityIcon(type: string): string {
     const icons: { [key: string]: string } = {

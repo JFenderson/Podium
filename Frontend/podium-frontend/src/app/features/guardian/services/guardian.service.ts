@@ -4,8 +4,6 @@ import { ApiService } from '../../../core/services/api.service';
 import {
   GuardianDto,
   GuardianDashboardDto,
-  GuardianApprovalDto,
-  GuardianPendingApprovalDto,
   LinkStudentDto,
   GuardianActivityDto,
   StudentGuardianDto
@@ -62,18 +60,69 @@ export class GuardianService {
   }
 
   /**
-   * Get pending approvals
+   * Get pending approvals (Contact Requests)
+   * Route: GET /api/Guardian/contact-requests?status=Pending
    */
-  getPendingApprovals(): Observable<GuardianPendingApprovalDto[]> {
-    return this.api.get<GuardianPendingApprovalDto[]>(`${this.endpoint}/pending-approvals`);
+  getPendingApprovals(): Observable<any[]> {
+    return this.api.get<any[]>(`${this.endpoint}/contact-requests`, { status: 'Pending' });
+  }
+
+  // =========================================================
+  // SCHOLARSHIPS
+  // =========================================================
+
+  /**
+   * Get student's offers (for linked students only)
+   * Updated to match Backend: GET /api/Guardian/scholarships?studentId={id}
+   */
+  getStudentOffers(studentId: number): Observable<any[]> {
+    return this.api.get<any[]>(`${this.endpoint}/scholarships`, { studentId });
   }
 
   /**
-   * Approve or deny scholarship offer
+   * Respond to scholarship offer (Accept/Decline)
+   * Updated to match Backend: PUT /api/Guardian/scholarships/{id}/respond
    */
-  approveOffer(offerId: number, dto: GuardianApprovalDto): Observable<any> {
-    return this.api.post(`${this.endpoint}/approve-offer/${offerId}`, dto);
+  respondToScholarship(offerId: number, response: 'Accepted' | 'Declined', notes?: string): Observable<any> {
+    const payload = { response, notes };
+    return this.api.put(`${this.endpoint}/scholarships/${offerId}/respond`, payload);
   }
+
+  // =========================================================
+  // CONTACT REQUESTS
+  // =========================================================
+
+  /**
+   * Get contact requests
+   * Backend: GET /api/Guardian/contact-requests
+   */
+  getContactRequests(studentId?: number, status?: string): Observable<any[]> {
+    const params: any = {};
+    if (studentId) params.studentId = studentId;
+    if (status) params.status = status;
+    
+    return this.api.get<any[]>(`${this.endpoint}/contact-requests`, params);
+  }
+
+  /**
+   * Approve a contact request
+   * Backend: PUT /api/Guardian/contact-requests/{id}/approve
+   */
+  approveContactRequest(requestId: number, notes?: string): Observable<any> {
+    return this.api.put(`${this.endpoint}/contact-requests/${requestId}/approve`, { notes });
+  }
+
+  /**
+   * Decline a contact request
+   * Backend: PUT /api/Guardian/contact-requests/{id}/decline
+   */
+  declineContactRequest(requestId: number, reason?: string): Observable<any> {
+    return this.api.put(`${this.endpoint}/contact-requests/${requestId}/decline`, { reason });
+  }
+
+  // =========================================================
+  // STUDENT ACTIVITY & DATA
+  // =========================================================
 
   /**
    * Get recent activity
@@ -83,56 +132,60 @@ export class GuardianService {
   }
 
   /**
-   * Get student's offers (for linked students only)
-   */
-  getStudentOffers(studentId: number): Observable<any[]> {
-    return this.api.get<any[]>(`${this.endpoint}/student/${studentId}/offers`);
-  }
-
-  /**
    * Get student's activity (for linked students only)
    */
-  getStudentActivity(studentId: number): Observable<any[]> {
-    return this.api.get<any[]>(`${this.endpoint}/student/${studentId}/activity`);
+  getStudentActivity(studentId: number, daysBack: number = 30): Observable<any> {
+    return this.api.get<any>(`${this.endpoint}/student/${studentId}/activity`, { daysBack });
   }
 
   /**
-   * Get student's videos (for linked students only)
+   * Get student's profile/details view
    */
+  getStudentProfile(studentId: number): Observable<any> {
+    return this.api.get<any>(`${this.endpoint}/student/${studentId}/profile`);
+  }
+
+  // Note: These endpoints were removed/consolidated in your Controller. 
+  // If they don't exist in GuardianController.cs, you might need to remove them 
+  // or point them to the correct specific controller (e.g., StudentController).
+  // Keeping them commented out if they are no longer in GuardianController:
+  /*
   getStudentVideos(studentId: number): Observable<any[]> {
     return this.api.get<any[]>(`${this.endpoint}/student/${studentId}/videos`);
   }
-
-  /**
-   * Get student's ratings (for linked students only)
-   */
+  
   getStudentRatings(studentId: number): Observable<any[]> {
     return this.api.get<any[]>(`${this.endpoint}/student/${studentId}/ratings`);
   }
-
-  /**
-   * Send message to student
-   */
-  sendMessageToStudent(studentId: number, message: string): Observable<any> {
-    return this.api.post(`${this.endpoint}/student/${studentId}/message`, { message });
-  }
+  */
 
   /**
    * Get guardian notifications
    */
-  getNotifications(): Observable<any[]> {
-    return this.api.get<any[]>(`${this.endpoint}/notifications`);
+  getNotifications(filter: any = {}): Observable<any> {
+    return this.api.get<any>(`${this.endpoint}/notifications`, filter);
   }
 
   /**
-   * Get approval history
+   * Update notification preferences
+   * Updated to match Backend: PUT /api/Guardian/preferences
    */
-  getApprovalHistory(): Observable<any[]> {
-    return this.api.get<any[]>(`${this.endpoint}/approval-history`);
+  updateNotificationPreferences(preferences: any): Observable<any> {
+    return this.api.put(`${this.endpoint}/preferences`, preferences);
+  }
+
+  /**
+   * Get student's guardians (for verification)
+   * Note: This endpoint does not appear in your provided Controller. 
+   * Ensure it exists or this call will fail.
+   */
+  getStudentGuardians(studentId: number): Observable<StudentGuardianDto[]> {
+    return this.api.get<StudentGuardianDto[]>(`${this.endpoint}/student/${studentId}/guardians`);
   }
 
   /**
    * Request access to student (if not already linked)
+   * Route: POST /api/Guardian/request-access
    */
   requestStudentAccess(studentEmail: string, relationship: string): Observable<any> {
     return this.api.post(`${this.endpoint}/request-access`, {
@@ -142,23 +195,9 @@ export class GuardianService {
   }
 
   /**
-   * Get student's guardians (for verification)
-   */
-  getStudentGuardians(studentId: number): Observable<StudentGuardianDto[]> {
-    return this.api.get<StudentGuardianDto[]>(`${this.endpoint}/student/${studentId}/guardians`);
-  }
-
-  /**
-   * Update notification preferences
-   */
-  updateNotificationPreferences(preferences: any): Observable<any> {
-    return this.api.put(`${this.endpoint}/notification-preferences`, preferences);
-  }
-
-  /**
-   * Get guardian statistics
+   * Get guardian statistics (Dashboard summary)
    */
   getGuardianStats(): Observable<any> {
-    return this.api.get(`${this.endpoint}/stats`);
+    return this.api.get(`${this.endpoint}/dashboard`); // Mapped to dashboard as stats are likely there
   }
 }
