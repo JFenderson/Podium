@@ -1,11 +1,17 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import {
   DirectorDto,
   DirectorDashboardDto,
   BandStatisticsDto,
-  DirectorActivityDto
+  DirectorActivityDto,
+  AnalyticsDashboardState,
+  BandBudgetDto,
+  ConversionFunnelDto,
+  DirectorEngagementMetricsDto,
+  OfferStatsDto,
+  RecruiterPerformanceDto
 } from '../../../core/models/director.models';
 
 @Injectable({
@@ -130,4 +136,20 @@ export class DirectorService {
   getComparativeAnalytics(bandId: number): Observable<any> {
     return this.api.get(`${this.endpoint}/band/${bandId}/comparative-analytics`);
   }
+
+getAnalyticsDashboard(bandId: number): Observable<AnalyticsDashboardState> {
+    return forkJoin({
+      offerStats: this.api.get<OfferStatsDto>(`${this.endpoint}/band/${bandId}/offer-stats`),
+      engagement: this.api.get<DirectorEngagementMetricsDto>(`${this.endpoint}/band/${bandId}/engagement`),
+      staffPerformance: this.api.get<RecruiterPerformanceDto[]>(`${this.endpoint}/band/${bandId}/staff-performance`),
+      budget: this.api.get<BandBudgetDto>(`${this.endpoint}/band/${bandId}/scholarship-budget`),
+      funnel: this.api.get<ConversionFunnelDto>(`${this.endpoint}/band/${bandId}/conversion-funnel`)
+    });
+  }
+
+  // Individual methods if you need to refresh specific sections later
+  getOfferStats(bandId: number) {
+    return this.api.get<OfferStatsDto>(`${this.endpoint}/band/${bandId}/offer-stats`);
+  }
+
 }

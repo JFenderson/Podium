@@ -93,3 +93,62 @@ export interface GraduationYearDistributionDto {
   year: number;
   count: number;
 }
+
+export interface OfferStatsDto {
+  totalOffers: number;
+  pending: number;
+  accepted: number;
+  declined: number;
+  expired: number;
+  acceptanceRate: number;
+  responseRate: number;
+}
+
+export interface DirectorEngagementMetricsDto {
+  totalProfileViews: number;
+  totalVideoWatches: number;
+  totalInterests: number;
+  dailyActivity: DailyEngagementDto[];
+}
+
+export interface DailyEngagementDto {
+  date: Date;
+  views: number;
+  interests: number;
+}
+
+export interface RecruiterPerformanceDto {
+  staffId: number;
+  name: string;
+  contactsInitiated: number;
+  offersSent: number;
+  successfulPlacements: number;
+  conversionRate: number;
+}
+
+export interface BandBudgetDto {
+  totalBudget: number;
+  allocated: number;         // Accepted offers
+  remaining: number;
+  pendingCommitment: number; // Sent/Pending offers
+  fiscalYear: number;
+}
+
+export interface ConversionFunnelDto {
+  totalInterests: number;
+  contacted: number;
+  offersSent: number;
+  offersAccepted: number;
+  interestToContactRate: number;
+  contactToOfferRate: number;
+  offerToAcceptRate: number;
+}
+
+// Wrapper for the view state
+export interface AnalyticsDashboardState {
+  offerStats: OfferStatsDto | null;
+  engagement: DirectorEngagementMetricsDto | null;
+  staffPerformance: RecruiterPerformanceDto[];
+  budget: BandBudgetDto | null;
+  funnel: ConversionFunnelDto | null;
+}
