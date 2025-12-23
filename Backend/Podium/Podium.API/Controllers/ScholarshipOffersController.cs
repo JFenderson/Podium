@@ -43,7 +43,7 @@ namespace Podium.API.Controllers
         /// </summary>
         [HttpPost]
         [Authorize(Policy = "CanCreateOffer")]
-        public async Task<ActionResult<ScholarshipOfferDto>> CreateOffer([FromBody] CreateOfferDto dto)
+        public async Task<ActionResult<ScholarshipOfferDto>> CreateOffer([FromBody] CreateScholarshipOfferDto dto)
         {
             // 1. Verify student exists to get Email
             var student = await _unitOfWork.Students.GetQueryable()
@@ -59,7 +59,7 @@ namespace Podium.API.Controllers
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
 
             // 2. Delegate Creation to Service
-            var createdOfferDto = await _service.CreateOfferAsync(dto, userIdClaim, userRole == Roles.Director);
+            var createdOffer = await _service.CreateOfferAsync(dto, userIdClaim, userRole == Roles.Director);
 
             // =========================================================
             // NOTIFICATION LOGIC
@@ -72,8 +72,8 @@ namespace Podium.API.Controllers
                     student.ApplicationUserId,
                     "ScholarshipOffer",
                     "You Received an Offer!",
-                    $"You have received a {dto.OfferType} offer of ${dto.ScholarshipAmount:N0}!",
-                    createdOfferDto.OfferId.ToString()
+                    $"You have received a {dto.OfferType} offer of ${dto.Amount:N0}!",
+                    createdOffer.OfferId.ToString()
                 );
             }
 
@@ -102,11 +102,11 @@ namespace Podium.API.Controllers
                     "ScholarshipOffer",
                     "New Offer for your Student",
                     $"{student.FirstName} has received a scholarship offer.",
-                    createdOfferDto.OfferId.ToString()
+                    createdOffer.OfferId.ToString()
                 );
             }
 
-            return Ok(new { Message = "Offer created and notifications queued", Offer = createdOfferDto });
+            return Ok(new { Message = "Offer created and notifications queued", Offer = createdOffer });
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace Podium.API.Controllers
         }
 
         [HttpPut("{id}/respond")]
-        public async Task<IActionResult> Respond(int id, [FromBody] RespondToOfferDto dto)
+        public async Task<IActionResult> Respond(int id, [FromBody] RespondToScholarshipOfferDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             bool isGuardian = User.HasClaim(c => c.Type == "IsGuardian" && c.Value == "true");
@@ -253,7 +253,7 @@ namespace Podium.API.Controllers
                     OfferId = o.Id,
                     StudentId = o.StudentId,
                     OfferType = o.OfferType,
-                    ScholarshipAmount = o.ScholarshipAmount,
+                    Amount = o.ScholarshipAmount,
                     Status = o.Status,
                     CreatedAt = o.CreatedAt,
                     ApprovedAt = o.ApprovedDate
@@ -274,7 +274,7 @@ namespace Podium.API.Controllers
                     OfferId = o.Id,
                     StudentId = o.StudentId,
                     OfferType = o.OfferType,
-                    ScholarshipAmount = o.ScholarshipAmount,
+                    Amount = o.ScholarshipAmount,
                     Status = o.Status,
                     Terms = o.Terms,
                     Notes = o.Description,

@@ -382,7 +382,7 @@ namespace BandRecruitment.Controllers
                     userId,
                     "ScholarshipApproved",
                     $"Approved scholarship offer {id}",
-                    new { OfferId = id, Amount = approvedOffer.ScholarshipAmount, StudentId = approvedOffer.StudentId });
+                    new { OfferId = id, Amount = approvedOffer.Amount, StudentId = approvedOffer.StudentId });
 
                 return Ok(approvedOffer);
             }

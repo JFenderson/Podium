@@ -395,7 +395,7 @@ namespace Podium.Application.Services
                     StudentName = so.Student.FirstName + " " + so.Student.LastName,
                     BandId = so.BandId,
                     BandName = so.Band.BandName,
-                    ScholarshipAmount = so.ScholarshipAmount,
+                    Amount = so.ScholarshipAmount,
                     Status = so.Status,
                     OfferType = so.OfferType,
                     CreatedAt = so.CreatedAt,

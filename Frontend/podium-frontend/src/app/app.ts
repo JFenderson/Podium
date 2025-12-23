@@ -12,14 +12,15 @@ import { ToastContainerComponent } from './shared/components/toast-container/toa
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, CommonModule, Header, Footer, Sidebar, ToastContainerComponent],
-  template: `<router-outlet></router-outlet>
-  <app-toast-container />`,
+  templateUrl: './app.html',
   styles: []
 })
 export class AppComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private destroy$ = new Subject<void>();
 
+
+   isAuthenticated = this.authService.isAuthenticated;
   ngOnInit(): void {
     // Subscribe to authentication state changes
     this.authService.currentUser$

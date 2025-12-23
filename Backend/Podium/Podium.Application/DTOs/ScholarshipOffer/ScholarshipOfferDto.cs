@@ -17,7 +17,7 @@ namespace Podium.Application.DTOs.Offer
         public string StudentName { get; set; } = string.Empty;
         public int BandId { get; set; }
         public string BandName { get; set; } = string.Empty;
-        public decimal? ScholarshipAmount { get; set; }
+        public decimal? Amount { get; set; }
         public ScholarshipStatus Status { get; set; }
         public string OfferType { get; set; } = string.Empty;
         
@@ -30,6 +30,7 @@ namespace Podium.Application.DTOs.Offer
         // Additional info
         public string? Terms { get; set; }
         public string? Requirements { get; set; }
+        public string? Description { get; set; }
         public string? Notes { get; set; }
         public string? RescindReason { get; set; }
         

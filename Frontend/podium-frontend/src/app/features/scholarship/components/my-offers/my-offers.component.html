@@ -1,1 +1,50 @@
-<p>my-offers works!</p>
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">My Scholarship Offers</h1>
+  </div>
+
+  <div *ngIf="isLoading" class="flex justify-center py-12">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+
+  <div *ngIf="!isLoading && offers.length === 0" class="bg-white rounded-lg shadow p-8 text-center">
+    <div class="text-gray-400 mb-4">
+      <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+      </svg>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900">No Offers Yet</h3>
+    <p class="text-gray-500 mt-2">You haven't received any scholarship offers yet. Keep up the good work!</p>
+  </div>
+
+  <div *ngIf="!isLoading && offers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let offer of offers" 
+         [routerLink]="['/scholarships', offer.offerId]"
+         class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden border-l-4"
+         [ngClass]="getStatusColor(offer.status)">
+      
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-xl font-bold text-gray-900">{{ offer.bandName }}</h3>
+            <p class="text-sm text-gray-600">{{ offer.offerType }}</p>
+          </div>
+          <span class="px-2 py-1 text-xs font-semibold rounded-full" 
+                [ngClass]="getStatusBadgeClass(offer.status)">
+            {{ offer.status }}
+          </span>
+        </div>
+
+        <div class="mb-4">
+          <p class="text-3xl font-bold text-green-600">${{ offer.scholarshipAmount | number }}</p>
+          <p class="text-xs text-gray-500">Amount</p>
+        </div>
+
+        <div class="flex justify-between items-center text-sm text-gray-500 pt-4 border-t border-gray-100">
+          <span>Expires: {{ offer.expirationDate | date:'mediumDate' }}</span>
+          <span class="text-blue-600 font-medium group-hover:underline">View Details &rarr;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

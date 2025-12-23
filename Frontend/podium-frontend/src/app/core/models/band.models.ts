@@ -1,21 +1,22 @@
 // Band DTOs matching backend
 
 export interface BandSummaryDto {
-  bandId: number;
+  id: number;
   bandName: string;
-  collegeName: string;
+  universityName: string;
   state: string;
   city: string;
   division?: string;
   conference?: string;
   logoUrl?: string;
   memberCount?: number;
+  shortDescription?: string;
 }
 
 export interface BandDetailDto {
-  bandId: number;
+  id: number;
   bandName: string;
-  collegeName: string;
+  universityName: string;
   collegeWebsite?: string;
   bandWebsite?: string;
   state: string;

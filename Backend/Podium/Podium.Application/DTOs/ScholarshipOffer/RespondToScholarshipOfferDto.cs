@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.Offer
 {
-    public class RespondToOfferDto
+    public class RespondToScholarshipOfferDto
     {
         public bool Accept { get; set; }
-        public string? Comment { get; set; }
+        public string? Notes { get; set; }
     }
 }

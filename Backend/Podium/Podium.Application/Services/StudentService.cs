@@ -439,4 +439,105 @@ public class StudentService : IStudentService
             default: return false;
         }
     }
+
+    public async Task<ServiceResult<StudentDashboardDto>> GetStudentDashboardAsync()
+    {
+        // 1. Identify the current user
+        var userId = await _permissionService.GetCurrentUserIdAsync();
+        if (string.IsNullOrEmpty(userId))
+            return ServiceResult<StudentDashboardDto>.Failure("User not authenticated");
+
+        // 2. Fetch Student with related data needed for metrics
+        var student = await _unitOfWork.Students.GetQueryable()
+            .Include(s => s.Videos)
+            .Include(s => s.ScholarshipOffers)
+            .Include(s => s.ContactRequests)
+            .FirstOrDefaultAsync(s => s.ApplicationUserId == userId);
+
+        if (student == null)
+            return ServiceResult<StudentDashboardDto>.Failure("Student profile not found");
+
+        // 3. Calculate Metrics
+
+        // Offers: Assuming active offers are those not declined, rescinded, or expired.
+        // Adjust logic based on your ScholarshipStatus enum.
+        var activeOffersCount = student.ScholarshipOffers
+            .Count(o => o.Status != ScholarshipStatus.Declined &&
+                        o.Status != ScholarshipStatus.Rescinded &&
+                        o.Status != ScholarshipStatus.Draft);
+
+        // Contact Requests
+        var pendingRequestsCount = await _unitOfWork.ContactRequests.GetQueryable()
+    .Where(c => c.Status == "Pending") // <--- Use the Status property
+    .ToListAsync();
+
+        // Notifications
+        var recentNotifications = await _unitOfWork.Notifications.GetQueryable()
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .Select(n => new StudentNotificationDto
+            {
+                Id = n.Id,
+                Title = n.Title,
+                Message = n.Message,
+                Type = n.Type,
+                CreatedAt = n.CreatedAt,
+                IsRead = n.IsRead
+            })
+            .ToListAsync();
+
+        // Profile Image (Primary Video Thumbnail)
+        var profileImage = student.Videos
+            .Where(v => !v.IsDeleted && v.ThumbnailUrl != null)
+            .OrderByDescending(v => v.IsPrimary)
+            .Select(v => v.ThumbnailUrl)
+            .FirstOrDefault();
+
+        // 4. Construct Activity Feed (Example: mixing offers and notifications)
+        var activities = new List<StudentActivityDto>();
+
+        // Add recent offers to activity
+        activities.AddRange(student.ScholarshipOffers
+            .Where(o => o.CreatedAt > DateTime.UtcNow.AddDays(-30))
+            .Select(o => new StudentActivityDto
+            {
+                Description = $"Received scholarship offer", // You can enrich this if you include Band
+                Date = o.CreatedAt,
+                Icon = "local_offer"
+            }));
+
+        // Add recent notifications to activity
+        activities.AddRange(recentNotifications.Select(n => new StudentActivityDto
+        {
+            Description = n.Title,
+            Date = n.CreatedAt,
+            Icon = n.Type.ToLower().Contains("alert") ? "warning" : "notifications"
+        }));
+
+        // Sort combined activity
+        var sortedActivity = activities.OrderByDescending(a => a.Date).Take(10).ToList();
+
+        // 5. Build DTO
+        var dashboardDto = new StudentDashboardDto
+        {
+            StudentId = student.Id,
+            FirstName = student.FirstName,
+            LastName = student.LastName,
+            PrimaryInstrument = student.PrimaryInstrument ?? "Unknown",
+            ProfileImageUrl = profileImage,
+            GuardianInviteCode = student.GuardianInviteCode,
+
+            // Metrics
+            ActiveOffers = activeOffersCount,
+            PendingContactRequests = pendingRequestsCount.Count,
+            TotalProfileViews = 0, // Requires adding IRepository<ProfileView> to UnitOfWork to fetch real count
+            SearchAppearances = 0, // Requires logging search results
+
+            RecentNotifications = recentNotifications,
+            RecentActivity = sortedActivity
+        };
+
+        return ServiceResult<StudentDashboardDto>.Success(dashboardDto);
+    }
 }

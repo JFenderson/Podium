@@ -11,6 +11,8 @@ export const STUDENT_ROUTES: Routes = [
   },
     {
     path: 'dashboard',
+    canActivate: [roleGuard],
+    data: { roles: [Roles.Student] },
     loadComponent: () => import('./components/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent)
   },
   {

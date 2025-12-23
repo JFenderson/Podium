@@ -56,5 +56,7 @@ namespace Podium.Core.Entities
         [ForeignKey(nameof(RecruiterStaffId))]
         public virtual BandStaff RecruiterStaff { get; set; } = null!;
         public string CreatedBy { get; set; }
+        public bool IsAccepted { get; set; }
+        public bool IsDeclined { get; set; }
     }
 }

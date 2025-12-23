@@ -72,7 +72,7 @@ export class BandDetailComponent implements OnInit {
 
     this.studentService.showInterest({
       studentId: currentUser.studentId,
-      bandId: this.band.bandId,
+      bandId: this.band.id,
       interestedAt: new Date()
     }).subscribe({
       next: () => {

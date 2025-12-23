@@ -78,7 +78,7 @@
          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div *ngFor="let band of filteredBands" 
            class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-        <a [routerLink]="['/bands', band.bandId]" class="block">
+        <a [routerLink]="['/bands', band.id]" class="block">
           <!-- Band Logo/Image Placeholder -->
           <div class="h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
             <img *ngIf="band.logoUrl" [src]="band.logoUrl" [alt]="band.bandName" class="h-full w-full object-cover" />
@@ -92,7 +92,7 @@
             <h3 class="text-xl font-bold text-gray-900 mb-2 hover:text-indigo-600 transition-colors">
               {{ band.bandName }}
             </h3>
-            <p class="text-gray-600 mb-4">{{ band.collegeName }}</p>
+            <p class="text-gray-600 mb-4">{{ band.universityName }}</p>
             
             <div class="flex items-center text-sm text-gray-500 mb-2">
               <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">

@@ -9,9 +9,9 @@ namespace Podium.Application.Interfaces
 {
     public interface IScholarshipService
     {
-        Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector);
+        Task<ScholarshipOfferDto> CreateOfferAsync(CreateScholarshipOfferDto dto, string userId, bool isDirector);
         Task ApproveOfferAsync(int offerId, string directorId);
-        Task RespondToOfferAsync(int offerId, RespondToOfferDto dto, string userId, bool isGuardian);
+        Task RespondToOfferAsync(int offerId, RespondToScholarshipOfferDto dto, string userId, bool isGuardian);
         Task GuardianFinalizeOfferAsync(int offerId, string guardianUserId, bool accept);
         Task RescindOfferAsync(int offerId, RescindScholarshipRequest dto, string directorId);
         Task<ScholarshipBudgetDto> GetBudgetStatsAsync(int bandId);

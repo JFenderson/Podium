@@ -11,6 +11,7 @@ import {
   StudentDashboardDto,
 } from '../../../core/models/student.models';
 import { RatingDto, ServiceResult } from '../../../core/models/common.models';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -90,7 +91,15 @@ export class StudentService {
     return this.api.delete(`${this.endpoint}/${studentId}/video/${videoId}`);
   }
 
-  getDashboard(): Observable<StudentDashboardDto> {
-    return this.api.get<StudentDashboardDto>('Student/dashboard');
+getDashboard(): Observable<StudentDashboardDto> {
+    return this.api.get<ServiceResult<StudentDashboardDto>>(`${this.endpoint}/dashboard`).pipe(
+      map(response => {
+        // Check if data is missing despite a successful response
+        if (!response.data) {
+          throw new Error('Dashboard data is missing');
+        }
+        return response.data;
+      })
+    );
   }
 }

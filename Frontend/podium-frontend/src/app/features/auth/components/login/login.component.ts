@@ -96,12 +96,14 @@ export class LoginComponent implements OnInit {
 
     switch (primaryRole) {
       case 'Student':
-        targetRoute = '/student/dashboard';
+        targetRoute = '/students/dashboard';
         break;
       case 'Guardian':
         targetRoute = '/guardian/dashboard';
         break;
       case 'BandStaff':
+         targetRoute = '/bandstaff/dashboard';
+        break;
       case 'Director':
         targetRoute = '/director/dashboard';
         break;

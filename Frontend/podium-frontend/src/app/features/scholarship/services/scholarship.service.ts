@@ -103,4 +103,9 @@ export class ScholarshipService {
   getOfferStats(bandId: number): Observable<any> {
     return this.api.get(`${this.endpoint}/stats`, { bandId });
   }
+
+  rescindOffer(id: number, reason: string): Observable<any> {
+    return this.api.put(`${this.endpoint}/${id}/rescind`, { reason });
+  }
+  
 }

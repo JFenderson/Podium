@@ -68,7 +68,7 @@ export class BandListComponent implements OnInit {
     this.filteredBands = this.bands.filter(band => {
       const matchesSearch = !search || 
         band.bandName.toLowerCase().includes(search.toLowerCase()) ||
-        band.collegeName.toLowerCase().includes(search.toLowerCase()) ||
+        band.universityName.toLowerCase().includes(search.toLowerCase()) ||
         band.city.toLowerCase().includes(search.toLowerCase());
       
       const matchesState = !state || band.state === state;
@@ -76,6 +76,8 @@ export class BandListComponent implements OnInit {
       return matchesSearch && matchesState;
     });
   }
+
+  
 
   extractStates(bands: BandSummaryDto[]): void {
     const stateSet = new Set(bands.map(b => b.state));

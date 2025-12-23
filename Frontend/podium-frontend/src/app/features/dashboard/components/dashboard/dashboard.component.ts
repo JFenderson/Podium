@@ -25,7 +25,7 @@ export class DashboardComponent implements OnInit {
     } else if (user.roles.includes(Roles.Director) || user.roles.includes(Roles.BandStaff)) {
       this.router.navigate(['/director/dashboard']);
     } else if (user.roles.includes(Roles.Student)) {
-      this.router.navigate(['/students/profile']); // Or /student/dashboard if you have one
+      this.router.navigate(['/student/dashboard']); // Or /student/dashboard if you have one
     } else {
       // Fallback for Admin or unknown roles
       this.router.navigate(['/profile']); 

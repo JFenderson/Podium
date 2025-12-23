@@ -32,18 +32,18 @@ export const routes: Routes = [
   },
   // Students - requires authentication
   {
-    path: 'student',
+    path: 'students',
     canActivate: [authGuard],
     loadChildren: () => import('./features/student/student.routes').then(m => m.STUDENT_ROUTES)
   },
   // Bands - public access
   {
-    path: 'band',
+    path: 'bands',
     loadChildren: () => import('./features/band/band.routes').then(m => m.BAND_ROUTES)
   },
   // Scholarships - requires authentication
   {
-    path: 'scholarship',
+    path: 'scholarships',
     canActivate: [authGuard],
     loadChildren: () => import('./features/scholarship/scholarship.routes').then(m => m.SCHOLARSHIP_ROUTES)
   },

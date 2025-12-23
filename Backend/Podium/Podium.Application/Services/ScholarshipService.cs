@@ -28,7 +28,7 @@ namespace Podium.Application.Services
             _notificationService = notificationService;
             _logger = logger;
         }
-        public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateOfferDto dto, string userId, bool isDirector)
+        public async Task<ScholarshipOfferDto> CreateOfferAsync(CreateScholarshipOfferDto dto, string userId, bool isDirector)
         {
             int currentFiscalYear = DateTime.UtcNow.Year;
             var budget = await _unitOfWork.BandBudgets.GetQueryable()
@@ -38,13 +38,13 @@ namespace Podium.Application.Services
                 throw new InvalidOperationException($"No budget defined for fiscal year {currentFiscalYear}.");
 
             // 2. Validate Budget
-            if (budget.RemainingAmount < dto.ScholarshipAmount)
+            if (budget.RemainingAmount < dto.Amount)
             {
                 throw new InvalidOperationException($"Insufficient budget. Remaining: ${budget.RemainingAmount:N0}");
             }
 
-            budget.AllocatedAmount += dto.ScholarshipAmount;
-            budget.RemainingAmount -= dto.ScholarshipAmount;
+            budget.AllocatedAmount += dto.Amount;
+            budget.RemainingAmount -= dto.Amount;
 
             _unitOfWork.BandBudgets.Update(budget);
             // 1. Fetch the Band to check/deduct budget
@@ -70,15 +70,34 @@ namespace Podium.Application.Services
                 StudentId = dto.StudentId,
                 BandId = band.Id,
                 CreatedByUserId = userId,
-                ScholarshipAmount = dto.ScholarshipAmount,
+                ScholarshipAmount = dto.Amount,
                 Description = dto.Description,
                 OfferType = dto.OfferType,
                 // LOGIC: Directors skip approval, Recruiters go to Pending
+                RequiresGuardianApproval = dto.RequiresGuardianApproval,
                 Status = isDirector ? ScholarshipStatus.Sent : ScholarshipStatus.PendingApproval,
                 ExpirationDate = DateTime.UtcNow.AddDays(30) // Default 30 days
             };
 
             await _unitOfWork.ScholarshipOffers.AddAsync(offer);
+
+            try
+            {
+                var audit = new AuditLog
+                {
+                    ApplicationUserId = userId,
+                    ActionType = "CreateScholarshipOffer",
+                    Description = $"Created {dto.OfferType} offer of ${dto.Amount} for Student #{dto.StudentId}",
+                    CreatedAt = DateTime.UtcNow,
+                    MetadataJson = JsonSerializer.Serialize(new { dto.StudentId, dto.BandId, dto.Amount })
+                };
+                await _unitOfWork.AuditLogs.AddAsync(audit);
+            }
+            catch (Exception)
+            {
+                throw new Exception("Could not log this scholarship");
+            }
+
 
             try
             {
@@ -139,7 +158,7 @@ namespace Podium.Application.Services
             }
         }
 
-        public async Task RespondToOfferAsync(int offerId, RespondToOfferDto dto, string userId, bool isGuardian)
+        public async Task RespondToOfferAsync(int offerId, RespondToScholarshipOfferDto dto, string userId, bool isGuardian)
         {
             var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);
             if (offer == null) throw new KeyNotFoundException("Offer not found");
@@ -153,6 +172,25 @@ namespace Podium.Application.Services
                 offer.Status = ScholarshipStatus.Expired;
                 await _unitOfWork.SaveChangesAsync(); // Save the status change to Expired
                 throw new InvalidOperationException("This offer has expired.");
+            }
+
+            // [NEW] Audit Log for Response
+            try
+            {
+                var audit = new AuditLog
+                {
+                    ApplicationUserId = userId,
+                    ActionType = isGuardian ? "GuardianRespondOffer" : "StudentRespondOffer",
+                    Description = $"{(isGuardian ? "Guardian" : "Student")} {(dto.Accept ? "Accepted" : "Declined")} Offer #{offerId}",
+                    CreatedAt = DateTime.UtcNow,
+                    MetadataJson = JsonSerializer.Serialize(new { OfferId = offerId, Accepted = dto.Accept, Comment = dto.Notes })
+                };
+                await _unitOfWork.AuditLogs.AddAsync(audit);
+            }
+            catch (Exception)
+            {
+
+                throw new Exception("Could not log this scholarship Acceptance or Rejection");
             }
 
             if (dto.Accept)
@@ -188,6 +226,7 @@ namespace Podium.Application.Services
                 }
             }
 
+            offer.ResponseNotes = dto.Notes;
             offer.ResponseDate = DateTime.UtcNow;
 
 
@@ -201,7 +240,7 @@ namespace Podium.Application.Services
                 offer.RespondedByUserId = userId;
             }
 
-            offer.ResponseNotes = dto.Comment;
+            offer.ResponseNotes = dto.Notes;
 
             _unitOfWork.ScholarshipOffers.Update(offer);
             await _unitOfWork.SaveChangesAsync();
@@ -217,6 +256,30 @@ namespace Podium.Application.Services
                     "Scholarship Response",
                     $"{studentName} has {offer.Status.ToString().ToLower()} the scholarship offer.",
                     offer.Id.ToString());
+            }
+
+            // [NEW] Notify Guardians (Activity Tracking)
+            // Query StudentGuardians to find linked users
+            var linkedGuardians = await _unitOfWork.StudentGuardians.GetQueryable()
+                .Include(sg => sg.Guardian)
+                .ThenInclude(g => g.ApplicationUser)
+                .Where(sg => sg.StudentId == offer.StudentId)
+                .Select(sg => sg.Guardian.ApplicationUserId)
+                .ToListAsync();
+
+            foreach (var guardianUserId in linkedGuardians)
+            {
+                // Don't notify the user who just performed the action (if it was a guardian)
+                if (guardianUserId == userId) continue;
+
+                string action = dto.Accept ? "accepted" : "declined";
+                await _notificationService.NotifyUserAsync(
+                    guardianUserId,
+                    "ScholarshipActivity",
+                    "Scholarship Update",
+                    $"The scholarship offer from {offer.Band?.BandName ?? "Band"} was {action}.",
+                    offer.Id.ToString()
+                );
             }
 
             // TODO: Update Budget Committed Amount
@@ -355,7 +418,7 @@ namespace Podium.Application.Services
             BandId = offer.BandId,
             BandName = offer.Band != null ? offer.Band.BandName : "",
             Status = offer.Status,
-            ScholarshipAmount = offer.ScholarshipAmount,
+            Amount = offer.ScholarshipAmount,
             OfferType = offer.OfferType,
             CreatedAt = offer.CreatedAt,
             ApprovedAt = offer.ApprovedAt,

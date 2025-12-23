@@ -61,6 +61,16 @@ namespace Podium.API.Controllers
             return HandleResult(result);
         }
 
+        [HttpGet("dashboard")]
+        [Authorize(Policy = "StudentOnly")]
+        public async Task<ActionResult<StudentDashboardDto>> GetDashboard()
+        {
+            // Assuming you have a method in _studentService to get dashboard data
+            // If not, you might need to build the DTO here or add the method to the service
+            var result = await _studentService.GetStudentDashboardAsync(); // You need to implement this in StudentService
+            return Ok(result);
+        }
+
         [HttpGet("me")]
         [Authorize(Policy = "StudentOnly")]
         public async Task<ActionResult<StudentDetailsDto>> GetMyProfile()
