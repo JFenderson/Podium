@@ -4,7 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ScholarshipService } from '../../services/scholarship.service';
 import { AuthService } from '../../../auth/services/auth.service';
 // FIX: Corrected import path
-import { ScholarshipOfferDto, OfferStatus } from '../../../../core/models/scholarship.models'; 
+import { ScholarshipOfferDto, ScholarshipOfferStatus } from '../../../../core/models/scholarship.models'; 
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
@@ -16,7 +16,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 export class OfferDetailComponent implements OnInit {
   offer: ScholarshipOfferDto | null = null;
   currentUser: any;
-  OfferStatus = OfferStatus; // Expose enum to template
+  OfferStatus = ScholarshipOfferStatus; // Expose enum to template
   
   constructor(
     private route: ActivatedRoute,
@@ -46,13 +46,13 @@ export class OfferDetailComponent implements OnInit {
     if (!this.offer) return false;
     
     // Logic based on your OfferStatus enum
-    if (this.isStudent && this.offer.status === OfferStatus.Sent) return true;
+    if (this.isStudent && this.offer.status === ScholarshipOfferStatus.Sent) return true;
     
     // Note: If you add 'PendingGuardianSignature' to OfferStatus later, add logic here.
     // For now assuming Guardian acts on 'Sent' or specific logic you requested:
-    if (this.isGuardian && this.offer.requiresGuardianApproval && this.offer.status === OfferStatus.Sent) return true;
+    if (this.isGuardian && this.offer.requiresGuardianApproval && this.offer.status === ScholarshipOfferStatus.Sent) return true;
     
-    if (this.isStaff && (this.offer.status === OfferStatus.Sent || this.offer.status === OfferStatus.Draft)) return true;
+    if (this.isStaff && (this.offer.status === ScholarshipOfferStatus.Sent || this.offer.status === ScholarshipOfferStatus.Draft)) return true;
     
     return false;
   }

@@ -36,12 +36,12 @@
         </div>
 
         <div class="mb-4">
-          <p class="text-3xl font-bold text-green-600">${{ offer.scholarshipAmount | number }}</p>
+          <p class="text-3xl font-bold text-green-600">${{ offer.amount | number }}</p>
           <p class="text-xs text-gray-500">Amount</p>
         </div>
 
         <div class="flex justify-between items-center text-sm text-gray-500 pt-4 border-t border-gray-100">
-          <span>Expires: {{ offer.expirationDate | date:'mediumDate' }}</span>
+          <span>Expires: {{ offer.expiresAt | date:'mediumDate' }}</span>
           <span class="text-blue-600 font-medium group-hover:underline">View Details &rarr;</span>
         </div>
       </div>

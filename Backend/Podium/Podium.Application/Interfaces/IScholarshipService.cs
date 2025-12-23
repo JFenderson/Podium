@@ -17,5 +17,6 @@ namespace Podium.Application.Interfaces
         Task<ScholarshipBudgetDto> GetBudgetStatsAsync(int bandId);
         Task CheckExpirationsAsync(); // To be called by a background job
         Task<ScholarshipOverviewDto> GetScholarshipsAsync(string userId, ScholarshipFilterDto filters);
+        Task<ScholarshipOfferDto> GetOfferByIdAsync(int id);
     }
 }

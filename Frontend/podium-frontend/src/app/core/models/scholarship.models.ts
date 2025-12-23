@@ -1,4 +1,3 @@
-// Scholarship DTOs matching backend
 
 export interface ScholarshipOfferDto {
   offerId: number;
@@ -7,9 +6,11 @@ export interface ScholarshipOfferDto {
   bandId: number;
   bandName?: string;
   offerType: OfferType;
+
   amount?: number;
   description: string;
-  status: OfferStatus;
+  terms?: string;
+  status: ScholarshipOfferStatus;
   expiresAt?: Date;
   sentAt?: Date;
   respondedAt?: Date;
@@ -31,16 +32,17 @@ export interface CreateScholarshipOfferDto {
   description: string;
   expiresAt?: string | Date;
   requiresGuardianApproval: boolean;
+  terms?: string;
 }
 
 export interface UpdateScholarshipOfferDto {
   amount?: number;
   description?: string;
   expiresAt?: Date;
-  status?: OfferStatus;
+  status?: ScholarshipOfferStatus;
 }
 
-export interface RespondToOfferDto {
+export interface RespondToScholarshipOfferDto {
   isAccepted: boolean;
   notes?: string;
 }
@@ -56,14 +58,15 @@ export enum OfferType {
   Interest = 'Interest'
 }
 
-export enum OfferStatus {
+export enum ScholarshipOfferStatus {
   Draft = 'Draft',
   Sent = 'Sent',
   Viewed = 'Viewed',
   Accepted = 'Accepted',
   Declined = 'Declined',
   Expired = 'Expired',
-  Withdrawn = 'Withdrawn'
+  Withdrawn = 'Withdrawn',
+  PendingGuardianSignature = 'PendingGuardianSignature'
 }
 
 export enum ApprovalStatus {
@@ -75,7 +78,7 @@ export enum ApprovalStatus {
 export interface ScholarshipFilterDto {
   studentId?: number;
   bandId?: number;
-  status?: OfferStatus;
+  status?: ScholarshipOfferStatus;
   offerType?: OfferType;
   pageNumber?: number;
   pageSize?: number;
@@ -87,7 +90,7 @@ export interface ScholarshipSummaryDto {
   bandName: string;
   offerType: OfferType;
   amount?: number;
-  status: OfferStatus;
+  status: ScholarshipOfferStatus;
   sentAt?: Date;
   expiresAt?: Date;
 }

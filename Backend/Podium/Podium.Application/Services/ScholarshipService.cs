@@ -130,6 +130,21 @@ namespace Podium.Application.Services
             return MapToDto(offer);
         }
 
+        public async Task<ScholarshipOfferDto> GetOfferByIdAsync(int id)
+        {
+            // 1. Fetch with includes to ensure related data (Names) are available for the DTO
+            var offer = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Include(o => o.Student)
+                .Include(o => o.Band)
+                .Include(o => o.CreatedByStaff)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (offer == null) return null;
+
+            // 2. Use the existing helper to return a safe DTO
+            return MapToDto(offer);
+        }
+
         public async Task ApproveOfferAsync(int offerId, string directorId)
         {
             var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(offerId);

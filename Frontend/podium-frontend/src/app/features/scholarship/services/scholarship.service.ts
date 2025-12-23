@@ -5,7 +5,7 @@ import {
   ScholarshipOfferDto,
   CreateScholarshipOfferDto,
   UpdateScholarshipOfferDto,
-  RespondToOfferDto,
+  RespondToScholarshipOfferDto,
   GuardianApprovalDto,
   ScholarshipFilterDto,
   ScholarshipSummaryDto
@@ -65,7 +65,7 @@ export class ScholarshipService {
   /**
    * Respond to offer (Student only)
    */
-  respondToOffer(id: number, dto: RespondToOfferDto): Observable<any> {
+  respondToOffer(id: number, dto: RespondToScholarshipOfferDto): Observable<any> {
     return this.api.put(`${this.endpoint}/${id}/respond`, dto);
   }
 
