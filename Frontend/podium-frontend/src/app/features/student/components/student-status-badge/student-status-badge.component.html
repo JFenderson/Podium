@@ -1,0 +1,38 @@
+<div class="relative group inline-block cursor-help">
+  <span 
+    [ngClass]="currentConfig.classes"
+    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors duration-150 ease-in-out"
+    role="status"
+    [attr.aria-label]="currentConfig.label"
+  >
+    <svg 
+      class="mr-1.5 h-4 w-4 flex-shrink-0" 
+      xmlns="http://www.w3.org/2000/svg" 
+      fill="none" 
+      viewBox="0 0 24 24" 
+      stroke="currentColor"
+      aria-hidden="true"
+    >
+      <path 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        stroke-width="2" 
+        [attr.d]="currentConfig.iconPath" 
+      />
+    </svg>
+
+    {{ currentConfig.label }}
+  </span>
+
+  <div 
+    class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 hidden group-hover:block z-50"
+    role="tooltip"
+  >
+    <div class="bg-gray-900 text-white text-xs rounded py-1 px-2 text-center shadow-lg">
+      {{ currentConfig.tooltip }}
+      <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+        <div class="border-4 border-transparent border-t-gray-900"></div>
+      </div>
+    </div>
+  </div>
+</div>

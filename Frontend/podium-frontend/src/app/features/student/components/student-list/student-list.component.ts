@@ -7,11 +7,12 @@ import { StudentService } from '../../services/student.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { StudentDetailsDto, StudentFilterDto, PagedResult } from '../../../../core/models/student.models';
 import { Permissions } from '../../../../core/models/common.models';
+import { StudentStatusBadgeComponent } from '../student-status-badge/student-status-badge.component';
 
 @Component({
   selector: 'app-student-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, StudentStatusBadgeComponent],
   templateUrl: './student-list.component.html'
 })
 export class StudentListComponent implements OnInit {

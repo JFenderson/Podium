@@ -1,6 +1,8 @@
 // Student DTOs matching Backend definitions strictly
 
 export interface StudentDetailsDto {
+hasOffer: any;
+requiresGuardianApproval: boolean;
   yearsOfExperience: any;
   studentId: number;
   firstName: string;
