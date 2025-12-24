@@ -1,16 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ScholarshipService } from '../../services/scholarship.service';
 import { AuthService } from '../../../auth/services/auth.service';
 // FIX: Corrected import path
 import { ScholarshipOfferDto, ScholarshipOfferStatus } from '../../../../core/models/scholarship.models'; 
 import { ToastService } from '../../../../core/services/toast.service';
+import { Roles } from '../../../../core/models/common.models';
 
 @Component({
   selector: 'app-offer-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './offer-detail.component.html'
 })
 export class OfferDetailComponent implements OnInit {
@@ -96,5 +97,17 @@ export class OfferDetailComponent implements OnInit {
       },
       error: () => this.toast.error('Failed to rescind offer.') // FIX: .error()
     });
+  }
+
+  get backLink(): string {
+    return this.authService.hasRole(Roles.Student) 
+      ? '/scholarships/my-offers' 
+      : '/scholarships/list';
+  }
+
+  get backLabel(): string {
+    return this.authService.hasRole(Roles.Student) 
+      ? 'Back to My Offers' 
+      : 'Back to Scholarship List';
   }
 }

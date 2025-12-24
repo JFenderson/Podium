@@ -20,7 +20,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
 
-   isAuthenticated = this.authService.isAuthenticated;
+   isAuthenticated(): boolean {
+    return this.authService.isAuthenticated();
+  }
+  
   ngOnInit(): void {
     // Subscribe to authentication state changes
     this.authService.currentUser$

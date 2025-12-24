@@ -164,7 +164,7 @@ namespace Podium.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ScholarshipOfferDto>> GetOffer(int id)
         {
-            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(id);
+            var offer = await _service.GetOfferByIdAsync(id);
             if (offer == null) return NotFound();
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
