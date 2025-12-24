@@ -11,7 +11,7 @@ import { AuthService } from '../../features/auth/services/auth.service';
   styleUrls: ['./sidebar.scss'], // Corrected from styleUrl to styleUrls
 })
 export class Sidebar {
-  authService = inject(AuthService);
+  private authService = inject(AuthService);
 
 get isStaff(): boolean {
     return this.authService.hasAnyRole(['Director', 'BandStaff']);
@@ -24,5 +24,9 @@ get isStaff(): boolean {
   // FIX: This property was missing
   get isStudent(): boolean {
     return this.authService.hasRole('Student');
+  }
+
+  logout(): void {
+    this.authService.logout();
   }
 }
