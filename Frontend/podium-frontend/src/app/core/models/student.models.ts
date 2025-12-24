@@ -1,24 +1,24 @@
 // Student DTOs matching Backend definitions strictly
 
 export interface StudentDetailsDto {
-hasOffer: any;
-requiresGuardianApproval: boolean;
+  hasOffer?: boolean;
+  requiresGuardianApproval?: boolean;
   yearsOfExperience: any;
   studentId: number;
   firstName: string;
   lastName: string;
   email: string;
-  
+
   // Bio & Description
   bio?: string;
   bioDescription?: string; // Backend getter alias for Bio
-  
+
   // Contact & Location
   phoneNumber?: string;
   city?: string;
   state?: string;
   zipcode?: string;
-  
+
   // Personal & Academic
   dateOfBirth?: Date;
   graduationYear?: number;
@@ -26,13 +26,13 @@ requiresGuardianApproval: boolean;
   gpa?: number;
   intendedMajor?: string;
   schoolType?: string;
-  
+
   // Musical
   primaryInstrument?: string;
   secondaryInstruments: string[]; // Backend sends List<string>
   skillLevel?: string;
-  achievements: string[];         // Backend sends List<string>
-  awards?: string[];              // Backend getter alias for Achievements
+  achievements: string[]; // Backend sends List<string>
+  awards?: string[]; // Backend getter alias for Achievements
 
   // Engagement / Metrics
   videoUrl?: string;
@@ -41,12 +41,12 @@ requiresGuardianApproval: boolean;
   ratingCount?: number;
   profileViews?: number;
   hasGuardian: boolean;
-  
+
   // Lists
-  // NOTE: Backend InterestDto only contains { studentId, bandId }. 
+  // NOTE: Backend InterestDto only contains { studentId, bandId }.
   // It does not currently return BandName or Date.
-  interests: InterestDto[]; 
-  
+  interests: InterestDto[];
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -57,24 +57,24 @@ export interface UpdateStudentDto {
   lastName?: string;
   phoneNumber?: string;
   dateOfBirth?: Date;
-  
+
   bioDescription?: string; // Backend maps this to Bio
-  
+
   // Academic
   graduationYear?: number;
   highSchool?: string;
   gpa?: number;
   intendedMajor?: string;
   schoolType?: string;
-  
+
   // Musical
   primaryInstrument?: string;
   skillLevel?: string;
-  
+
   // Backend DTO defines this as 'string?', but usually frontend handles arrays.
   // If your backend requires a JSON string, you must JSON.stringify() this array before sending.
-  secondaryInstruments?: string | string[]; 
-  
+  secondaryInstruments?: string | string[];
+
   awards?: string[];
   achievements?: string[];
 
@@ -117,7 +117,7 @@ export interface InterestedStudentDto {
   highSchool: string;
   state: string;
   interestedDate: Date;
-  
+
   // Engagement
   videosUploaded: number;
   eventsAttended: number;
@@ -125,7 +125,7 @@ export interface InterestedStudentDto {
   lastContactDate?: Date;
   hasOffer: boolean;
   offerStatus?: string;
-  
+
   // Guardian Info
   hasGuardianLinked: boolean;
   requiresGuardianApproval: boolean;
@@ -168,14 +168,14 @@ export interface StudentDashboardDto {
   lastName: string;
   primaryInstrument: string;
   profileImageUrl?: string;
-  guardianInviteCode: string; 
-  
+  guardianInviteCode: string;
+
   // Stats
   totalProfileViews: number;
   searchAppearances: number;
   activeOffers: number;
   pendingContactRequests: number;
-  
+
   // Recent items
   recentNotifications: StudentNotificationDto[];
   recentActivity: StudentActivityDto[];
