@@ -9,7 +9,7 @@ import {
   DirectorActivityType
 } from '../../../../core/models/director.models';
 import { Roles } from '../../../../core/models/common.models';
-import { StudentStatusBadgeComponent } from '../../../student/components/student-status-badge/student-status-badge.component';
+import { StudentStatusBadgeComponent } from '../../../../shared/components/student-status-badge/student-status-badge.component';
 
 @Component({
   selector: 'app-director-dashboard',
