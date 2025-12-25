@@ -40,13 +40,45 @@ export interface LinkStudentDto {
 }
 
 export interface GuardianDashboardDto {
-  linkedStudents: GuardianLinkedStudentDto[];
   pendingApprovals: GuardianPendingApprovalDto[];
   recentActivity: GuardianActivityDto[];
   totalOffers: number;
   pendingOffersCount: number;
   priorityAlerts: PriorityAlertDto[];
-  recentActivities: GuardianRecentActivityDto[];
+  // Summary Stats
+  totalPendingApprovals: number;
+  totalActiveOffers: number;
+  totalUnreadNotifications: number;
+
+  // Data Lists for Columns
+  pendingContactRequests: GuardianContactRequestDto[]; // Column 1
+  scholarshipOffers: GuardianScholarshipDto[];         // Column 2
+  recentActivities: GuardianRecentActivityDto[];       // Column 3
+  
+  linkedStudents: GuardianLinkedStudentDto[];
+}
+
+export interface ContactRequestAction {
+  requestId: number;
+  approved: boolean;
+}
+
+export interface ScholarshipAction {
+  offerId: number;
+  status: 'Accepted' | 'Declined';
+}
+
+export interface GuardianContactRequestDto {
+  requestId: number;
+  studentId: number;
+  studentName: string;
+  recruiterName: string;
+  recruiterRole: string;
+  recruiterAvatarUrl?: string;
+  bandName: string;
+  message: string;
+  sentAt: Date;
+  expiresAt: Date;
 }
 
 export interface GuardianPendingApprovalDto {
@@ -122,6 +154,8 @@ export interface StudentGuardianDto {
 }
 
 export interface GuardianScholarshipDto {
+studentName: any;
+amount: string|number;
   offerId: number;
   bandId: number;
   bandName: string;

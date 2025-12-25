@@ -17,7 +17,7 @@ import { StudentStatusBadgeComponent } from '../../../student/components/student
   imports: [
     CommonModule,
     RouterLink,
-    StudentStatusBadgeComponent
+    
   ],
   templateUrl: './director-dashboard.component.html',
   styleUrls: ['./director-dashboard.component.scss']

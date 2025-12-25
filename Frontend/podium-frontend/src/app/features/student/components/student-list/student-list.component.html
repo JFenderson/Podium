@@ -183,7 +183,7 @@
         <div class="p-6">
   <div class="mb-3"> 
     <app-student-status-badge 
-      [requiresGuardianApproval]="student.requiresGuardianApproval"
+      [requiresGuardianApproval]="student.requiresGuardianApproval ?? false"
       [isPending]="!student.hasOffer"
     ></app-student-status-badge>
   </div>

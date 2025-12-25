@@ -10,13 +10,27 @@
       <app-header class="flex-shrink-0 z-10"></app-header>
     }
     
-    <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-background relative">
-      <div class="max-w-7xl mx-auto">
+    <main class="flex-1 overflow-y-auto bg-background relative"
+          [class.p-4]="isAuthenticated()"
+          [class.md:p-6]="isAuthenticated()">
+      
+      <div [class.max-w-7xl]="isAuthenticated()" 
+           [class.mx-auto]="isAuthenticated()"
+           [class.w-full]="!isAuthenticated()"
+           [class.h-full]="!isAuthenticated()">
+        
         <router-outlet></router-outlet>
+        
         <app-toast-container />
       </div>
+
+      @if (!isAuthenticated()) {
+        <app-footer></app-footer>
+      }
     </main>
 
-    <app-footer class="flex-shrink-0"></app-footer>
+    @if (isAuthenticated()) {
+      <app-footer class="flex-shrink-0"></app-footer>
+    }
   </div>
 </div>

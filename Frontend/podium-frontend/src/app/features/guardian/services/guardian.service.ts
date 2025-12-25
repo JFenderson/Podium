@@ -1,20 +1,33 @@
-import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import {
   GuardianDto,
   GuardianDashboardDto,
   LinkStudentDto,
   GuardianActivityDto,
-  StudentGuardianDto
+  StudentGuardianDto,
+  ContactRequestAction,
+  ScholarshipAction
 } from '../../../core/models/guardian.models';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GuardianService {
   private readonly endpoint = 'Guardian';
-
+private http = inject(HttpClient);
+  private toast = inject(ToastService);
+  private apiUrl = `${environment.apiUrl}/Guardian`;
+  private hubUrl = `${environment.apiUrl}/hubs/notifications`;
+  
+  private hubConnection?: HubConnection;
+  public dashboard = signal<GuardianDashboardDto | null>(null);
+  
   constructor(private api: ApiService) {}
 
   /**
@@ -34,8 +47,11 @@ export class GuardianService {
   /**
    * Get guardian dashboard
    */
+
   getDashboard(): Observable<GuardianDashboardDto> {
-    return this.api.get<GuardianDashboardDto>(`${this.endpoint}/dashboard`);
+    return this.http.get<GuardianDashboardDto>(`${this.endpoint}/dashboard`).pipe(
+      tap(data => this.dashboard.set(data))
+    );
   }
 
   /**
@@ -83,9 +99,13 @@ export class GuardianService {
    * Respond to scholarship offer (Accept/Decline)
    * Updated to match Backend: PUT /api/Guardian/scholarships/{id}/respond
    */
-  respondToScholarship(offerId: number, response: 'Accepted' | 'Declined', notes?: string): Observable<any> {
-    const payload = { response, notes };
-    return this.api.put(`${this.endpoint}/scholarships/${offerId}/respond`, payload);
+ respondToScholarship(action: ScholarshipAction): Observable<void> {
+    return this.http.post<void>(`${this.endpoint}/scholarships/${action.offerId}/respond`, action).pipe(
+      tap(() => {
+        this.toast.success(`Scholarship ${action.status}`);
+        this.refreshDashboard();
+      })
+    );
   }
 
   // =========================================================
@@ -108,8 +128,14 @@ export class GuardianService {
    * Approve a contact request
    * Backend: PUT /api/Guardian/contact-requests/{id}/approve
    */
-  approveContactRequest(requestId: number, notes?: string): Observable<any> {
-    return this.api.put(`${this.endpoint}/contact-requests/${requestId}/approve`, { notes });
+
+  approveContactRequest(action: ContactRequestAction): Observable<void> {
+    return this.http.post<void>(`${this.endpoint}/approvals/contact`, action).pipe(
+      tap(() => {
+        this.toast.success(`Request ${action.approved ? 'Approved' : 'Declined'}`);
+        this.refreshDashboard(); 
+      })
+    );
   }
 
   /**
@@ -199,5 +225,25 @@ export class GuardianService {
    */
   getGuardianStats(): Observable<any> {
     return this.api.get(`${this.endpoint}/dashboard`); // Mapped to dashboard as stats are likely there
+  }
+
+  startSignalR() {
+    this.hubConnection = new HubConnectionBuilder()
+      .withUrl(this.hubUrl)
+      .withAutomaticReconnect()
+      .build();
+
+    this.hubConnection.start()
+      .then(() => console.log('Guardian Hub Connected'))
+      .catch((err: any) => console.error('SignalR Error:', err));
+
+    this.hubConnection.on('DashboardUpdate', () => {
+      this.toast.info('New activity received');
+      this.refreshDashboard();
+    });
+  }
+
+  private refreshDashboard() {
+    this.getDashboard().subscribe();
   }
 }

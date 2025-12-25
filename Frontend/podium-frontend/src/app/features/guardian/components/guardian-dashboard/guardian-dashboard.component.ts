@@ -5,17 +5,24 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { GuardianService } from '../../services/guardian.service';
 import { AuthService } from '../../../../features/auth/services/auth.service';
 import {
-  GuardianDashboardDto,
   GuardianPendingApprovalDto,
-  GuardianApprovalDto,
-  GuardianLinkedStudentDto
+  GuardianApprovalDto
 } from '../../../../core/models/guardian.models';
 import { Roles } from '../../../../core/models/common.models';
+import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
+import { ScholarshipCardComponent } from '../scholarship-card/scholarship-card.component';
+import { ContactRequestCardComponent } from '../contact-request-card/contact-request-card.component';
 
 @Component({
   selector: 'app-guardian-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    SkeletonLoaderComponent,
+    
+],
   templateUrl: './guardian-dashboard.component.html'
 })
 export class GuardianDashboardComponent implements OnInit {
@@ -23,7 +30,10 @@ export class GuardianDashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
-  dashboard: GuardianDashboardDto | null = null;
+  // Assuming guardianService.dashboard is a Signal. 
+  // If it's a BehaviorSubject, use AsyncPipe in template.
+  dashboard = this.guardianService.dashboard; 
+  
   isLoading = false;
   isProcessingApproval = false;
   error: string | null = null;
@@ -47,29 +57,39 @@ export class GuardianDashboardComponent implements OnInit {
       return;
     }
 
-    this.loadDashboard();
+    this.loadData();
+    // Ensure SignalR is connected for real-time updates
+    this.guardianService.startSignalR(); 
   }
 
-  loadDashboard(): void {
+  loadData() {
     this.isLoading = true;
-    this.error = null;
-
     this.guardianService.getDashboard().subscribe({
-      next: (dashboard) => {
-        this.dashboard = dashboard;
+      next: () => this.isLoading = false,
+      error: (err) => {
         this.isLoading = false;
-      },
-      error: (error) => {
-        this.error = 'Failed to load dashboard. Please try again.';
-        this.isLoading = false;
-        console.error('Error loading dashboard:', error);
+        this.error = 'Failed to load dashboard data.';
+        console.error(err);
       }
     });
   }
 
+  // --- Handlers ---
+
+  approveRequest(requestId: number) {
+    this.guardianService.approveContactRequest({ requestId, approved: true }).subscribe();
+  }
+
+  declineRequest(requestId: number) {
+    if(confirm('Are you sure you want to decline this request?')) {
+      this.guardianService.approveContactRequest({ requestId, approved: false }).subscribe();
+    }
+  }
+
   openApprovalModal(approval: GuardianPendingApprovalDto): void {
     this.selectedApproval = approval;
-    this.approvalForm.reset({ approved: true });
+    // Default to approved = true
+    this.approvalForm.reset({ approved: true, notes: '' });
     this.showApprovalModal = true;
   }
 
@@ -79,24 +99,30 @@ export class GuardianDashboardComponent implements OnInit {
     this.approvalForm.reset();
   }
 
- submitApproval(): void {
+  submitApproval(): void {
     if (!this.selectedApproval) return;
 
     this.isProcessingApproval = true;
     this.error = null;
 
-    // Convert boolean 'approved' to backend string enum
     const responseType = this.approvalForm.value.approved ? 'Accepted' : 'Declined';
     const notes = this.approvalForm.value.notes;
 
-    this.guardianService.respondToScholarship(this.selectedApproval.offerId, responseType, notes).subscribe({
+    // Use the offerId from the selected approval
+    this.guardianService.respondToScholarship({
+      offerId: this.selectedApproval.offerId, 
+      status: responseType, 
+      // notes: notes // Uncomment if backend DTO accepts notes for scholarship response
+    }).subscribe({
       next: () => {
         this.isProcessingApproval = false;
         this.closeApprovalModal();
         this.successMessage = this.approvalForm.value.approved 
           ? 'Offer approved successfully!' 
           : 'Offer declined successfully.';
-        this.loadDashboard();
+        
+        // Reload data to reflect changes
+        this.loadData();
         setTimeout(() => this.successMessage = null, 3000);
       },
       error: (error: any) => {
@@ -105,40 +131,15 @@ export class GuardianDashboardComponent implements OnInit {
         console.error('Error processing approval:', error);
       }
     });
-}
-
-  getActivityIcon(type: string): string {
-    const icons: { [key: string]: string } = {
-      'OfferReceived': 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-      'OfferAccepted': 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-      'OfferDeclined': 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
-      'InterestShown': 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
-      'VideoUploaded': 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
-      'default': 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-    };
-    return icons[type] || icons['default'];
-  }
-
-  getActivityColor(type: string): string {
-    const colors: { [key: string]: string } = {
-      'OfferReceived': 'bg-blue-100 text-blue-600',
-      'OfferAccepted': 'bg-green-100 text-green-600',
-      'OfferDeclined': 'bg-red-100 text-red-600',
-      'ApprovalGranted': 'bg-green-100 text-green-600',
-      'ApprovalDenied': 'bg-red-100 text-red-600',
-      'InterestShown': 'bg-purple-100 text-purple-600',
-      'VideoUploaded': 'bg-indigo-100 text-indigo-600',
-      'default': 'bg-gray-100 text-gray-600'
-    };
-    return colors[type] || colors['default'];
   }
 
   getUrgencyClass(expiresAt?: Date): string {
-    if (!expiresAt) return '';
+    if (!expiresAt) return 'border-gray-200';
     
     const now = new Date();
     const expires = new Date(expiresAt);
-    const daysUntilExpiry = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const diffTime = expires.getTime() - now.getTime();
+    const daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (daysUntilExpiry <= 3) {
       return 'border-red-500 bg-red-50';
