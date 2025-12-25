@@ -45,7 +45,7 @@ export enum NotificationType {
 
 export enum NotificationPriority {
   Low = 'Low',
-  Normal = 'Normal',
+  Medium = 'Medium',
   High = 'High',
   Urgent = 'Urgent'
 }

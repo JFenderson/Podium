@@ -28,7 +28,7 @@ show(message: string, type: Toast['type'] = 'info', priority: NotificationPriori
     switch (priority) {
       case NotificationPriority.Urgent: return 10000; // 10s
       case NotificationPriority.High: return 7000;    // 7s
-      case NotificationPriority.Normal: return 5000;  // 5s
+      case NotificationPriority.Medium: return 5000;  // 5s
       default: return 3000;                           // 3s (Low)
     }
   }

@@ -1,8 +1,8 @@
-// notification-list.component.ts
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NotificationService } from '../../../core/services/notification.service';
+// CHECK THIS PATH: ensure it points to where you saved the file in step 2
 import { NotificationCardComponent } from './notification-card.component';
 import { NotificationDto, NotificationPriority } from '../../../core/models/notification.models';
 
@@ -18,7 +18,7 @@ import { NotificationDto, NotificationPriority } from '../../../core/models/noti
           <option [ngValue]="null">All Priorities</option>
           <option [value]="Priority.Urgent">Urgent</option>
           <option [value]="Priority.High">High</option>
-          <option [value]="Priority.Normal">Normal</option>
+          <option [value]="Priority.Medium">Medium</option>
           <option [value]="Priority.Low">Low</option>
         </select>
 
@@ -33,7 +33,8 @@ import { NotificationDto, NotificationPriority } from '../../../core/models/noti
         <app-notification-card 
           *ngFor="let notification of notifications()" 
           [notification]="notification"
-          (markRead)="onMarkRead($event)">
+          (markRead)="onMarkRead($event)"
+          (dismiss)="onDismiss($event)">
         </app-notification-card>
 
         <div *ngIf="notifications().length === 0" class="text-center py-10 text-gray-500">
@@ -46,7 +47,7 @@ import { NotificationDto, NotificationPriority } from '../../../core/models/noti
 export class NotificationListComponent implements OnInit {
   private service = inject(NotificationService);
   
-  Priority = NotificationPriority; // Expose enum to template
+  Priority = NotificationPriority;
   notifications = signal<NotificationDto[]>([]);
   
   selectedPriority: NotificationPriority | null = null;
@@ -57,6 +58,7 @@ export class NotificationListComponent implements OnInit {
   }
 
   loadNotifications() {
+    // Now this will work because we added getNotifications back to the service
     this.service.getNotifications({
       priority: this.selectedPriority || undefined,
       isRead: this.showUnreadOnly ? false : undefined,
@@ -68,7 +70,13 @@ export class NotificationListComponent implements OnInit {
   }
 
   onMarkRead(notification: NotificationDto) {
-    // Call service logic to mark as read
-    console.log('Marking as read:', notification.notificationId);
+    this.service.markAsRead(notification.notificationId).subscribe();
+  }
+
+  // Added missing handler
+  onDismiss(notification: NotificationDto) {
+    this.service.deleteNotification(notification.notificationId).subscribe(() => {
+        this.loadNotifications(); // Reload list after delete
+    });
   }
 }

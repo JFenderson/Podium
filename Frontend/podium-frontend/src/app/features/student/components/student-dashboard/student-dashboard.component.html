@@ -142,44 +142,28 @@
       </div>
     </div>
 
-    <div class="lg:col-span-2">
-      <div class="bg-white rounded-lg shadow overflow-hidden h-full">
-        <div class="px-4 py-3 border-b bg-gray-50">
-          <h6 class="text-blue-600 font-bold m-0">Recent Notifications</h6>
-        </div>
-        <div class="p-0">
-          <div
-            *ngIf="dashboard.recentNotifications.length === 0"
-            class="text-center text-gray-400 py-12"
-          >
-            No new notifications.
-          </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-lg font-bold text-gray-900">Recent Notifications</h2>
+    <span class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-xs font-semibold">
+      {{ (notificationService.unreadCount$ | async) || 0 }} New
+    </span>
+  </div>
 
-          <div class="divide-y divide-gray-100">
-            <div
-              *ngFor="let note of dashboard.recentNotifications"
-              class="p-4 hover:bg-gray-50 transition"
-            >
-              <div class="flex justify-between items-start">
-                <h6
-                  class="text-sm mb-1"
-                  [ngClass]="{
-                    'font-bold text-gray-900': !note.isRead,
-                    'text-gray-600': note.isRead
-                  }"
-                >
-                  {{ note.title }}
-                </h6>
-                <small class="text-gray-400 text-xs">{{
-                  note.createdAt | date : 'shortDate'
-                }}</small>
-              </div>
-              <p class="text-sm text-gray-500 m-0">{{ note.message }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="space-y-4">
+    <app-notification-card
+      *ngFor="let notification of notificationService.notifications$ | async"
+      [notification]="notification"
+      (markRead)="onMarkAsRead($event)"
+      (dismiss)="onDismiss($event)">
+    </app-notification-card>
+
+    <div *ngIf="(notificationService.notifications$ | async)?.length === 0" 
+         class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+      <p>No new notifications</p>
     </div>
+  </div>
+</div>
   </div>
 </div>
 
