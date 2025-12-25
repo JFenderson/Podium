@@ -9,20 +9,26 @@ import { ServiceResult, ApiError } from '../models/common.models';
   providedIn: 'root'
 })
 export class ApiService {
-  protected readonly baseUrl = environment.apiUrl;
+  // FIX 1: Use a getter to ensure we always get the fresh value from environment
+  // This prevents initialization race conditions where baseUrl might be undefined
+  protected get baseUrl(): string {
+    return environment.apiUrl;
+  }
 
-  constructor(protected http: HttpClient) {}
+  constructor(protected http: HttpClient) {
+    console.log('✅ ApiService Ready. Target API:', this.baseUrl);
+  }
 
   /**
    * GET request
    */
   get<T>(endpoint: string, params?: any): Observable<T> {
-    const httpParams = this.buildHttpParams(params);
-    
-    return this.http.get<T>(`${this.baseUrl}/${endpoint}`, { params: httpParams }).pipe(
-      catchError(this.handleError)
-    );
-  }
+  const fullUrl = `${this.baseUrl}/${endpoint}`;
+  console.log(`🚀 API SENDING REQUEST TO: ${fullUrl}`); // <--- LOOK FOR THIS LOG
+  return this.http.get<T>(fullUrl, { params: this.buildHttpParams(params) }).pipe(
+    catchError(this.handleError)
+  );
+}
 
   /**
    * POST request
@@ -61,7 +67,7 @@ export class ApiService {
   }
 
   /**
-   * Upload file with form data
+   * Upload file
    */
   upload<T>(endpoint: string, formData: FormData): Observable<T> {
     return this.http.post<T>(`${this.baseUrl}/${endpoint}`, formData).pipe(
@@ -74,7 +80,6 @@ export class ApiService {
    */
   download(endpoint: string, params?: any): Observable<Blob> {
     const httpParams = this.buildHttpParams(params);
-    
     return this.http.get(`${this.baseUrl}/${endpoint}`, {
       params: httpParams,
       responseType: 'blob'
@@ -97,12 +102,8 @@ export class ApiService {
     );
   }
 
-  /**
-   * Build HTTP params from object
-   */
   private buildHttpParams(params?: any): HttpParams {
     let httpParams = new HttpParams();
-    
     if (params) {
       Object.keys(params).forEach(key => {
         const value = params[key];
@@ -117,13 +118,9 @@ export class ApiService {
         }
       });
     }
-    
     return httpParams;
   }
 
-  /**
-   * Handle HTTP errors
-   */
   protected handleError(error: HttpErrorResponse): Observable<never> {
     const apiError: ApiError = {
       message: 'An error occurred',
@@ -132,10 +129,8 @@ export class ApiService {
     };
 
     if (error.error instanceof ErrorEvent) {
-      // Client-side error
       apiError.message = error.error.message;
     } else {
-      // Server-side error
       if (error.error?.message) {
         apiError.message = error.error.message;
       } else if (error.error?.errors) {

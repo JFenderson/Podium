@@ -6,7 +6,7 @@ import { AuthService } from '../../features/auth/services/auth.service'; // Adju
 @Component({
   selector: 'app-guardian',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet ],
   templateUrl: './guardian-layout.html',
   styles: []
 })

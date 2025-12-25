@@ -11,7 +11,7 @@ import { GuardianContactRequestDto } from '../../../../core/models/guardian.mode
       <div class="flex justify-between items-start mb-3">
         <div class="flex items-center space-x-3">
           <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-            {{ request.recruiterName.charAt(0) }}
+            {{ request.recruiterName?.charAt(0) }}
           </div>
           <div>
             <h4 class="text-sm font-bold text-gray-900">{{ request.recruiterName }}</h4>

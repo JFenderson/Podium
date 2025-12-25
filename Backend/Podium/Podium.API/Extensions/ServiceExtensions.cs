@@ -196,18 +196,18 @@ namespace Podium.API.Extensions
 
             // Hangfire
             services.AddHangfire(config => config
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
-                {
-                    CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                    SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                    QueuePollInterval = TimeSpan.Zero,
-                    UseRecommendedIsolationLevel = true,
-                    DisableGlobalLocks = true
-                }));
-
+                  .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                  .UseSimpleAssemblyNameTypeSerializer()
+                  .UseRecommendedSerializerSettings()
+                  .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+                  {
+                      CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                      SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                      QueuePollInterval = TimeSpan.Zero,
+                      UseRecommendedIsolationLevel = true,
+                      DisableGlobalLocks = true,
+                      PrepareSchemaIfNecessary = true // <--- ADD THIS LINE to fix the crash
+                  }));
             services.AddHangfireServer();
 
             // Background Jobs

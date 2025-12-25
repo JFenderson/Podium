@@ -1,4 +1,4 @@
-// Guardian DTOs matching backend
+// src/app/core/models/guardian.models.ts
 
 export interface GuardianDto {
   guardianId: number;
@@ -22,9 +22,10 @@ export interface GuardianLinkedStudentDto {
   graduationYear?: number;
   highSchool?: string;
   primaryInstrument?: string;
+  
+  // Stats & UI Flags
   pendingOffers: number;
   pendingApprovals: number;
-
   pendingContactRequests: number;
   activeScholarshipOffers: number;
   bandsInterested: number;
@@ -36,43 +37,51 @@ export interface GuardianLinkedStudentDto {
 export interface LinkStudentDto {
   studentEmail: string;
   relationship: string;
-  verificationCode: string; // Optional, if you implement invite codes later
+  verificationCode: string;
+}
+
+// FIX: Added missing DTOs that were causing build errors
+export interface NotificationListDto {
+  items: any[]; // You can replace 'any' with NotificationDto if you have it
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface GuardianNotificationPreferencesDto {
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  inAppNotifications: boolean;
+  alertTypes: string[];
 }
 
 export interface GuardianDashboardDto {
-  pendingApprovals: GuardianPendingApprovalDto[];
-  recentActivity: GuardianActivityDto[];
+  // Data Lists
+linkedStudents?: GuardianLinkedStudentDto[];
+  pendingApprovals?: GuardianPendingApprovalDto[];
+  recentActivity?: GuardianActivityDto[]; 
+  recentActivities?: GuardianRecentActivityDto[];
+  priorityAlerts?: PriorityAlertDto[];
+  
+  pendingContactRequests?: GuardianContactRequestDto[];
+  scholarshipOffers?: GuardianScholarshipDto[];
+
+  // Summary Stats
   totalOffers: number;
   pendingOffersCount: number;
-  priorityAlerts: PriorityAlertDto[];
-  // Summary Stats
   totalPendingApprovals: number;
   totalActiveOffers: number;
   totalUnreadNotifications: number;
-
-  // Data Lists for Columns
-  pendingContactRequests: GuardianContactRequestDto[]; // Column 1
-  scholarshipOffers: GuardianScholarshipDto[];         // Column 2
-  recentActivities: GuardianRecentActivityDto[];       // Column 3
-  
-  linkedStudents: GuardianLinkedStudentDto[];
-}
-
-export interface ContactRequestAction {
-  requestId: number;
-  approved: boolean;
-}
-
-export interface ScholarshipAction {
-  offerId: number;
-  status: 'Accepted' | 'Declined';
 }
 
 export interface GuardianContactRequestDto {
   requestId: number;
   studentId: number;
   studentName: string;
-  recruiterName: string;
+ recruiterName?: string;
   recruiterRole: string;
   recruiterAvatarUrl?: string;
   bandName: string;
@@ -87,60 +96,54 @@ export interface GuardianPendingApprovalDto {
   studentName: string;
   bandId: number;
   bandName: string;
-  offerType?: string;
   amount?: number;
+  offerType?: string;
   description: string;
-  expiresAt?: Date;
   sentAt: Date;
-  offerDetails: string;
+  expiresAt?: Date;
   dateReceived: Date;
-  requestedAt: Date;
 }
 
 export interface GuardianActivityDto {
   activityId: string;
-  type: GuardianActivityType;
+  type: string;
   studentName: string;
   description: string;
   timestamp: Date;
-  relatedEntityId?: number;
 }
 
-export enum GuardianActivityType {
-  OfferReceived = 'OfferReceived',
-  OfferAccepted = 'OfferAccepted',
-  OfferDeclined = 'OfferDeclined',
-  ApprovalRequested = 'ApprovalRequested',
-  ApprovalGranted = 'ApprovalGranted',
-  ApprovalDenied = 'ApprovalDenied',
-  ContactRequested = 'ContactRequested',
-  VideoUploaded = 'VideoUploaded',
-  InterestShown = 'InterestShown',
+export interface GuardianRecentActivityDto {
+  activityType: string;
+  description: string;
+  timestamp: Date;
+  studentName: string;
+  iconType: string;
 }
 
-export interface GuardianApprovalDto {
-  offerId: number;
-  approved: boolean;
-  notes?: string;
+export interface PriorityAlertDto {
+  alertType: string;
+  message: string;
+  studentId: number;
+  studentName: string;
+  deadline: Date;
+  actionUrl: string;
+  severity: 'High' | 'Medium' | 'Low';
 }
 
-export interface GuardianApprovalRequestDto {
-  requestId: number;
+export interface GuardianScholarshipDto {
   offerId: number;
   studentId: number;
   studentName: string;
   bandId: number;
   bandName: string;
-  offerDetails: string;
-  amount?: number;
-  requestedAt: Date;
-  status: ApprovalStatus;
-}
-
-export enum ApprovalStatus {
-  Pending = 'Pending',
-  Approved = 'Approved',
-  Declined = 'Declined',
+  amount: number; // standardized
+  scholarshipAmount: number; // alias if backend sends this
+  offerType: string;
+  status: string;
+  createdAt: Date;
+  expirationDate: Date;
+  terms?: string;
+  requiresGuardianApproval: boolean;
 }
 
 export interface StudentGuardianDto {
@@ -148,24 +151,8 @@ export interface StudentGuardianDto {
   firstName: string;
   lastName: string;
   email?: string;
-  phoneNumber?: string;
   relationship?: string;
   isPrimary: boolean;
-}
-
-export interface GuardianScholarshipDto {
-studentName: any;
-amount: string|number;
-  offerId: number;
-  bandId: number;
-  bandName: string;
-  scholarshipAmount: number;
-  status: string; // 'Sent', 'Accepted', 'Declined', 'expired'
-  offerType: string;
-  createdAt: Date;
-  expirationDate: Date;
-  terms?: string;
-  requiresGuardianApproval: boolean;
 }
 
 export interface StudentProfileViewDto {
@@ -184,7 +171,7 @@ export interface StudentProfileViewDto {
 export interface StudentActivityReportDto {
   studentId: number;
   studentName: string;
-  videosUploaded: any[]; // Define VideoActivityDto if needed
+  videosUploaded: any[];
   interestShown: InterestActivityDto[];
   offersReceived: OfferActivityDto[];
   eventsAttended: EventActivityDto[];
@@ -210,27 +197,3 @@ export interface EventActivityDto {
   eventDate: Date;
   didAttend: boolean;
 }
-
-export interface PriorityAlertDto {
-  alertType: string; // 'ExpiringOffer' | 'UrgentApproval'
-  message: string;
-  studentId: number;
-  studentName: string;
-  deadline: Date;
-  actionUrl: string;
-  severity: 'High' | 'Medium' | 'Low';
-}
-
-export interface GuardianRecentActivityDto {
-  title: string;
-  description: string;
-  timestamp: Date;
-  iconType: string;
-}
-
-export interface GuardianApprovalDto {
-  offerId: number;
-  approved: boolean;
-  notes?: string;
-}
-

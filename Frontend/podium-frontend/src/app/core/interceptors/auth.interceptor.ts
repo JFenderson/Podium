@@ -3,7 +3,6 @@ import { inject } from '@angular/core';
 import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
 import { AuthService } from '../../features/auth/services/auth.service';
 
-// Shared state for token refresh (outside the interceptor function)
 let isRefreshing = false;
 const refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
@@ -18,34 +17,25 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // Add auth token to request
   const token = authService.getToken();
   let authReq = req;
+  
   if (token) {
-    req = addToken(req, token);
+    // FIX: Update 'authReq', NOT 'req'.
+    // Previously: req = addToken(req, token) <-- 'authReq' remained the old request!
+    authReq = addToken(req, token);
   }
 
-  return next(req).pipe(
+  return next(authReq).pipe(
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
-        return handle401Error(req, next, authService);
+        return handle401Error(authReq, next, authService);
       }
       return throwError(() => error);
     })
   );
 };
 
-/**
- * Add JWT token to request headers
- */
-function addToken(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
-  return request.clone({
-    setHeaders: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-}
+// ... [Keep the rest of the file (addToken, isPublicEndpoint, handle401Error) exactly as is] ...
 
-/**
- * Check if endpoint is public (doesn't require auth)
- */
 function isPublicEndpoint(url: string): boolean {
   const publicEndpoints = [
     '/Auth/login',
@@ -55,44 +45,44 @@ function isPublicEndpoint(url: string): boolean {
     '/Auth/forgot-password',
     '/Auth/reset-password',
     '/Auth/registration-options',
-    '/Band' // Public band listing
+    '/Band'
   ];
-
   return publicEndpoints.some(endpoint => url.includes(endpoint));
 }
 
-/**
- * Handle 401 Unauthorized errors by refreshing token
- */
 function handle401Error(request: HttpRequest<unknown>, next: HttpHandlerFn, authService: AuthService) {
   if (!isRefreshing) {
-    // A. First request to hit 401 starts the refresh
     isRefreshing = true;
     refreshTokenSubject.next(null);
 
     return authService.refreshToken().pipe(
       switchMap((response) => {
         isRefreshing = false;
-
         const newToken = response.accessToken || response.token;
-
-          refreshTokenSubject.next(newToken); // Pass new token to waiting requests
-          return next(addToken(request, newToken));
+        refreshTokenSubject.next(newToken);
+        return next(addToken(request, newToken));
       }),
       catchError((err) => {
         isRefreshing = false;
-        authService.logout(); // If refresh fails, strict logout
+        authService.logout();
         return throwError(() => err);
       })
     );
   } else {
-    // B. Subsequent requests wait for the refresh to finish
     return refreshTokenSubject.pipe(
-      filter((token) => token !== null), // Wait until token is not null
-      take(1), // Take 1 and complete
+      filter((token) => token !== null),
+      take(1),
       switchMap((token) => {
         return next(addToken(request, token!));
       })
     );
   }
+}
+
+function addToken(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
+  return request.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token}`
+    }
+  });
 }

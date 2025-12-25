@@ -1,233 +1,244 @@
-<div class="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 p-6">
   
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-gray-900">Guardian Dashboard</h1>
-    <p class="text-gray-600">Overview of your students and pending actions</p>
-  </div>
-
-  <div *ngIf="isLoading" class="grid grid-cols-1 gap-6">
-    <app-skeleton-loader class="h-40 w-full"></app-skeleton-loader>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <app-skeleton-loader class="h-64"></app-skeleton-loader>
-      <app-skeleton-loader class="h-64"></app-skeleton-loader>
-      <app-skeleton-loader class="h-64"></app-skeleton-loader>
-    </div>
-  </div>
-
-  <div *ngIf="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-md">
-    <div class="flex">
-      <div class="flex-shrink-0">
-        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-        </svg>
+  <header class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Guardian Dashboard</h1>
+        <p class="text-gray-600">Overview of your students' recruitment activity</p>
       </div>
-      <div class="ml-3">
-        <p class="text-sm text-red-700">{{ error }}</p>
+      <div class="flex gap-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+          <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+          Live Updates Active
+        </span>
       </div>
     </div>
-  </div>
 
-  <div *ngIf="successMessage" class="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg animate-fade-in-down">
-    <strong class="font-bold">Success!</strong>
-    <span class="block sm:inline"> {{ successMessage }}</span>
-  </div>
+    <div *ngIf="isLoading" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <app-skeleton-loader *ngFor="let i of [1,2,3,4]" class="h-28 rounded-xl"></app-skeleton-loader>
+    </div>
 
-  <div *ngIf="!isLoading && dashboard() as data" class="space-y-8">
-
-    <div *ngIf="data.pendingApprovals && data.pendingApprovals.length > 0" class="bg-white rounded-xl shadow-sm border border-amber-200 overflow-hidden">
-      <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center">
-        <div class="flex items-center">
-          <span class="flex p-2 rounded-lg bg-amber-100 text-amber-600 mr-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-          </span>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">Action Required</h2>
-            <p class="text-sm text-amber-700">You have {{ data.pendingApprovals.length }} pending approvals</p>
-          </div>
-        </div>
-      </div>
+    <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       
-      <div class="divide-y divide-gray-100">
-        <div *ngFor="let approval of data.pendingApprovals" class="p-6 hover:bg-gray-50 transition-colors">
-          <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded">{{ approval.offerType }}</span>
-                <span class="text-sm text-gray-500">• {{ approval.dateReceived | date:'mediumDate' }}</span>
-              </div>
-              <h3 class="text-xl font-bold text-gray-900">{{ approval.studentName }} has an offer!</h3>
-              <p class="text-gray-600 mt-1">
-                <span class="font-medium text-gray-900">{{ approval.bandName }}</span> is offering a scholarship of 
-                <span class="font-bold text-green-600">{{ approval.amount | currency }}</span>.
-              </p>
-              <p class="text-xs text-gray-500 mt-2 italic">"{{ approval.description }}"</p>
+      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-blue-200 group relative overflow-hidden"
+              (click)="scrollToSection('activity-timeline')"> <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <svg class="w-16 h-16 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+        </div>
+        <div class="text-gray-500 text-sm font-medium mb-1">Linked Students</div>
+        <div class="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+          {{ data.linkedStudents?.length || 0 }}
+        </div>
+      </button>
+
+      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 group relative overflow-hidden"
+              (click)="scrollToSection('contact-requests')">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <svg class="w-16 h-16 text-orange-600" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
+        </div>
+        <div class="text-gray-500 text-sm font-medium mb-1">Pending Requests</div>
+        <div class="text-3xl font-bold text-orange-600">
+          {{ data.pendingContactRequests?.length || 0 }}
+        </div>
+      </button>
+
+      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-green-200 group relative overflow-hidden"
+              (click)="scrollToSection('scholarship-offers')">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <svg class="w-16 h-16 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+        </div>
+        <div class="text-gray-500 text-sm font-medium mb-1">Active Offers</div>
+        <div class="text-3xl font-bold text-green-600">
+          {{ data.totalActiveOffers || 0 }}
+        </div>
+      </button>
+
+      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-red-200 group relative overflow-hidden"
+              (click)="scrollToSection('activity-timeline')">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <svg class="w-16 h-16 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+        </div>
+        <div class="text-gray-500 text-sm font-medium mb-1">Unread Alerts</div>
+        <div class="text-3xl font-bold text-red-600">
+          {{ data.priorityAlerts?.length || 0 }}
+        </div>
+      </button>
+
+    </div>
+  </header>
+
+  <div *ngIf="error" class="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between">
+    <span>{{ error }}</span>
+    <button (click)="loadData()" class="underline font-bold">Retry</button>
+  </div>
+
+  <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <section id="contact-requests" class="space-y-4 scroll-mt-24">
+      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+        <span class="bg-orange-100 text-orange-600 p-1.5 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        </span>
+        Contact Requests
+      </h2>
+
+      <div *ngIf="!data.pendingContactRequests || data.pendingContactRequests.length === 0" class="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center text-gray-500">
+        No pending requests
+      </div>
+
+      <div *ngFor="let req of data.pendingContactRequests" class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs overflow-hidden">
+               <img *ngIf="req.recruiterAvatarUrl" [src]="req.recruiterAvatarUrl" class="w-full h-full object-cover">
+               <span *ngIf="!req.recruiterAvatarUrl">{{ req.recruiterName?.charAt(0) || '?' }}</span>
             </div>
-            <button (click)="openApprovalModal(approval)" class="flex-shrink-0 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-              Review & Respond
+            <div>
+              <h3 class="font-bold text-gray-900">{{ req.recruiterName }}</h3>
+              <p class="text-xs text-gray-500">{{ req.bandName }}</p>
+            </div>
+          </div>
+          <span class="text-xs text-gray-400">{{ req.sentAt | date:'MMM d' }}</span>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-2 bg-gray-50 p-2 rounded border border-gray-100 italic">
+          "{{ req.message }}"
+        </p>
+
+        <div class="flex items-center justify-between mt-4">
+          <span class="text-xs font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded">
+            For: {{ req.studentName }}
+          </span>
+          <div class="flex gap-2">
+            <button (click)="declineRequest(req.requestId)" class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+              Decline
+            </button>
+            <button (click)="approveRequest(req.requestId)" class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
+              Approve
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div *ngIf="data.priorityAlerts && data.priorityAlerts.length > 0" class="grid gap-4">
-        <div *ngFor="let alert of data.priorityAlerts" 
-             [class]="'p-4 rounded-lg border flex items-start gap-4 ' + (alert.severity === 'High' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200')">
-            <div [class]="'p-2 rounded-full ' + (alert.severity === 'High' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600')">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-            <div class="flex-1">
-                <h4 class="font-bold text-gray-900">{{ alert.message }}</h4>
-                <p class="text-sm text-gray-600">For {{ alert.studentName }} • Due {{ alert.deadline | date:'shortDate' }}</p>
-            </div>
-            <a [routerLink]="alert.actionUrl" class="text-sm font-medium underline hover:no-underline text-indigo-600">View</a>
-        </div>
-    </div>
+    <section id="scholarship-offers" class="space-y-4 scroll-mt-24">
+      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </span>
+        Pending Offers
+      </h2>
 
-    <div>
-      <div class="flex justify-between items-end mb-6">
-        <div>
-          <h2 class="text-xl font-bold text-gray-900">Your Students</h2>
-          <p class="text-gray-500 text-sm">Manage profiles and activity</p>
-        </div>
-        <a routerLink="/guardian/link-student" class="inline-flex items-center text-sm text-indigo-600 font-medium hover:text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-md transition-colors">
-          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-          Link Student
-        </a>
+      <div *ngIf="!data.scholarshipOffers || data.scholarshipOffers.length === 0" class="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center text-gray-500">
+        No pending offers
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div *ngFor="let student of data.linkedStudents" class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 group relative">
-          <div class="p-6 border-b border-gray-100 bg-gray-50/50">
-            <div class="flex items-center gap-4">
-              <div class="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center text-indigo-600 font-bold text-lg border border-indigo-200">
-                {{ student.studentName.charAt(0) }}
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                  <a [routerLink]="['/guardian/student', student.studentId]" class="focus:outline-none">
-                    <span class="absolute inset-0" aria-hidden="true"></span>
-                    {{ student.studentName }}
-                  </a>
-                </h3>
-                <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">{{ student.highSchool }}</p>
-                <p class="text-xs text-gray-400">Class of {{ student.graduationYear }}</p>
-              </div>
-            </div>
-          </div>
+      <div *ngFor="let offer of data.scholarshipOffers" class="bg-white p-5 rounded-xl shadow-sm border border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        <div class="flex justify-between mb-2">
+          <h3 class="font-bold text-gray-900">{{ offer.bandName }}</h3>
+          <span class="text-xs font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full">
+            ${{ offer.amount | number }}
+          </span>
+        </div>
+        
+        <div class="text-sm text-gray-600 mb-4">
+          <p>{{ offer.offerType }}</p>
+          <p class="text-xs text-red-500 mt-1 flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Expires {{ offer.expirationDate | date:'mediumDate' }}
+          </p>
+        </div>
 
-          <div class="p-6">
-            <div class="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Instrument</p>
-                <p class="font-semibold text-gray-900">{{ student.primaryInstrument }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Active Offers</p>
-                <div class="flex items-center">
-                  <span class="font-bold text-gray-900 text-lg">{{ student.activeScholarshipOffers }}</span>
-                  <span *ngIf="student.hasExpiringOffers" class="ml-2 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" title="Expires Soon"></span>
-                </div>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Interested Bands</p>
-                <p class="font-semibold text-gray-900">{{ student.bandsInterested }}</p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 mb-0.5 uppercase tracking-wide">Last Activity</p>
-                <p class="font-medium text-gray-700">{{ student.lastActivityDate | date:'MM/dd/yy' }}</p>
-              </div>
-            </div>
-          </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-500">For: {{ offer.studentName }}</span>
+          <button (click)="openApprovalModal({
+            offerId: offer.offerId,
+            studentId: offer.studentId,
+            studentName: offer.studentName,
+            bandId: offer.bandId,
+            bandName: offer.bandName,
+            amount: offer.amount,
+            description: offer.offerType,
+            sentAt: offer.createdAt,
+            dateReceived: offer.createdAt
+          })" class="px-4 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">
+            Review Offer
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="activity-timeline" class="space-y-4 scroll-mt-24">
+      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
+        <span class="bg-purple-100 text-purple-600 p-1.5 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </span>
+        Activity Timeline
+      </h2>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div *ngIf="data.recentActivities && data.recentActivities.length > 0; else noActivity" class="relative pl-4 border-l-2 border-gray-100 space-y-6">
           
-          <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-            <span class="text-xs font-medium text-indigo-600 group-hover:translate-x-1 transition-transform inline-flex items-center">
-              View Profile 
-              <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </span>
+          <div *ngFor="let act of data.recentActivities" class="relative">
+            <div class="absolute -left-[21px] bg-white border-2 border-purple-500 w-3 h-3 rounded-full mt-1.5"></div>
+            
+            <div class="flex flex-col">
+              <span class="text-xs font-semibold text-purple-600 mb-0.5">{{ act.activityType }}</span>
+              <p class="text-sm text-gray-800">{{ act.description }}</p>
+              <div class="flex justify-between items-center mt-1">
+                <span class="text-xs text-gray-500">{{ act.studentName }}</span>
+                <span class="text-xs text-gray-400">{{ act.timestamp | date:'shortTime' }}</span>
+              </div>
+            </div>
           </div>
+
         </div>
+        <ng-template #noActivity>
+          <div class="text-center text-gray-500 py-6 text-sm">
+            No recent activity
+          </div>
+        </ng-template>
       </div>
-    </div>
+    </section>
+
   </div>
 </div>
 
-<div *ngIf="showApprovalModal && selectedApproval" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-  <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" (click)="closeApprovalModal()"></div>
-    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+<div *ngIf="showApprovalModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+    <h3 class="text-xl font-bold mb-4">Respond to Offer</h3>
+    
+    <div *ngIf="selectedApproval" class="mb-6 bg-gray-50 p-4 rounded-lg">
+      <p class="font-bold text-gray-900">{{ selectedApproval.bandName }}</p>
+      <p class="text-sm text-gray-600">{{ selectedApproval.description }}</p>
+      <p class="text-lg font-bold text-green-600 mt-2">${{ selectedApproval.amount | number }}</p>
+    </div>
 
-    <div class="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-        <div class="sm:flex sm:items-start">
-          <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-            <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          </div>
-          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-              Review Scholarship Offer
-            </h3>
-            <div class="mt-2">
-              <p class="text-sm text-gray-500">
-                You are responding to the offer from <span class="font-bold">{{ selectedApproval.bandName }}</span> for <span class="font-bold">{{ selectedApproval.studentName }}</span>.
-              </p>
-              
-              <div class="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-700 border border-gray-200">
-                <div class="flex justify-between mb-1">
-                    <span>Amount:</span>
-                    <span class="font-bold text-green-600">{{ selectedApproval.amount | currency }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Type:</span>
-                    <span class="font-medium">{{ selectedApproval.offerType }}</span>
-                </div>
-              </div>
-
-              <form [formGroup]="approvalForm" class="mt-4 space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
-                  <div class="flex space-x-4">
-                    <label class="inline-flex items-center">
-                      <input type="radio" formControlName="approved" [value]="true" class="form-radio text-indigo-600 h-4 w-4">
-                      <span class="ml-2">Approve Offer</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                      <input type="radio" formControlName="approved" [value]="false" class="form-radio text-red-600 h-4 w-4">
-                      <span class="ml-2">Decline Offer</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label for="notes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                  <textarea 
-                    id="notes" 
-                    formControlName="notes"
-                    rows="3" 
-                    class="mt-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    placeholder="Add a message to the recruiter..."></textarea>
-                </div>
-              </form>
-            </div>
-          </div>
+    <form [formGroup]="approvalForm" (ngSubmit)="submitApproval()">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" formControlName="approved" [value]="true" class="text-green-600 focus:ring-green-500">
+            <span>Accept Offer</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" formControlName="approved" [value]="false" class="text-red-600 focus:ring-red-500">
+            <span>Decline Offer</span>
+          </label>
         </div>
       </div>
-      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-        <button type="button" 
-          [disabled]="isProcessingApproval"
-          (click)="submitApproval()"
-          class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-          [ngClass]="approvalForm.value.approved ? 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500' : 'bg-red-600 hover:bg-red-700 focus:ring-red-500'">
-          <span *ngIf="isProcessingApproval" class="mr-2 animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-          {{ approvalForm.value.approved ? 'Approve' : 'Decline' }}
-        </button>
-        <button type="button" 
-          [disabled]="isProcessingApproval"
-          (click)="closeApprovalModal()"
-          class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-          Cancel
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+        <textarea formControlName="notes" rows="3" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+        <button type="submit" [disabled]="isProcessingApproval" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          {{ isProcessingApproval ? 'Sending...' : 'Submit Response' }}
         </button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
