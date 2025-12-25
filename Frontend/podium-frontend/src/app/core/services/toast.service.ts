@@ -1,9 +1,11 @@
 import { Injectable, signal } from '@angular/core';
+import { NotificationPriority } from '../models/notification.models';
 
 export interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
+  priority?: NotificationPriority;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -11,11 +13,24 @@ export class ToastService {
   toasts = signal<Toast[]>([]);
   private nextId = 0;
 
-  show(message: string, type: Toast['type'] = 'info', duration = 3000) {
+show(message: string, type: Toast['type'] = 'info', priority: NotificationPriority = NotificationPriority.Low) {
     const id = this.nextId++;
-    this.toasts.update(toasts => [...toasts, { id, message, type }]);
+    const duration = this.getDurationByPriority(priority);
     
-    setTimeout(() => this.remove(id), duration);
+    this.toasts.update(toasts => [...toasts, { id, message, type, priority }]);
+    
+    if (duration > 0) {
+      setTimeout(() => this.remove(id), duration);
+    }
+  }
+
+  private getDurationByPriority(priority: NotificationPriority): number {
+    switch (priority) {
+      case NotificationPriority.Urgent: return 10000; // 10s
+      case NotificationPriority.High: return 7000;    // 7s
+      case NotificationPriority.Normal: return 5000;  // 5s
+      default: return 3000;                           // 3s (Low)
+    }
   }
 
   remove(id: number) {

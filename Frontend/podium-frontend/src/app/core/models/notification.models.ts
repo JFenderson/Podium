@@ -118,9 +118,7 @@ export interface NotificationFilterDto {
   type?: NotificationType;
   priority?: NotificationPriority;
   isRead?: boolean;
-  isPinned?: boolean;
-  dateFrom?: Date;
-  dateTo?: Date;
+  since?: Date;
   pageNumber?: number;
   pageSize?: number;
 }
