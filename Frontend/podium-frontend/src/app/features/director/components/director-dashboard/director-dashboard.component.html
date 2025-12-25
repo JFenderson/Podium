@@ -30,7 +30,7 @@
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm font-medium text-text-secondary">Total Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalOffers }}</h3>
+            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalOffers || 0 }}</h3>
           </div>
           <div class="p-2 bg-blue-50 rounded-lg">
             <span class="material-icons text-blue-600">local_offer</span>
@@ -42,7 +42,7 @@
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm font-medium text-text-secondary">Pending Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.pendingOffers }}</h3>
+            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.pendingOffers || 0 }}</h3>
           </div>
           <div class="p-2 bg-orange-50 rounded-lg">
             <span class="material-icons text-orange-600">hourglass_empty</span>
@@ -54,7 +54,7 @@
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm font-medium text-text-secondary">Accepted Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.acceptedOffers }}</h3>
+            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.acceptedOffers || 0 }}</h3>
           </div>
           <div class="p-2 bg-green-50 rounded-lg">
             <span class="material-icons text-green-600">check_circle</span>
@@ -66,7 +66,7 @@
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm font-medium text-text-secondary">Total Students</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalStudents }}</h3>
+            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalStudents || 0 }}</h3>
           </div>
           <div class="p-2 bg-purple-50 rounded-lg">
             <span class="material-icons text-purple-600">school</span>
@@ -76,13 +76,19 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
       <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
         <h3 class="text-lg font-semibold text-text-primary mb-4">Offer Status</h3>
         <div class="space-y-4">
+          <div *ngIf="!offerStatusData || offerStatusData.length === 0" class="text-center text-text-secondary py-4">
+            No data available
+          </div>
           <div *ngFor="let item of offerStatusData" class="flex items-center">
             <div class="w-32 text-sm text-text-secondary">{{ item.status }}</div>
             <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div class="h-full bg-primary" [style.width.%]="(item.count / dashboard.totalOffers) * 100"></div>
+              <div class="h-full bg-primary" 
+                   [style.width.%]="dashboard.totalOffers ? (item.count / dashboard.totalOffers) * 100 : 0">
+              </div>
             </div>
             <div class="w-12 text-right text-sm font-medium">{{ item.count }}</div>
           </div>
@@ -104,7 +110,8 @@
               <p class="text-xs text-text-secondary mt-0.5">{{ activity.timestamp | date:'short' }}</p>
             </div>
           </div>
-          <div *ngIf="dashboard.recentActivity.length === 0" class="text-center py-6 text-text-secondary">
+          
+          <div *ngIf="!dashboard.recentActivity || dashboard.recentActivity.length === 0" class="text-center py-6 text-text-secondary">
             No recent activity found.
           </div>
         </div>
