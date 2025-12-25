@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Podium.Core.Constants;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
@@ -44,5 +45,7 @@ namespace Podium.Core.Entities
 
         [ForeignKey(nameof(GuardianId))]
         public virtual Guardian? Guardian { get; set; }
+
+        public NotificationPriority? Priority { get; set; }
     }
 }

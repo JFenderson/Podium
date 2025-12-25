@@ -6,11 +6,7 @@ using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces; // Updated
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Podium.Application.Services
 {
@@ -478,6 +474,21 @@ namespace Podium.Application.Services
             var query = _unitOfWork.GuardianNotifications.GetQueryable()
                 .Where(n => n.GuardianId == guardian.Id);
             // ... apply filters ...
+            // 1. Filter by Type
+            if (!string.IsNullOrEmpty(filter.Type))
+                query = query.Where(n => n.Type == filter.Type);
+
+            // 2. Filter by Read Status
+            if (filter.IsRead.HasValue)
+                query = query.Where(n => n.IsRead == filter.IsRead.Value);
+
+            // 3. Filter by Priority (New)
+            if (filter.Priority.HasValue)
+                query = query.Where(n => n.Priority == filter.Priority.Value);
+
+            // 4. Sort by Priority (Urgent first) then Date
+            query = query.OrderByDescending(n => n.Priority)
+                         .ThenByDescending(n => n.CreatedAt);
             return ServiceResult<NotificationListDto>.Success(new NotificationListDto());
         }
 

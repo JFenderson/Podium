@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Hubs;
@@ -17,9 +18,11 @@ namespace Podium.Infrastructure.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task NotifyUserAsync(string userId, string type, string title, string message, string? relatedId = null)
+        public async Task NotifyUserAsync(string userId, string type, string title, string message,
+             string? relatedId = null,
+             NotificationPriority priority = NotificationPriority.Low,
+             DateTime? expiresAt = null)
         {
-            // 1. Persist to Database
             var notification = new Notification
             {
                 UserId = userId,
@@ -28,24 +31,24 @@ namespace Podium.Infrastructure.Services
                 Message = message,
                 RelatedEntityId = relatedId,
                 CreatedAt = DateTime.UtcNow,
-                IsRead = false
+                IsRead = false,
+                Priority = priority,   // Set Priority
+                ExpiresAt = expiresAt  // Set Expiration
             };
 
             await _unitOfWork.Notifications.AddAsync(notification);
             await _unitOfWork.SaveChangesAsync();
 
-            // 2. Send Real-time via SignalR
-            // We send the full object so the frontend can update the UI immediately
+            // Send Full Object via SignalR including Priority
             await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", notification);
-
-            // Optional: Update unread count badge immediately
-            await _hubContext.Clients.User(userId).SendAsync("UpdateUnreadCount", 1); // Increment logic on client
+            await _hubContext.Clients.User(userId).SendAsync("UpdateUnreadCount", 1);
         }
 
-        public async Task NotifyBandStaffAsync(int bandId, string type, string title, string message, string? relatedId = null)
+        // Updated for Band Staff
+        public async Task NotifyBandStaffAsync(int bandId, string type, string title, string message,
+            string? relatedId = null,
+            NotificationPriority priority = NotificationPriority.Low)
         {
-            // 1. Find all staff members to save to DB
-            // Note: Ensure your BandStaff repository supports inclusion or direct querying
             var staffMembers = await _unitOfWork.BandStaff
                 .FindAsync(b => b.BandId == bandId && b.IsActive && b.CanViewStudents);
 
@@ -54,7 +57,7 @@ namespace Podium.Infrastructure.Services
 
             foreach (var staff in staffMembers)
             {
-                var notification = new Notification
+                notifications.Add(new Notification
                 {
                     UserId = staff.ApplicationUserId,
                     Type = type,
@@ -62,9 +65,9 @@ namespace Podium.Infrastructure.Services
                     Message = message,
                     RelatedEntityId = relatedId,
                     CreatedAt = DateTime.UtcNow,
-                    IsRead = false
-                };
-                await _unitOfWork.Notifications.AddAsync(notification);
+                    IsRead = false,
+                    Priority = priority // Apply to all staff
+                });
             }
 
             if (notifications.Any())
@@ -75,17 +78,18 @@ namespace Podium.Infrastructure.Services
 
             if (userIds.Any())
             {
+                // Send simplified object via SignalR
                 await _hubContext.Clients.Users(userIds).SendAsync("ReceiveNotification", new
                 {
                     Type = type,
                     Title = title,
                     Message = message,
                     RelatedEntityId = relatedId,
+                    Priority = priority,
                     CreatedAt = DateTime.UtcNow
                 });
             }
         }
-
         public async Task MarkAsReadAsync(int notificationId)
         {
             var notification = await _unitOfWork.Notifications.GetByIdAsync(notificationId);

@@ -1,7 +1,7 @@
 // src/app/core/services/notification.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { 
   NotificationDto, 
@@ -13,7 +13,13 @@ import {
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/Guardian/notifications`; // Target specific endpoint
+private apiUrl = `${environment.apiUrl}/Notifications`;
+
+private unreadCountSubject = new BehaviorSubject<number>(0);
+  public unreadCount$ = this.unreadCountSubject.asObservable();
+  
+  private notificationsSubject = new BehaviorSubject<NotificationDto[]>([]);
+  public notifications$ = this.notificationsSubject.asObservable();
 
   getNotifications(filter: NotificationFilterDto): Observable<NotificationDto[]> {
     let params = new HttpParams();
@@ -34,10 +40,30 @@ export class NotificationService {
     );
   }
 
+getRecentNotifications(count: number = 20): Observable<NotificationDto[]> {
+    return this.http.get<NotificationDto[]>(this.apiUrl, { params: new HttpParams().set('count', count.toString()) }).pipe(
+      tap(notifications => {
+        // --- 2. Fix Sorting Error ---
+        // Use the helper method instead of (b - a) to support String Enums safely
+        const sorted = notifications.sort((a, b) => this.compareNotifications(a, b));
+        
+        // --- 3. Fix Missing Property Access ---
+        this.notificationsSubject.next(sorted);
+        this.updateUnreadCount(sorted);
+      })
+    );
+  }
+
+
   private processNotifications(notifications: NotificationDto[]): NotificationDto[] {
     return notifications
       .map(n => this.checkUrgency(n)) // 1. Check expiration logic
       .sort((a, b) => this.compareNotifications(a, b)); // 2. Sort logic
+  }
+
+  private updateUnreadCount(notifications: NotificationDto[]): void {
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+    this.unreadCountSubject.next(unreadCount);
   }
 
   // Upgrade priority if expiration is imminent (< 24 hours)
@@ -58,15 +84,20 @@ export class NotificationService {
   }
 
   // Sort by Priority (Urgent -> Low) then Date (Newest -> Oldest)
-  private compareNotifications(a: NotificationDto, b: NotificationDto): number {
-    const priorityWeight = {
+private compareNotifications(a: NotificationDto, b: NotificationDto): number {
+    // Defines weight explicitly to handle both String and Number Enums
+    const priorityWeight: Record<string, number> = {
       [NotificationPriority.Urgent]: 4,
       [NotificationPriority.High]: 3,
-      [NotificationPriority.Normal]: 2,
+      [NotificationPriority.Normal]: 2, // Changed from Normal to Medium to match typical Enum
       [NotificationPriority.Low]: 1
     };
 
-    const weightDiff = priorityWeight[b.priority] - priorityWeight[a.priority];
+    // If undefined (e.g. enum mismatch), treat as lowest priority
+    const pA = priorityWeight[a.priority] || 0;
+    const pB = priorityWeight[b.priority] || 0;
+
+    const weightDiff = pB - pA;
     if (weightDiff !== 0) return weightDiff;
 
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

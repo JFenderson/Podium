@@ -15,6 +15,7 @@ export interface NotificationDto {
   createdAt: Date;
   readAt?: Date;
   expiresAt?: Date;
+  
 }
 
 export enum NotificationType {

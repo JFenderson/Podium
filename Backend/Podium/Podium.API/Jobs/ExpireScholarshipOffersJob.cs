@@ -1,10 +1,6 @@
-﻿using Podium.Core.Interfaces; // Changed from Podium.Infrastructure.Data
+﻿using Microsoft.EntityFrameworkCore;
 using Podium.Core.Constants;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
-using System.Linq;
-using System;
+using Podium.Core.Interfaces; // Changed from Podium.Infrastructure.Data
 
 namespace Podium.API.Jobs
 {
@@ -12,11 +8,13 @@ namespace Podium.API.Jobs
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExpireScholarshipOffersJob> _logger;
+        private readonly INotificationService _notificationService;
 
-        public ExpireScholarshipOffersJob(IUnitOfWork unitOfWork, ILogger<ExpireScholarshipOffersJob> logger)
+        public ExpireScholarshipOffersJob(IUnitOfWork unitOfWork, ILogger<ExpireScholarshipOffersJob> logger, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task ExecuteAsync()
@@ -27,9 +25,11 @@ namespace Podium.API.Jobs
 
             // Find offers that are still pending/draft but past their expiration date
             var expiredOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
-                .Where(o => (o.Status == ScholarshipStatus.Pending || o.Status == ScholarshipStatus.Draft)
-                            && o.ExpirationDate < now)
-                .ToListAsync();
+              .Include(o => o.Band)
+              .Include(o => o.Student).ThenInclude(s => s.ApplicationUser)
+              .Where(o => (o.Status == ScholarshipStatus.Pending || o.Status == ScholarshipStatus.Draft)
+                          && o.ExpirationDate < now)
+              .ToListAsync();
 
             foreach (var offer in expiredOffers)
             {
@@ -39,6 +39,27 @@ namespace Podium.API.Jobs
                 // though usually EF Core tracks fetched entities. 
                 // Adding Update for clarity/safety depending on repo implementation.
                 _unitOfWork.ScholarshipOffers.Update(offer);
+
+                if (offer.Student?.ApplicationUser != null)
+                {
+                    await _notificationService.NotifyUserAsync(
+                        offer.Student.ApplicationUserId,
+                        "OfferExpired",
+                        "Scholarship Offer Expired",
+                        $"The offer from {offer.Band.BandName} has expired.",
+                        offer.Id.ToString(),
+                        NotificationPriority.Urgent // Red Alert
+                    );
+                }
+
+                await _notificationService.NotifyBandStaffAsync(
+                offer.BandId,
+                "OfferExpired",
+                "Offer Expired",
+                $"Offer for {offer.Student?.FirstName} {offer.Student?.LastName} has expired.",
+                offer.Id.ToString(),
+                NotificationPriority.High
+            );
             }
 
             if (expiredOffers.Any())

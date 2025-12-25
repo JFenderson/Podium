@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Podium.Core.Constants;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Podium.Core.Entities
@@ -28,6 +29,9 @@ namespace Podium.Core.Entities
         public string? RelatedEntityId { get; set; } // e.g., OfferId, VideoId
 
         public bool IsRead { get; set; } = false;
+
+        public NotificationPriority Priority { get; set; } = NotificationPriority.Low;
+        public DateTime? ExpiresAt { get; set; }
 
     }
 }

@@ -1,17 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
 using Podium.Application.DTOs;
-using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
 using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
-using Podium.Infrastructure.Authorization;
-using Podium.Infrastructure.Data;
-using System.Linq;
-using System.Text.Json;
 
 namespace Podium.Application.Services;
 
@@ -146,7 +141,8 @@ public class StudentService : IStudentService
             "NewInterest",
             "New Student Interest",
             $"{studentName} is interested in your band!",
-            studentId.ToString()
+            studentId.ToString(),
+            NotificationPriority.High
         );
 
         // Query for guardians who are Active and opted-in to notifications
@@ -360,7 +356,7 @@ public class StudentService : IStudentService
 
     private StudentDetailsDto MapToDetailsDto(Student s)
     {
-        
+
 
         // Calculate Ratings
         double avgRating = 0;
