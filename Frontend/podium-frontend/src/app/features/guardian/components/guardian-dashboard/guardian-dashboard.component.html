@@ -21,7 +21,8 @@
     <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       
       <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-blue-200 group relative overflow-hidden"
-              (click)="scrollToSection('activity-timeline')"> <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              (click)="scrollToSection('my-students')">
+        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
           <svg class="w-16 h-16 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
         </div>
         <div class="text-gray-500 text-sm font-medium mb-1">Linked Students</div>
@@ -62,7 +63,6 @@
           {{ data.priorityAlerts?.length || 0 }}
         </div>
       </button>
-
     </div>
   </header>
 
@@ -70,6 +70,37 @@
     <span>{{ error }}</span>
     <button (click)="loadData()" class="underline font-bold">Retry</button>
   </div>
+
+  <section *ngIf="!isLoading && dashboard() as data" id="my-students" class="mb-8 scroll-mt-24">
+    <h2 class="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
+      <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+      </span>
+      My Students
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div *ngFor="let student of data.linkedStudents" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
+        
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+  {{ (student.firstName || '?').charAt(0) }}{{ (student.lastName || '').charAt(0) }}
+</div>
+          <div>
+            <h3 class="font-bold text-gray-900">{{ student.studentName }}</h3>
+            <p class="text-xs text-gray-500">{{ student.primaryInstrument || 'No Instrument' }}</p>
+          </div>
+        </div>
+
+        <app-student-status-badge
+          [status]="student.accountStatus || 'Active'"
+          [requiresGuardianApproval]="student.requiresGuardianApproval || false"
+          [isPending]="student.accountStatus === 'Pending'">
+        </app-student-status-badge>
+
+      </div>
+    </div>
+  </section>
 
   <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

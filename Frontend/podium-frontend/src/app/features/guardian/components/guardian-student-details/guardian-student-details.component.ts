@@ -8,11 +8,12 @@ import {
   StudentActivityReportDto 
 } from '../../../../core/models/guardian.models';
 import { forkJoin } from 'rxjs';
+import { StudentStatusBadgeComponent } from '../../../../shared/components/student-status-badge/student-status-badge.component';
 
 @Component({
   selector: 'app-guardian-student-details',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, StudentStatusBadgeComponent],
   templateUrl: './guardian-student-details.component.html'
 })
 export class GuardianStudentDetailsComponent implements OnInit {

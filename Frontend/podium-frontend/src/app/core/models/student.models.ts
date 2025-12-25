@@ -2,7 +2,6 @@
 
 export interface StudentDetailsDto {
   hasOffer?: boolean;
-  requiresGuardianApproval?: boolean;
   yearsOfExperience: any;
   studentId: number;
   firstName: string;
@@ -50,6 +49,10 @@ export interface StudentDetailsDto {
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
+
+  accountStatus?: string;           
+  requiresGuardianApproval?: boolean;
+  isMinor?: boolean;
 }
 
 export interface UpdateStudentDto {

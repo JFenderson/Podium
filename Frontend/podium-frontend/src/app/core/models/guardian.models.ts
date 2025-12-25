@@ -32,6 +32,10 @@ export interface GuardianLinkedStudentDto {
   lastActivityDate: Date;
   hasExpiringOffers: boolean;
   hasUrgentApprovals: boolean;
+
+  accountStatus: string;           // e.g., 'Active', 'Pending', 'Suspended'
+  requiresGuardianApproval: boolean; 
+  isMinor: boolean;
 }
 
 export interface LinkStudentDto {
@@ -166,6 +170,10 @@ export interface StudentProfileViewDto {
   videosUploaded: number;
   bandsInterested: number;
   eventsAttended: number;
+
+  accountStatus: string;
+  requiresGuardianApproval: boolean;
+  isMinor: boolean;
 }
 
 export interface StudentActivityReportDto {

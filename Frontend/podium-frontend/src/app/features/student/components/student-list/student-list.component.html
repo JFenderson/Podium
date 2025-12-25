@@ -182,10 +182,11 @@
         <!-- Student Info -->
         <div class="p-6">
   <div class="mb-3"> 
-    <app-student-status-badge 
-      [requiresGuardianApproval]="student.requiresGuardianApproval ?? false"
-      [isPending]="!student.hasOffer"
-    ></app-student-status-badge>
+ <app-student-status-badge 
+  [status]="student.accountStatus || 'Pending'" 
+  [requiresGuardianApproval]="student.requiresGuardianApproval || false" 
+  [isPending]="student.accountStatus === 'Pending'">
+</app-student-status-badge>
   </div>
           <h3 class="text-lg font-bold text-gray-900 mb-1">
             {{ student.firstName }} {{ student.lastName }}

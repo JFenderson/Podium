@@ -7,6 +7,7 @@ import { AuthService } from '../../../../features/auth/services/auth.service';
 import { GuardianDashboardDto, GuardianPendingApprovalDto } from '../../../../core/models/guardian.models';
 import { Roles } from '../../../../core/models/common.models';
 import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
+import { StudentStatusBadgeComponent } from '../../../../shared/components/student-status-badge/student-status-badge.component';
 
 @Component({
   selector: 'app-guardian-dashboard',
@@ -14,7 +15,8 @@ import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-
   imports: [
     CommonModule, 
     ReactiveFormsModule,
-    SkeletonLoaderComponent
+    SkeletonLoaderComponent,
+    StudentStatusBadgeComponent
   ],
   templateUrl: './guardian-dashboard.component.html'
 })

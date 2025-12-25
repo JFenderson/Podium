@@ -11,11 +11,12 @@ import { CreateRatingDto, RatingDto } from '../../../../core/models/rating.model
 import { VideoDto } from '../../../../core/models/video.models';
 import { Permissions, Roles } from '../../../../core/models/common.models';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { StudentStatusBadgeComponent } from '../../../../shared/components/student-status-badge/student-status-badge.component';
 
 @Component({
   selector: 'app-student-detail',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, StudentStatusBadgeComponent],
   templateUrl: './student-detail.component.html'
 })
 export class StudentDetailComponent implements OnInit {
