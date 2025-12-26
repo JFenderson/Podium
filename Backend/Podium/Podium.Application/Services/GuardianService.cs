@@ -206,55 +206,105 @@ namespace Podium.Application.Services
                 .AnyAsync(sg => sg.GuardianId == guardianId.Id && sg.StudentId == studentId && sg.IsActive);
         }
 
+        // In Podium.Application/Services/GuardianService.cs
+
         public async Task<LinkedStudentActivityReportDto> GetStudentActivityAsync(int studentId, int daysBack)
         {
             var startDate = DateTime.UtcNow.AddDays(-daysBack);
             var student = await _unitOfWork.Students.GetByIdAsync(studentId);
             if (student == null) throw new KeyNotFoundException($"Student {studentId} not found");
 
-            var videosTask = _unitOfWork.Videos.GetQueryable()
+            // FIX: Await each call sequentially to avoid "Second operation started" DbContext error.
+
+            // 1. Videos
+            var videos = await _unitOfWork.Videos.GetQueryable()
                 .Where(v => v.StudentId == studentId && v.CreatedAt >= startDate)
                 .OrderByDescending(v => v.CreatedAt)
-                .Select(v => new VideoActivityDto { VideoId = v.Id, Title = v.Title, Instrument = v.Instrument, UploadedDate = v.CreatedAt, Views = v.ViewCount, IsPublic = v.IsPublic })
+                .Select(v => new VideoActivityDto
+                {
+                    VideoId = v.Id,
+                    Title = v.Title,
+                    Instrument = v.Instrument,
+                    UploadedDate = v.CreatedAt,
+                    Views = v.ViewCount,
+                    IsPublic = v.IsPublic
+                })
                 .ToListAsync();
 
-            var interestsTask = _unitOfWork.StudentInterests.GetQueryable()
+            // 2. Interests
+            // Note: We fetch the list first, then map in memory to safely handle the nested null checks
+            var interestList = await _unitOfWork.StudentInterests.GetQueryable()
                 .Where(si => si.StudentId == studentId && si.InterestedDate >= startDate)
-                .Include(si => si.Band).Include(si => si.Student).ThenInclude(s => s.ContactLogs)
+                .Include(si => si.Band)
+                .Include(si => si.Student)
+                    .ThenInclude(s => s.ContactLogs)
                 .OrderByDescending(si => si.InterestedDate)
                 .ToListAsync();
 
-            var offersTask = _unitOfWork.ScholarshipOffers.GetQueryable()
+            // 3. Offers
+            var offers = await _unitOfWork.ScholarshipOffers.GetQueryable()
                 .Where(so => so.StudentId == studentId && so.CreatedAt >= startDate)
                 .Include(so => so.Band)
                 .OrderByDescending(so => so.CreatedAt)
-                .Select(so => new OfferActivityDto { OfferId = so.Id, BandName = so.Band.BandName, Amount = so.ScholarshipAmount, Status = so.Status.ToString(), OfferDate = so.CreatedAt, ExpirationDate = so.ExpirationDate, RequiresGuardianApproval = so.RequiresGuardianApproval })
+                .Select(so => new OfferActivityDto
+                {
+                    OfferId = so.Id,
+                    BandName = so.Band != null ? so.Band.BandName : "Unknown Band",
+                    Amount = so.ScholarshipAmount,
+                    Status = so.Status.ToString(),
+                    OfferDate = so.CreatedAt,
+                    ExpirationDate = so.ExpirationDate,
+                    RequiresGuardianApproval = so.RequiresGuardianApproval
+                })
                 .ToListAsync();
 
-            var eventsTask = _unitOfWork.EventRegistrations.GetQueryable()
+            // 4. Events
+            var events = await _unitOfWork.EventRegistrations.GetQueryable()
                 .Where(er => er.StudentId == studentId && er.CreatedAt >= startDate)
-                .Include(er => er.BandEvent).ThenInclude(e => e.Band)
+                .Include(er => er.BandEvent)
+                    .ThenInclude(e => e.Band)
                 .OrderByDescending(er => er.BandEvent.EventDate)
-                .Select(er => new EventActivityDto { EventId = er.Id, EventName = er.BandEvent.EventName, BandName = er.BandEvent.Band.BandName, EventDate = er.BandEvent.EventDate, DidAttend = er.DidAttend, RegisteredDate = er.CreatedAt })
+                .Select(er => new EventActivityDto
+                {
+                    EventId = er.Id,
+                    EventName = er.BandEvent != null ? er.BandEvent.EventName : "Unknown Event",
+                    BandName = (er.BandEvent != null && er.BandEvent.Band != null) ? er.BandEvent.Band.BandName : "Unknown Band",
+                    EventDate = er.BandEvent != null ? er.BandEvent.EventDate : DateTime.MinValue,
+                    DidAttend = er.DidAttend,
+                    RegisteredDate = er.CreatedAt
+                })
                 .ToListAsync();
 
-            var contactsTask = _unitOfWork.ContactLogs.GetQueryable()
+            // 5. Contacts
+            var contacts = await _unitOfWork.ContactLogs.GetQueryable()
                 .Where(cl => cl.StudentId == studentId && cl.CreatedAt >= startDate)
-                .Include(cl => cl.Band).Include(cl => cl.RecruiterStaff)
+                .Include(cl => cl.Band)
+                .Include(cl => cl.RecruiterStaff)
                 .OrderByDescending(cl => cl.CreatedAt)
-                .Select(cl => new ContactActivityDto { ContactId = cl.Id, RecruiterName = cl.RecruiterStaff.ApplicationUserId, BandName = cl.Band.BandName, ContactDate = cl.CreatedAt, ContactMethod = cl.ContactMethod, Purpose = cl.Purpose })
+                .Select(cl => new ContactActivityDto
+                {
+                    ContactId = cl.Id,
+                    RecruiterName = cl.RecruiterStaff != null ? cl.RecruiterStaff.ApplicationUserId : "Unknown Recruiter",
+                    BandName = cl.Band != null ? cl.Band.BandName : "Unknown Band",
+                    ContactDate = cl.CreatedAt,
+                    ContactMethod = cl.ContactMethod,
+                    Purpose = cl.Purpose
+                })
                 .ToListAsync();
 
-            await Task.WhenAll(videosTask, interestsTask, offersTask, eventsTask, contactsTask);
-
-            var interests = (await interestsTask).Select(si => new InterestActivityDto
+            // Map Interests in memory (safe from null references)
+            var interests = interestList.Select(si => new InterestActivityDto
             {
                 BandId = si.BandId,
-                BandName = si.Band.BandName,
-                University = si.Band.UniversityName,
+                BandName = si.Band?.BandName ?? "Unknown Band",
+                University = si.Band?.UniversityName ?? "Unknown University",
                 InterestDate = si.InterestedDate,
-                HasBeenContacted = si.Student.ContactLogs.Any(cl => cl.BandId == si.BandId),
-                ContactDate = si.Student.ContactLogs.Where(cl => cl.BandId == si.BandId).OrderBy(cl => cl.CreatedAt).Select(cl => (DateTime?)cl.CreatedAt).FirstOrDefault()
+                HasBeenContacted = si.Student?.ContactLogs?.Any(cl => cl.BandId == si.BandId) ?? false,
+                ContactDate = si.Student?.ContactLogs?
+                    .Where(cl => cl.BandId == si.BandId)
+                    .OrderBy(cl => cl.CreatedAt)
+                    .Select(cl => (DateTime?)cl.CreatedAt)
+                    .FirstOrDefault()
             }).ToList();
 
             return new LinkedStudentActivityReportDto
@@ -263,16 +313,16 @@ namespace Podium.Application.Services
                 StudentName = student.FirstName + " " + student.LastName,
                 StartDate = startDate,
                 EndDate = DateTime.UtcNow,
-                VideosUploaded = await videosTask,
+                VideosUploaded = videos,
                 InterestShown = interests,
-                OffersReceived = await offersTask,
-                EventsAttended = await eventsTask,
-                ContactsMade = await contactsTask,
-                TotalVideos = (await videosTask).Count,
+                OffersReceived = offers,
+                EventsAttended = events,
+                ContactsMade = contacts,
+                TotalVideos = videos.Count,
                 TotalInterests = interests.Count,
-                TotalOffers = (await offersTask).Count,
-                TotalEvents = (await eventsTask).Count,
-                TotalContacts = (await contactsTask).Count
+                TotalOffers = offers.Count,
+                TotalEvents = events.Count,
+                TotalContacts = contacts.Count
             };
         }
 
