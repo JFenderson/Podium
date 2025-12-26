@@ -14,7 +14,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-student-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NotificationCardComponent], // Add MatIconModule if using Angular Material
+  imports: [CommonModule, RouterLink, ReactiveFormsModule], // Add MatIconModule if using Angular Material
   templateUrl: './student-dashboard.component.html',
   styleUrls: ['./student-dashboard.component.scss']
 })

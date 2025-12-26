@@ -1,275 +1,378 @@
-<div class="min-h-screen bg-gray-50 p-6">
+<div class="min-h-screen bg-gray-50 p-6 md:p-8">
   
   <header class="mb-8">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Guardian Dashboard</h1>
-        <p class="text-gray-600">Overview of your students' recruitment activity</p>
+        <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Guardian Dashboard</h1>
+        <p class="text-gray-500 mt-1">Overview of your students' recruitment activity</p>
       </div>
-      <div class="flex gap-3">
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+      
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
           <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
           Live Updates Active
         </span>
+        
+        <button routerLink="/guardian/link-student" class="inline-flex items-center px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition shadow-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          Link Student
+        </button>
       </div>
     </div>
 
-    <div *ngIf="isLoading" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-      <app-skeleton-loader *ngFor="let i of [1,2,3,4]" class="h-28 rounded-xl"></app-skeleton-loader>
-    </div>
-
-    <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      
-      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-blue-200 group relative overflow-hidden"
-              (click)="scrollToSection('my-students')">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <svg class="w-16 h-16 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+    <div *ngIf="urgentAlerts().length > 0" class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm animate-fade-in-down mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
         </div>
-        <div class="text-gray-500 text-sm font-medium mb-1">Linked Students</div>
-        <div class="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-          {{ data.linkedStudents?.length || 0 }}
+        <div class="ml-3 w-full">
+          <h3 class="text-sm font-bold text-red-800 uppercase tracking-wide mb-1">Action Required</h3>
+          <ul class="list-disc pl-5 space-y-1">
+            <li *ngFor="let alert of urgentAlerts()" class="text-sm text-red-700">
+              <span class="font-semibold">{{ alert.studentName }}:</span> {{ alert.message }}
+              <a [href]="alert.actionUrl" class="ml-2 font-medium underline hover:text-red-900 cursor-pointer">View</a>
+            </li>
+          </ul>
         </div>
-      </button>
-
-      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-orange-200 group relative overflow-hidden"
-              (click)="scrollToSection('contact-requests')">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <svg class="w-16 h-16 text-orange-600" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
-        </div>
-        <div class="text-gray-500 text-sm font-medium mb-1">Pending Requests</div>
-        <div class="text-3xl font-bold text-orange-600">
-          {{ data.pendingContactRequests?.length || 0 }}
-        </div>
-      </button>
-
-      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-green-200 group relative overflow-hidden"
-              (click)="scrollToSection('scholarship-offers')">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <svg class="w-16 h-16 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-        </div>
-        <div class="text-gray-500 text-sm font-medium mb-1">Active Offers</div>
-        <div class="text-3xl font-bold text-green-600">
-          {{ data.totalActiveOffers || 0 }}
-        </div>
-      </button>
-
-      <button class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 text-left transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-red-200 group relative overflow-hidden"
-              (click)="scrollToSection('activity-timeline')">
-        <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <svg class="w-16 h-16 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-        </div>
-        <div class="text-gray-500 text-sm font-medium mb-1">Unread Alerts</div>
-        <div class="text-3xl font-bold text-red-600">
-          {{ data.priorityAlerts?.length || 0 }}
-        </div>
-      </button>
+      </div>
     </div>
   </header>
 
-  <div *ngIf="error" class="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between">
-    <span>{{ error }}</span>
-    <button (click)="loadData()" class="underline font-bold">Retry</button>
-  </div>
+  <ng-container *ngIf="!isLoading(); else loading">
 
-  <section *ngIf="!isLoading && dashboard() as data" id="my-students" class="mb-8 scroll-mt-24">
-    <h2 class="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
-      <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-      </span>
-      My Students
-    </h2>
+    <div class="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center">
+      
+      <div *ngIf="selectorType() === 'tabs'" class="inline-flex bg-white p-1 rounded-xl shadow-sm border border-gray-200">
+        <button 
+          (click)="selectStudent(null)"
+          [class]="selectedStudentId() === null 
+            ? 'bg-gray-100 text-gray-900 shadow-sm font-semibold' 
+            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+          class="px-4 py-2 rounded-lg text-sm transition-all duration-200"
+        >
+          Overview
+        </button>
+        <button 
+          *ngFor="let student of students()"
+          (click)="selectStudent(student.studentId)"
+          [class]="selectedStudentId() === student.studentId 
+            ? 'bg-blue-50 text-blue-700 shadow-sm font-semibold' 
+            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+          class="px-4 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2 ml-1"
+        >
+          {{ student.firstName }}
+          <span *ngIf="student.pendingApprovals > 0" class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-sm">
+            {{ student.pendingApprovals }}
+          </span>
+        </button>
+      </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div *ngFor="let student of data.linkedStudents" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
-        
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
-  {{ (student.firstName || '?').charAt(0) }}{{ (student.lastName || '').charAt(0) }}
-</div>
-          <div>
-            <h3 class="font-bold text-gray-900">{{ student.studentName }}</h3>
-            <p class="text-xs text-gray-500">{{ student.primaryInstrument || 'No Instrument' }}</p>
-          </div>
-        </div>
-
-        <app-student-status-badge
-          [status]="student.accountStatus || 'Active'"
-          [requiresGuardianApproval]="student.requiresGuardianApproval || false"
-          [isPending]="student.accountStatus === 'Pending'">
-        </app-student-status-badge>
-
+      <div *ngIf="selectorType() === 'dropdown'" class="w-full md:w-auto">
+        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Select Student</label>
+        <select 
+          [value]="selectedStudentId()" 
+          (change)="selectStudent($any($event.target).value ? +$any($event.target).value : null)"
+          class="block w-full md:w-64 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2.5"
+        >
+          <option [value]="null">All Students (Overview)</option>
+          <option *ngFor="let s of students()" [value]="s.studentId">
+            {{ s.studentName }} 
+            <ng-container *ngIf="s.pendingApprovals > 0">({{ s.pendingApprovals }} pending)</ng-container>
+          </option>
+        </select>
       </div>
     </div>
-  </section>
 
-  <div *ngIf="!isLoading && dashboard() as data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <section id="contact-requests" class="space-y-4 scroll-mt-24">
-      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
-        <span class="bg-orange-100 text-orange-600 p-1.5 rounded-lg">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-        </span>
-        Contact Requests
-      </h2>
-
-      <div *ngIf="!data.pendingContactRequests || data.pendingContactRequests.length === 0" class="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center text-gray-500">
-        No pending requests
-      </div>
-
-      <div *ngFor="let req of data.pendingContactRequests" class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-        <div class="flex justify-between items-start mb-3">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs overflow-hidden">
-               <img *ngIf="req.recruiterAvatarUrl" [src]="req.recruiterAvatarUrl" class="w-full h-full object-cover">
-               <span *ngIf="!req.recruiterAvatarUrl">{{ req.recruiterName?.charAt(0) || '?' }}</span>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900">{{ req.recruiterName }}</h3>
-              <p class="text-xs text-gray-500">{{ req.bandName }}</p>
-            </div>
-          </div>
-          <span class="text-xs text-gray-400">{{ req.sentAt | date:'MMM d' }}</span>
-        </div>
-
-        <p class="text-sm text-gray-600 mb-2 bg-gray-50 p-2 rounded border border-gray-100 italic">
-          "{{ req.message }}"
-        </p>
-
-        <div class="flex items-center justify-between mt-4">
-          <span class="text-xs font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded">
-            For: {{ req.studentName }}
-          </span>
-          <div class="flex gap-2">
-            <button (click)="declineRequest(req.requestId)" class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-              Decline
-            </button>
-            <button (click)="approveRequest(req.requestId)" class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors">
-              Approve
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="scholarship-offers" class="space-y-4 scroll-mt-24">
-      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
-        <span class="bg-green-100 text-green-600 p-1.5 rounded-lg">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </span>
-        Pending Offers
-      </h2>
-
-      <div *ngIf="!data.scholarshipOffers || data.scholarshipOffers.length === 0" class="bg-white p-8 rounded-xl border border-dashed border-gray-300 text-center text-gray-500">
-        No pending offers
-      </div>
-
-      <div *ngFor="let offer of data.scholarshipOffers" class="bg-white p-5 rounded-xl shadow-sm border border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-        <div class="flex justify-between mb-2">
-          <h3 class="font-bold text-gray-900">{{ offer.bandName }}</h3>
-          <span class="text-xs font-bold bg-green-100 text-green-800 px-2 py-1 rounded-full">
-            ${{ offer.amount | number }}
-          </span>
+    <div *ngIf="!selectedStudentId()" class="animate-fade-in">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-white flex justify-between items-center">
+          <h2 class="font-bold text-gray-800 text-lg">All Students</h2>
+          <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full border border-gray-200">{{ students().length }} Linked</span>
         </div>
         
-        <div class="text-sm text-gray-600 mb-4">
-          <p>{{ offer.offerType }}</p>
-          <p class="text-xs text-red-500 mt-1 flex items-center gap-1">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Expires {{ offer.expirationDate | date:'mediumDate' }}
-          </p>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-gray-500">For: {{ offer.studentName }}</span>
-          <button (click)="openApprovalModal({
-            offerId: offer.offerId,
-            studentId: offer.studentId,
-            studentName: offer.studentName,
-            bandId: offer.bandId,
-            bandName: offer.bandName,
-            amount: offer.amount,
-            description: offer.offerType,
-            sentAt: offer.createdAt,
-            dateReceived: offer.createdAt
-          })" class="px-4 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm">
-            Review Offer
-          </button>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-100">
+            <thead class="bg-gray-50/50">
+              <tr>
+                <th (click)="sortData('studentName')" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
+                  Student <span *ngIf="sortColumn() === 'studentName'" class="ml-1 text-blue-500">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+                </th>
+                <th (click)="sortData('activeScholarshipOffers')" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
+                  Offers
+                </th>
+                <th (click)="sortData('pendingApprovals')" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
+                  Approvals
+                </th>
+                <th (click)="sortData('lastActivityDate')" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
+                  Last Activity
+                </th>
+                <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+              <tr *ngFor="let student of sortedStudents" 
+                  class="hover:bg-gray-50 transition-colors duration-150 cursor-pointer group" 
+                  (click)="selectStudent(student.studentId)">
+                
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm ring-2 ring-white">
+                      {{ student.firstName | slice:0:1 }}
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ student.studentName }}</div>
+                      <div class="text-xs text-gray-500">{{ student.primaryInstrument }}</div>
+                    </div>
+                  </div>
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 font-medium">{{ student.activeScholarshipOffers }}</div>
+                  <div class="text-xs text-gray-500">Active Offers</div>
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span *ngIf="student.pendingApprovals > 0" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                    {{ student.pendingApprovals }} Needed
+                  </span>
+                  <span *ngIf="student.pendingApprovals === 0" class="text-gray-400 text-sm flex items-center">
+                    <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Up to date
+                  </span>
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ student.lastActivityDate | date:'MMM d, y' }}
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                  <button (click)="$event.stopPropagation(); selectStudent(student.studentId)" class="text-indigo-600 hover:text-indigo-900 mr-4 font-semibold hover:underline">
+                    Manage
+                  </button>
+                  <button (click)="$event.stopPropagation(); unlinkStudent(student.studentId)" class="text-gray-400 hover:text-red-600 transition-colors" title="Unlink Student">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section id="activity-timeline" class="space-y-4 scroll-mt-24">
-      <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2">
-        <span class="bg-purple-100 text-purple-600 p-1.5 rounded-lg">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </span>
-        Activity Timeline
-      </h2>
-
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div *ngIf="data.recentActivities && data.recentActivities.length > 0; else noActivity" class="relative pl-4 border-l-2 border-gray-100 space-y-6">
-          
-          <div *ngFor="let act of data.recentActivities" class="relative">
-            <div class="absolute -left-[21px] bg-white border-2 border-purple-500 w-3 h-3 rounded-full mt-1.5"></div>
-            
-            <div class="flex flex-col">
-              <span class="text-xs font-semibold text-purple-600 mb-0.5">{{ act.activityType }}</span>
-              <p class="text-sm text-gray-800">{{ act.description }}</p>
-              <div class="flex justify-between items-center mt-1">
-                <span class="text-xs text-gray-500">{{ act.studentName }}</span>
-                <span class="text-xs text-gray-400">{{ act.timestamp | date:'shortTime' }}</span>
+    <div *ngIf="selectedStudent() as student" class="animate-fade-in space-y-6">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 -mr-10 -mt-10"></div>
+        
+        <div class="flex flex-col md:flex-row justify-between md:items-center gap-6 relative z-10">
+          <div class="flex items-center">
+            <div class="h-20 w-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-white">
+              {{ student.firstName | slice:0:1 }}
+            </div>
+            <div class="ml-6">
+              <h2 class="text-2xl font-bold text-gray-900 tracking-tight">{{ student.studentName }}</h2>
+              <div class="flex flex-wrap items-center text-gray-600 text-sm mt-1 gap-3">
+                <span class="flex items-center"><svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3 2zm0 0v-8"></path></svg> {{ student.primaryInstrument }}</span>
+                <span class="text-gray-300">|</span>
+                <span>Class of {{ student.graduationYear }}</span>
+                <span class="text-gray-300">|</span>
+                <app-student-status-badge [status]="student.accountStatus"></app-student-status-badge>
               </div>
             </div>
           </div>
-
-        </div>
-        <ng-template #noActivity>
-          <div class="text-center text-gray-500 py-6 text-sm">
-            No recent activity
+          <div class="flex items-center gap-3">
+            <a [routerLink]="['/guardian/student', student.studentId]" class="hidden sm:inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition text-sm font-medium shadow-sm">
+              Full Profile
+            </a>
           </div>
-        </ng-template>
+        </div>
       </div>
-    </section>
 
-  </div>
-</div>
+      <div class="border-b border-gray-200 overflow-x-auto">
+        <nav class="-mb-px flex space-x-8 min-w-max" aria-label="Tabs">
+          <button 
+            *ngFor="let tab of ['activity', 'offers', 'requests', 'profile', 'videos']"
+            (click)="setTab($any(tab))"
+            [class.border-blue-500]="activeTab() === tab"
+            [class.text-blue-600]="activeTab() === tab"
+            [class.border-transparent]="activeTab() !== tab"
+            [class.text-gray-500]="activeTab() !== tab"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center"
+          >
+            {{ tab }}
+            <span *ngIf="tab === 'offers' && student.pendingApprovals > 0" class="ml-2 bg-red-100 text-red-600 py-0.5 px-2.5 rounded-full text-xs font-bold">
+              {{ student.pendingApprovals }}
+            </span>
+            <span *ngIf="tab === 'requests' && student.pendingContactRequests > 0" class="ml-2 bg-yellow-100 text-yellow-700 py-0.5 px-2.5 rounded-full text-xs font-bold">
+              {{ student.pendingContactRequests }}
+            </span>
+          </button>
+        </nav>
+      </div>
 
-<div *ngIf="showApprovalModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl transform transition-all">
-    <h3 class="text-xl font-bold mb-4">Respond to Offer</h3>
-    
-    <div *ngIf="selectedApproval" class="mb-6 bg-gray-50 p-4 rounded-lg">
-      <p class="font-bold text-gray-900">{{ selectedApproval.bandName }}</p>
-      <p class="text-sm text-gray-600">{{ selectedApproval.description }}</p>
-      <p class="text-lg font-bold text-green-600 mt-2">${{ selectedApproval.amount | number }}</p>
+      <div class="min-h-[300px] relative">
+        
+        <div *ngIf="isDetailLoading()" class="absolute inset-0 bg-white/80 z-10 flex justify-center pt-20 backdrop-blur-sm transition-opacity">
+          <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-100 border-t-blue-600"></div>
+        </div>
+
+        <div *ngIf="activeTab() === 'activity'" class="space-y-4 animate-fade-in">
+          <div *ngIf="studentActivity().length === 0" class="text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <p class="text-gray-500">No recent activity recorded.</p>
+          </div>
+          
+          <div *ngFor="let act of studentActivity()" class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex gap-4 hover:shadow-md transition cursor-default">
+            <div class="mt-1">
+              <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 ring-4 ring-blue-50/50">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              </div>
+            </div>
+            <div>
+              <p class="text-gray-900 font-medium text-base">{{ act.description }}</p>
+              <p class="text-gray-500 text-xs mt-1 font-medium">{{ act.timestamp | date:'medium' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="activeTab() === 'offers'" class="animate-fade-in">
+          <div *ngIf="studentOffers().length === 0" class="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-200">
+            <div class="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+              <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <h3 class="text-gray-900 font-bold text-lg">No Scholarship Offers Yet</h3>
+            <p class="text-gray-500 mt-2">Offers will appear here once directors send them.</p>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div *ngFor="let offer of studentOffers()" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-blue-300 transition-all duration-300 relative group">
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h4 class="font-bold text-lg text-gray-900 group-hover:text-blue-700 transition-colors">{{ offer.bandName }}</h4>
+                  <p class="text-gray-500 text-sm font-medium">{{ offer.offerType }}</p>
+                </div>
+                <span [class]="'px-3 py-1 text-xs rounded-full font-bold tracking-wide uppercase ' + 
+                  (offer.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
+                   offer.status === 'Accepted' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600')">
+                  {{ offer.status }}
+                </span>
+              </div>
+              
+              <div class="flex items-baseline mb-6">
+                <span class="text-3xl font-extrabold text-gray-900 tracking-tight">{{ offer.amount | currency }}</span>
+                <span class="text-gray-500 ml-2 text-sm font-medium">total value</span>
+              </div>
+
+              <div *ngIf="offer.requiresGuardianApproval && offer.status === 'Pending'" class="mt-4 pt-4 border-t border-gray-100">
+                <button (click)="openApprovalModal(offer)" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition font-medium shadow-md shadow-indigo-200">
+                  Review & Decision
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="activeTab() === 'requests'" class="animate-fade-in">
+           <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+             <table class="min-w-full divide-y divide-gray-200">
+               <thead class="bg-gray-50">
+                 <tr>
+                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Band</th>
+                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                   <th class="px-6 py-3 text-right">Actions</th>
+                 </tr>
+               </thead>
+               <tbody class="divide-y divide-gray-200">
+                 <tr *ngFor="let req of studentRequests()" class="hover:bg-gray-50">
+                   <td class="px-6 py-4 text-sm font-bold text-gray-900">{{ req.recruiterName }}</td>
+                   <td class="px-6 py-4 text-sm text-gray-600">{{ req.bandName }}</td>
+                   <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" [title]="req.message">{{ req.message }}</td>
+                   <td class="px-6 py-4 text-right space-x-3">
+                     <button class="text-green-600 hover:text-green-800 font-bold text-sm hover:underline">Approve</button>
+                     <button class="text-red-600 hover:text-red-800 font-bold text-sm hover:underline">Decline</button>
+                   </td>
+                 </tr>
+                 <tr *ngIf="studentRequests().length === 0">
+                   <td colspan="4" class="px-6 py-12 text-center text-gray-500 text-sm">No pending contact requests.</td>
+                 </tr>
+               </tbody>
+             </table>
+           </div>
+        </div>
+
+        <div *ngIf="activeTab() === 'profile'" class="animate-fade-in text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-200">
+          <svg class="w-16 h-16 text-gray-200 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          <p class="text-gray-900 font-semibold text-lg">Profile Management</p>
+          <p class="text-gray-500 text-sm mt-1">To edit details, visit the full profile.</p>
+        </div>
+        
+        <div *ngIf="activeTab() === 'videos'" class="animate-fade-in text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-200">
+          <svg class="w-16 h-16 text-gray-200 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          <p class="text-gray-900 font-semibold text-lg">Video Library</p>
+          <p class="text-gray-500 text-sm mt-1">View your student's audition uploads here.</p>
+        </div>
+
+      </div>
     </div>
 
-    <form [formGroup]="approvalForm" (ngSubmit)="submitApproval()">
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
-        <div class="flex gap-4">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" formControlName="approved" [value]="true" class="text-green-600 focus:ring-green-500">
-            <span>Accept Offer</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" formControlName="approved" [value]="false" class="text-red-600 focus:ring-red-500">
-            <span>Decline Offer</span>
-          </label>
+  </ng-container>
+
+  <div *ngIf="showApprovalModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity animate-fade-in">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 animate-scale-in">
+      <h3 class="text-2xl font-bold mb-2 text-gray-900">Respond to Offer</h3>
+      <p class="text-gray-500 mb-8 text-sm">
+        You are acting on behalf of <strong class="text-gray-900">{{ selectedApproval?.studentName }}</strong> regarding the offer from <strong class="text-gray-900">{{ selectedApproval?.bandName }}</strong>.
+      </p>
+      
+      <form [formGroup]="approvalForm" (ngSubmit)="submitApproval()">
+        <div class="mb-8">
+          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Decision</label>
+          <div class="grid grid-cols-2 gap-4">
+            <label class="relative cursor-pointer group">
+              <input type="radio" formControlName="approved" [value]="true" class="peer sr-only">
+              <div class="p-4 rounded-xl border-2 border-gray-100 peer-checked:border-green-500 peer-checked:bg-green-50 text-center transition-all hover:border-gray-300 h-full flex flex-col justify-center items-center">
+                <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2 peer-checked:bg-green-200">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <div class="font-bold text-gray-900 peer-checked:text-green-800">Accept Offer</div>
+                <div class="text-xs text-gray-500 mt-1 peer-checked:text-green-700">Proceed to next steps</div>
+              </div>
+            </label>
+            
+            <label class="relative cursor-pointer group">
+              <input type="radio" formControlName="approved" [value]="false" class="peer sr-only">
+              <div class="p-4 rounded-xl border-2 border-gray-100 peer-checked:border-red-500 peer-checked:bg-red-50 text-center transition-all hover:border-gray-300 h-full flex flex-col justify-center items-center">
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-2 peer-checked:bg-red-200">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </div>
+                <div class="font-bold text-gray-900 peer-checked:text-red-800">Decline Offer</div>
+                <div class="text-xs text-gray-500 mt-1 peer-checked:text-red-700">Reject this opportunity</div>
+              </div>
+            </label>
+          </div>
         </div>
-      </div>
 
-      <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-        <textarea formControlName="notes" rows="3" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-      </div>
+        <div class="mb-8">
+          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Notes (Optional)</label>
+          <textarea formControlName="notes" rows="3" placeholder="Add a note for the director..." class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-3"></textarea>
+        </div>
 
-      <div class="flex justify-end gap-3">
-        <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-        <button type="submit" [disabled]="isProcessingApproval" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-          {{ isProcessingApproval ? 'Sending...' : 'Submit Response' }}
-        </button>
-      </div>
-    </form>
+        <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
+          <button type="button" (click)="closeApprovalModal()" class="px-5 py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium transition">Cancel</button>
+          <button type="submit" [disabled]="approvalForm.invalid || isProcessingApproval" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+            <span *ngIf="isProcessingApproval" class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+            Submit Decision
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
+
+  <ng-template #loading>
+    <app-skeleton-loader type="grid"></app-skeleton-loader>
+  </ng-template>
 </div>
