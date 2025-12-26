@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { authGuard } from '../../core/guards/auth.guard';
 import { roleGuard } from '../../core/guards/role.guard';
 import { Roles, Permissions } from '../../core/models/common.models';
+import { BandListComponent } from '../band/components/band-list/band-list.component';
+import { incompleteProfileGuard } from '../../core/guards/incomplete-profile.guard';
 
 export const STUDENT_ROUTES: Routes = [
   {
@@ -29,5 +31,10 @@ export const STUDENT_ROUTES: Routes = [
   {
     path: ':id',
     loadComponent: () => import('./components/student-detail/student-detail.component').then(m => m.StudentDetailComponent)
-  }
+  },
+  { 
+  path: 'bands/list', 
+  component: BandListComponent, 
+  canActivate: [incompleteProfileGuard] 
+}
 ];

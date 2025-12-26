@@ -1,174 +1,384 @@
-<div class="w-full p-6" *ngIf="dashboard; else loading">
-  <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-800">Welcome back, {{ dashboard.firstName }}!</h1>
-      <p class="text-gray-500">Here is what's happening with your recruiting journey.</p>
-    </div>
-    <div class="mt-4 md:mt-0">
-      <a
-        routerLink="/student/profile/edit"
-        class="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50 transition"
+<div class="w-full p-6 relative" *ngIf="dashboard && profile; else loading">
+  
+  <div class="mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ dashboard.firstName }}!</h1>
+        <p class="text-gray-500">Here is what's happening with your recruiting journey.</p>
+      </div>
+      <button 
+        *ngIf="!isProfileComplete"
+        (click)="openWizard()"
+        class="mt-3 md:mt-0 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow hover:shadow-lg transition flex items-center"
       >
-        Edit Profile
-      </a>
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+        Complete Profile
+      </button>
+    </div>
+
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+      <div class="flex justify-between text-sm mb-2">
+        <span class="font-bold text-gray-700">Profile Completion</span>
+        <span class="font-bold text-blue-600">{{ profileProgress }}%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-3">
+        <div 
+          class="bg-blue-600 h-3 rounded-full transition-all duration-1000 ease-out relative" 
+          [style.width.%]="profileProgress"
+        >
+            <div class="absolute right-0 top-0 bottom-0 w-full animate-pulse bg-white/20"></div>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-4 text-xs font-medium text-gray-500">
+        <span [class.text-green-600]="profile.phoneNumber && profile.city" class="flex items-center">
+          <span class="w-4 h-4 mr-1 flex items-center justify-center rounded-full border" [ngClass]="(profile.phoneNumber && profile.city) ? 'bg-green-100 border-green-600 text-green-600' : 'border-gray-300'">✓</span> 
+          Basics
+        </span>
+        <span [class.text-green-600]="profile.primaryInstrument && profile.bio" class="flex items-center">
+          <span class="w-4 h-4 mr-1 flex items-center justify-center rounded-full border" [ngClass]="(profile.primaryInstrument && profile.bio) ? 'bg-green-100 border-green-600 text-green-600' : 'border-gray-300'">✓</span> 
+          Musical Info
+        </span>
+        <span [class.text-green-600]="profile.videoUrl" class="flex items-center">
+          <span class="w-4 h-4 mr-1 flex items-center justify-center rounded-full border" [ngClass]="profile.videoUrl ? 'bg-green-100 border-green-600 text-green-600' : 'border-gray-300'">✓</span> 
+          Audition Video
+        </span>
+      </div>
     </div>
   </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
     
-    <div class="bg-white rounded-lg shadow border-l-4 border-green-500 p-4 cursor-pointer hover:shadow-lg transition" routerLink="/scholarships/my-offers">
-      <div class="flex items-center justify-between">
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-5 hover:shadow-md transition cursor-pointer" routerLink="/student/videos/upload">
+      <div class="flex justify-between items-center">
         <div>
-          <div class="text-xs font-bold text-green-600 uppercase mb-1">Scholarship Offers</div>
-          <div class="text-xl font-bold text-gray-800">{{ dashboard.activeOffers }}</div>
+          <p class="text-xs font-bold text-red-600 uppercase tracking-wide">My Videos</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1">{{ videoCount }}</p>
         </div>
-        <div class="text-gray-300">
-           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div class="bg-red-50 p-3 rounded-lg text-red-600">
+           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow border-l-4 border-blue-500 p-4 cursor-pointer hover:shadow-lg transition" routerLink="/students/profile">
-      <div class="flex items-center justify-between">
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-blue-500 p-5 hover:shadow-md transition cursor-pointer" routerLink="/students/profile">
+      <div class="flex justify-between items-center">
         <div>
-          <div class="text-xs font-bold text-blue-600 uppercase mb-1">Profile Views</div>
-          <div class="text-xl font-bold text-gray-800">{{ dashboard.totalProfileViews }}</div>
+          <p class="text-xs font-bold text-blue-600 uppercase tracking-wide">Profile Views</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1">{{ dashboard.totalProfileViews }}</p>
         </div>
-        <div class="text-gray-300">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        <div class="bg-blue-50 p-3 rounded-lg text-blue-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow border-l-4 border-yellow-500 p-4 cursor-pointer hover:shadow-lg transition" routerLink="/scholarships/my-offers">
-      <div class="flex items-center justify-between">
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-5 hover:shadow-md transition cursor-pointer" routerLink="/scholarships/my-offers">
+      <div class="flex justify-between items-center">
         <div>
-          <div class="text-xs font-bold text-yellow-600 uppercase mb-1">Pending Contacts</div>
-          <div class="text-xl font-bold text-gray-800">{{ dashboard.pendingContactRequests }}</div>
+          <p class="text-xs font-bold text-green-600 uppercase tracking-wide">Active Offers</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1">{{ dashboard.activeOffers }}</p>
         </div>
-        <div class="text-gray-300">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+        <div class="bg-green-50 p-3 rounded-lg text-green-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
       </div>
     </div>
 
-     <div class="bg-white rounded-lg shadow border-l-4 border-indigo-500 p-4 cursor-pointer hover:shadow-lg transition" routerLink="/students/profile">
-      <div class="flex items-center justify-between">
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-yellow-500 p-5 hover:shadow-md transition cursor-pointer">
+      <div class="flex justify-between items-center">
         <div>
-          <div class="text-xs font-bold text-indigo-600 uppercase mb-1">Search Appearances</div>
-          <div class="text-xl font-bold text-gray-800">{{ dashboard.searchAppearances }}</div>
+          <p class="text-xs font-bold text-yellow-600 uppercase tracking-wide">Band Interest</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1">{{ dashboard.pendingContactRequests }}</p>
         </div>
-        <div class="text-gray-300">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <div class="bg-yellow-50 p-3 rounded-lg text-yellow-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
         </div>
       </div>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
     <div class="lg:col-span-1 space-y-6">
-      <div class="bg-white rounded-lg shadow overflow-hidden border border-cyan-200">
-        <div class="bg-cyan-600 px-4 py-3">
-          <h6 class="text-white font-bold m-0">Link Your Guardian</h6>
+      
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div class="px-5 py-4 border-b bg-gray-50 flex items-center">
+           <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+           <h3 class="font-bold text-gray-800 m-0">Quick Actions</h3>
         </div>
-        <div class="p-6 text-center">
-          <p class="text-sm text-gray-600 mb-4">
-            Give this code to your parent or guardian so they can create an account and approve your
-            scholarship offers.
-          </p>
-
-          <div class="flex items-center justify-between bg-gray-50 border rounded p-3 mb-3">
-            <span class="text-lg font-mono font-bold text-gray-800 mx-auto tracking-widest">{{
-              dashboard.guardianInviteCode
-            }}</span>
-            <button
-              class="p-2 text-gray-500 hover:text-cyan-600 transition"
-              (click)="copyInviteCode(dashboard.guardianInviteCode)"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                ></path>
-              </svg>
-            </button>
-          </div>
-
-          <div
-            *ngIf="copySuccess"
-            class="bg-green-100 text-green-700 text-xs py-1 px-2 rounded inline-block"
-          >
-            Copied to clipboard!
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-4 py-3 border-b bg-gray-50">
-          <h6 class="text-blue-600 font-bold m-0">Quick Actions</h6>
-        </div>
-        <div class="p-4 flex flex-col space-y-2">
+        <div class="p-5 flex flex-col space-y-3">
           <a
             routerLink="/student/videos/upload"
-            class="flex items-center w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-center justify-center"
+            class="flex items-center justify-center px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
           >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-              ></path>
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
             </svg>
             Upload Audition Video
           </a>
           <a
             routerLink="/bands/list"
-            class="flex items-center w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition text-center justify-center"
+            class="flex items-center justify-center px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
           >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              ></path>
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
-            Find Bands
+            Browse Bands
           </a>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-sm overflow-hidden text-white">
+        <div class="p-6">
+          <h3 class="font-bold text-lg mb-2">Guardian Access</h3>
+          <p class="text-gray-300 text-sm mb-4">
+            Share this code with your parent or guardian to link accounts.
+          </p>
+
+          <div class="bg-white/10 border border-white/20 rounded-lg p-3 flex justify-between items-center backdrop-blur-sm">
+            <span class="text-xl font-mono font-bold tracking-widest text-white">{{
+              dashboard.guardianInviteCode
+            }}</span>
+            <button
+              class="p-2 text-gray-300 hover:text-white transition"
+              (click)="copyInviteCode(dashboard.guardianInviteCode)"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+            </button>
+          </div>
+          <div *ngIf="copySuccess" class="text-green-400 text-xs mt-2 text-right">
+            Copied to clipboard!
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-lg font-bold text-gray-900">Recent Notifications</h2>
-    <span class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-xs font-semibold">
-      {{ (notificationService.unreadCount$ | async) || 0 }} New
-    </span>
-  </div>
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 h-full flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+          <h3 class="font-bold text-gray-800 m-0">Recent Activity</h3>
+          <span class="text-xs text-gray-500 bg-white border px-2 py-1 rounded">Last 30 Days</span>
+        </div>
+        <div class="p-0 flex-grow">
+          <div
+            *ngIf="dashboard.recentActivity.length === 0 && dashboard.recentNotifications.length === 0"
+            class="text-center text-gray-400 py-12 flex flex-col items-center"
+          >
+             <svg class="w-16 h-16 text-gray-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p>No recent activity to show.</p>
+          </div>
 
-  <div class="space-y-4">
-    <app-notification-card
-      *ngFor="let notification of notificationService.notifications$ | async"
-      [notification]="notification"
-      (markRead)="onMarkAsRead($event)"
-      (dismiss)="onDismiss($event)">
-    </app-notification-card>
-
-    <div *ngIf="(notificationService.notifications$ | async)?.length === 0" 
-         class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-      <p>No new notifications</p>
+          <div class="divide-y divide-gray-100">
+            <div
+              *ngFor="let note of dashboard.recentNotifications"
+              class="p-4 hover:bg-gray-50 transition flex gap-4 items-start"
+            >
+              <div class="flex-shrink-0 mt-1">
+                 <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                 </div>
+              </div>
+              <div class="flex-grow">
+                <div class="flex justify-between items-start">
+                  <h6 class="text-sm font-semibold text-gray-900 m-0">
+                    {{ note.title }}
+                  </h6>
+                  <span class="text-xs text-gray-400">{{ note.createdAt | date : 'MMM d' }}</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1 mb-0">{{ note.message }}</p>
+              </div>
+              <div *ngIf="!note.isRead" class="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+            </div>
+            
+            <div *ngFor="let act of dashboard.recentActivity" class="p-4 hover:bg-gray-50 transition flex gap-4 items-start">
+                 <div class="flex-shrink-0 mt-1">
+                   <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                   </div>
+                 </div>
+                 <div>
+                    <p class="text-sm text-gray-800 font-medium m-0">{{ act.description }}</p>
+                    <span class="text-xs text-gray-400">{{ act.date | date : 'short' }}</span>
+                 </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+
+  <div *ngIf="showWizard" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[90vh]">
+      
+      <div class="bg-gray-50 px-6 py-4 border-b flex justify-between items-center flex-shrink-0">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Complete Your Profile</h2>
+          <div class="flex space-x-2 mt-2">
+            <div *ngFor="let step of [1,2,3,4,5]" class="w-2.5 h-2.5 rounded-full transition-colors" [ngClass]="step <= wizardStep ? 'bg-blue-600' : 'bg-gray-300'"></div>
+          </div>
+        </div>
+        <button (click)="closeWizard()" class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="p-8 overflow-y-auto flex-grow">
+        
+        <div *ngIf="wizardStep === 1" class="text-center py-4">
+          <div class="bg-blue-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-3">Welcome to Podium!</h3>
+          <p class="text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
+            We're excited to help you find the perfect band scholarship. Let's take 2 minutes to set up your profile so directors can find you.
+          </p>
+          <button (click)="nextStep()" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-0.5">
+            Get Started
+          </button>
+        </div>
+
+        <div *ngIf="wizardStep === 2">
+          <h3 class="text-xl font-bold text-gray-800 mb-1">The Basics</h3>
+          <p class="text-gray-500 text-sm mb-6">Director's need to know who you are and where you are from.</p>
+          
+          <form [formGroup]="basicsForm" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <input type="text" formControlName="firstName" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <input type="text" formControlName="lastName" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input type="tel" formControlName="phoneNumber" placeholder="(555) 123-4567" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input type="text" formControlName="city" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                <input type="text" formControlName="state" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div *ngIf="wizardStep === 3">
+          <h3 class="text-xl font-bold text-gray-800 mb-1">Your Music</h3>
+          <p class="text-gray-500 text-sm mb-6">Tell us about your instrument and experience.</p>
+
+          <form [formGroup]="musicForm" class="space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Primary Instrument</label>
+              <select formControlName="primaryInstrument" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="">Select an instrument...</option>
+                <option value="Trumpet">Trumpet</option>
+                <option value="Clarinet">Clarinet</option>
+                <option value="Percussion">Percussion</option>
+                <option value="Flute">Flute</option>
+                <option value="Trombone">Trombone</option>
+                <option value="Saxophone">Saxophone</option>
+                <option value="Tuba">Tuba</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Years Experience</label>
+                <input type="number" formControlName="yearsExperience" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Skill Level</label>
+                <select formControlName="skillLevel" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+              <p class="text-xs text-gray-400 mb-2">Tell directors briefly about your musical journey (min 20 chars).</p>
+              <textarea formControlName="bioDescription" rows="4" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="I started playing in 6th grade..."></textarea>
+              <div class="text-right text-xs text-red-500 mt-1" *ngIf="musicForm.get('bioDescription')?.hasError('minlength') && musicForm.get('bioDescription')?.touched">
+                Bio is too short.
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div *ngIf="wizardStep === 4" class="text-center">
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Showcase Your Talent</h3>
+          <p class="text-gray-600 mb-6">Profiles with videos get <span class="font-bold text-blue-600">4x more offers</span>. Upload a short clip now.</p>
+          
+          <div class="border-2 border-dashed border-gray-300 rounded-xl p-10 hover:bg-gray-50 transition cursor-pointer relative group">
+            <input type="file" (change)="onFileSelected($event)" accept="video/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+            
+            <div *ngIf="!selectedVideoFile" class="flex flex-col items-center">
+              <div class="bg-blue-50 p-4 rounded-full mb-3 group-hover:bg-blue-100 transition">
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+              </div>
+              <span class="text-gray-900 font-medium">Click to upload video</span>
+              <span class="text-xs text-gray-500 mt-1">MP4, MOV up to 50MB</span>
+            </div>
+
+            <div *ngIf="selectedVideoFile" class="text-green-600 font-bold flex flex-col items-center animate-fade-in">
+              <div class="bg-green-50 p-4 rounded-full mb-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              {{ selectedVideoFile.name }}
+              <p class="text-xs font-normal text-gray-500 mt-1">Click to change file</p>
+            </div>
+          </div>
+          
+          <div class="mt-8">
+            <button (click)="skipVideo()" class="text-gray-400 hover:text-gray-600 text-sm underline decoration-gray-300 underline-offset-4">I'll do this later</button>
+          </div>
+        </div>
+
+        <div *ngIf="wizardStep === 5" class="text-center py-6">
+          <div class="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 animate-bounce-short">
+            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-3">You're All Set!</h3>
+          <p class="text-gray-600 mb-8">
+            Your profile is now active. Directors can start finding you today.
+          </p>
+          <button (click)="closeWizard()" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold shadow-lg shadow-green-600/30 transition">
+            Go to Dashboard
+          </button>
+        </div>
+
+      </div>
+
+      <div class="bg-gray-50 px-6 py-4 border-t flex justify-between flex-shrink-0" *ngIf="wizardStep > 1 && wizardStep < 5">
+        <button (click)="prevStep()" class="text-gray-600 hover:text-gray-900 font-medium px-4 py-2 hover:bg-gray-200 rounded transition">Back</button>
+        <button 
+          (click)="wizardStep === 4 ? uploadFirstVideo() : nextStep()" 
+          [disabled]="(wizardStep === 2 && basicsForm.invalid) || (wizardStep === 3 && musicForm.invalid) || isSavingWizard"
+          class="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition"
+        >
+          <span *ngIf="isSavingWizard" class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+          {{ wizardStep === 4 ? 'Upload & Finish' : 'Next' }}
+        </button>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <ng-template #loading>
-  <div class="flex justify-center items-center h-64">
-    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  <div class="flex justify-center items-center h-screen bg-gray-50">
+    <div class="flex flex-col items-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+      <p class="text-gray-500 font-medium">Loading Dashboard...</p>
+    </div>
   </div>
 </ng-template>

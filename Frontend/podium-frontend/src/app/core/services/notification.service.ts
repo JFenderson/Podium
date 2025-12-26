@@ -24,19 +24,16 @@ export class NotificationService {
    * 1. GET FILTERED ALERTS (Used by Notification List Page)
    * This was missing in the previous version!
    */
-  getNotifications(filter: NotificationFilterDto): Observable<NotificationDto[]> {
+ getNotifications(filter: NotificationFilterDto): Observable<NotificationDto[]> {
     let params = new HttpParams();
-    
     if (filter.type) params = params.set('type', filter.type);
     if (filter.priority) params = params.set('priority', filter.priority);
     if (filter.isRead !== undefined) params = params.set('isRead', filter.isRead.toString());
-    if (filter.since) params = params.set('since', filter.since.toISOString());
     if (filter.pageNumber) params = params.set('page', filter.pageNumber);
     if (filter.pageSize) params = params.set('pageSize', filter.pageSize);
 
     return this.http.get<any>(this.apiUrl, { params }).pipe(
       map(response => {
-        // Handle potentially wrapped paginated response
         const items: NotificationDto[] = response.items || response || [];
         return this.processNotifications(items);
       })
