@@ -26,7 +26,6 @@ type Tab = 'activity' | 'offers' | 'requests' | 'profile' | 'videos';
     RouterLink,
     SkeletonLoaderComponent,
     StudentStatusBadgeComponent,
-    KeyboardNavigationDirective,
     BreadcrumbComponent
   ],
   templateUrl: './guardian-dashboard.component.html',

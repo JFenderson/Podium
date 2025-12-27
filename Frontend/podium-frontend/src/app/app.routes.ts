@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { Roles } from './core/models/common.models';
+import { StudentSearchComponent } from './features/band-staff/components/student-search/student-search.component';
 
 export const routes: Routes = [
   // Root path - redirect to login if not authenticated
@@ -61,6 +62,12 @@ export const routes: Routes = [
     data: { roles: [Roles.Director, Roles.BandStaff] },
     loadChildren: () => import('./features/director/director.routes').then(m => m.DIRECTOR_ROUTES)
   },
+  {
+  path: 'recruiter/search',
+  component: StudentSearchComponent,
+  canActivate: [authGuard, roleGuard],
+  data: { roles: [Roles.BandStaff, Roles.Director] }
+},
   // Profile - requires authentication
   {
     path: 'profile',
