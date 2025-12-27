@@ -95,6 +95,7 @@ export interface GuardianContactRequestDto {
 }
 
 export interface GuardianPendingApprovalDto {
+universityName: any;
   offerId: number;
   studentId: number;
   studentName: string;

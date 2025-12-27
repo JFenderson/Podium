@@ -62,7 +62,7 @@ export class GuardianDashboardComponent implements OnInit {
   );
 
   // --- Tab Content Data Signals ---
-  studentActivity = signal<any[]>([]);
+  studentActivity = signal<any>(null);
   studentOffers = signal<any[]>([]);
   studentRequests = signal<any[]>([]);
 
@@ -88,7 +88,7 @@ export class GuardianDashboardComponent implements OnInit {
       if (studentId) {
         this.loadStudentDetails(studentId);
       }
-    }, { allowSignalWrites: true });
+    });
   }
 
   ngOnInit(): void {
@@ -124,7 +124,7 @@ loadStudentDetails(studentId: number): void {
       next: (data) => this.studentActivity.set(data),
       error: (err) => {
         console.error('Failed to load activity', err);
-        this.studentActivity.set([]); // Fallback to empty array
+        this.studentActivity.set(null); // Fallback to empty array
       }
     });
 
@@ -172,13 +172,12 @@ loadStudentDetails(studentId: number): void {
   }
 
   // Computed property for the sorted list
-  get sortedStudents(): GuardianLinkedStudentDto[] {
+  sortedStudents = computed(() => {
     const students = [...this.students()];
     const col = this.sortColumn();
     const dir = this.sortDirection() === 'asc' ? 1 : -1;
 
     return students.sort((a: any, b: any) => {
-      // Handle potential nulls safely
       const valA = a[col] || '';
       const valB = b[col] || '';
       
@@ -186,7 +185,8 @@ loadStudentDetails(studentId: number): void {
       if (valA > valB) return 1 * dir;
       return 0;
     });
-  }
+  });
+
 
   // --- Approvals & Modals ---
 
