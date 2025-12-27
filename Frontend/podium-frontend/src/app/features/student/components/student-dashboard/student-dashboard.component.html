@@ -372,6 +372,64 @@
 
     </div>
   </div>
+
+<!-- Keyboard Help Modal -->
+<div *ngIf="showKeyboardHelp" 
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     (click)="showKeyboardHelp = false">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" (click)="$event.stopPropagation()">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-bold text-gray-900 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+        </svg>
+        Keyboard Shortcuts
+      </h2>
+      <button (click)="showKeyboardHelp = false" 
+              class="text-gray-400 hover:text-gray-600 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="space-y-3">
+      <div *ngFor="let shortcut of keyboardShortcuts" 
+           class="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition">
+        <span class="text-sm text-gray-700">{{ shortcut.description }}</span>
+        <div class="flex gap-1">
+          <kbd *ngIf="shortcut.ctrl" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Ctrl</kbd>
+          <kbd *ngIf="shortcut.shift" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Shift</kbd>
+          <kbd *ngIf="shortcut.alt" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Alt</kbd>
+          <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+            {{ shortcut.key === ' ' ? 'Space' : shortcut.key.toUpperCase() }}
+          </kbd>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 pt-4 border-t border-gray-200">
+      <p class="text-xs text-gray-500 text-center">
+        Press <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">Shift</kbd> + 
+        <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs font-mono">?</kbd> to toggle this help
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Help Button (Add near top-right of dashboard) -->
+<button (click)="toggleKeyboardHelp()"
+        class="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition z-40 group"
+        title="Keyboard Shortcuts (Shift + ?)">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+  </svg>
+  <span class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+    Keyboard Shortcuts
+  </span>
+</button>
+
+
 </div>
 
 <ng-template #loading>

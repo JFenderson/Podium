@@ -12,6 +12,8 @@ import {
 import { SkeletonLoaderComponent } from '../../../../shared/components/skeleton-loader/skeleton-loader.component';
 import { StudentStatusBadgeComponent } from '../../../../shared/components/student-status-badge/student-status-badge.component';
 import { finalize } from 'rxjs';
+import { KeyboardNavigationDirective, KeyboardShortcut } from '../../../../shared/directives/keyboard-navigation.directive';
+import { BreadcrumbComponent, BreadcrumbItem } from '../../../../shared/components/breadcrumb/breadcrumb.component';
 
 type Tab = 'activity' | 'offers' | 'requests' | 'profile' | 'videos';
 
@@ -23,7 +25,9 @@ type Tab = 'activity' | 'offers' | 'requests' | 'profile' | 'videos';
     ReactiveFormsModule, 
     RouterLink,
     SkeletonLoaderComponent,
-    StudentStatusBadgeComponent
+    StudentStatusBadgeComponent,
+    KeyboardNavigationDirective,
+    BreadcrumbComponent
   ],
   templateUrl: './guardian-dashboard.component.html',
   styleUrls: ['./guardian-dashboard.component.scss'] // Ensure this file exists or remove if using inline styles
@@ -31,6 +35,7 @@ type Tab = 'activity' | 'offers' | 'requests' | 'profile' | 'videos';
 export class GuardianDashboardComponent implements OnInit {
   private guardianService = inject(GuardianService);
   private fb = inject(FormBuilder);
+private router = inject(Router); 
 
   // --- State Signals ---
   dashboard = signal<GuardianDashboardDto | null>(null);
@@ -81,6 +86,35 @@ export class GuardianDashboardComponent implements OnInit {
     notes: ['', Validators.maxLength(500)]
   });
 
+  keyboardShortcuts: KeyboardShortcut[] = [];
+  showKeyboardHelp = false;
+  viewMode: 'list' | 'grid' = 'list';
+
+    breadcrumbs = computed<BreadcrumbItem[]>(() => {
+    const crumbs: BreadcrumbItem[] = [
+      { label: 'Guardian Dashboard', url: '/guardian/dashboard' }
+    ];
+
+    const student = this.selectedStudent();
+    if (student) {
+      crumbs.push({
+        label: student.studentName,
+        url: `/guardian/student/${student.studentId}`
+      });
+
+      const tab = this.activeTab();
+      if (tab !== 'activity') {
+        crumbs.push({
+          label: tab.charAt(0).toUpperCase() + tab.slice(1)
+        });
+      }
+    } else {
+      crumbs.push({ label: 'All Students' });
+    }
+
+    return crumbs;
+  });
+
   constructor() {
     // Effect: Automatically fetch student details when a student is selected
     effect(() => {
@@ -94,6 +128,7 @@ export class GuardianDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.loadDashboard();
     this.guardianService.startSignalR();
+    this.setupKeyboardShortcuts(); 
   }
 
   loadDashboard(): void {
@@ -235,5 +270,118 @@ loadStudentDetails(studentId: number): void {
         }
       });
     }
+  }
+
+  // 4. Setup keyboard shortcuts
+  private setupKeyboardShortcuts(): void {
+    this.keyboardShortcuts = [
+      {
+        key: 'o',
+        ctrl: true,
+        description: 'Overview Mode',
+        action: () => this.selectStudent(null)
+      },
+      {
+        key: 'l',
+        ctrl: true,
+        description: 'Link New Student',
+        action: () => this.router.navigate(['/guardian/link-student'])
+      },
+      {
+        key: 'ArrowLeft',
+        description: 'Previous Student',
+        action: () => this.navigateStudent(-1)
+      },
+      {
+        key: 'ArrowRight',
+        description: 'Next Student',
+        action: () => this.navigateStudent(1)
+      },
+      {
+        key: 'Escape',
+        description: 'Close Modal / Back to Overview',
+        action: () => {
+          if (this.showApprovalModal) {
+            this.closeApprovalModal();
+          } else if (this.selectedStudentId()) {
+            this.selectStudent(null);
+          }
+        }
+      },
+      {
+        key: '1',
+        alt: true,
+        description: 'Contact Requests Tab',
+        action: () => {
+          if (this.selectedStudentId()) {
+            this.setTab('requests');
+          }
+        }
+      },
+      {
+        key: '2',
+        alt: true,
+        description: 'Scholarship Offers Tab',
+        action: () => {
+          if (this.selectedStudentId()) {
+            this.setTab('offers');
+          }
+        }
+      },
+      {
+        key: '3',
+        alt: true,
+        description: 'Activity Timeline Tab',
+        action: () => {
+          if (this.selectedStudentId()) {
+            this.setTab('activity');
+          }
+        }
+      },
+      {
+        key: 'v',
+        ctrl: true,
+        description: 'Toggle View Mode (List/Grid)',
+        action: () => {
+          if (this.studentCount() >= 6) {
+            this.viewMode = this.viewMode === 'list' ? 'grid' : 'list';
+          }
+        }
+      },
+      {
+        key: '?',
+        shift: true,
+        description: 'Show Keyboard Shortcuts',
+        action: () => {
+          this.showKeyboardHelp = !this.showKeyboardHelp;
+        }
+      }
+    ];
+  }
+
+  //Navigate between students with arrow keys
+  private navigateStudent(direction: number): void {
+    const studentsList = this.students();
+    if (studentsList.length === 0) return;
+
+    const currentIndex = studentsList.findIndex(s => s.studentId === this.selectedStudentId());
+    
+    if (currentIndex === -1) {
+      // No student selected, select first
+      this.selectStudent(studentsList[0].studentId);
+    } else {
+      const newIndex = (currentIndex + direction + studentsList.length) % studentsList.length;
+      this.selectStudent(studentsList[newIndex].studentId);
+    }
+  }
+
+  //  Toggle view mode
+  toggleViewMode(): void {
+    this.viewMode = this.viewMode === 'list' ? 'grid' : 'list';
+  }
+
+  // Toggle keyboard help
+  toggleKeyboardHelp(): void {
+    this.showKeyboardHelp = !this.showKeyboardHelp;
   }
 }

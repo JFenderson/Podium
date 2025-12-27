@@ -10,6 +10,8 @@ import { NotificationDto } from '../../../../core/models/notification.models';
 import { finalize } from 'rxjs/operators';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { KeyboardNavigationDirective, KeyboardShortcut } from '../../../../shared/directives/keyboard-navigation.directive';
+
 
 @Component({
   selector: 'app-student-dashboard',
@@ -25,7 +27,8 @@ export class StudentDashboardComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-
+keyboardShortcuts: KeyboardShortcut[] = [];
+  showKeyboardHelp = false;
 
   // Data
   dashboard: StudentDashboardDto | null = null;
@@ -51,6 +54,7 @@ basicsForm!: FormGroup;
     this.loadDashboard();
     this.loadData();
     this.initForms();
+    this.setupKeyboardShortcuts();
     this.notificationService.getRecentNotifications().subscribe();
     this.notificationService.getUnreadCount().subscribe();
   }
@@ -267,5 +271,57 @@ openWizard(): void {
       next: () => console.log('Dismissed notification'),
       error: (err) => console.error('Error dismissing notification', err)
     });
+  }
+
+  private setupKeyboardShortcuts(): void {
+    this.keyboardShortcuts = [
+      {
+        key: 'p',
+        ctrl: true,
+        description: 'Complete Profile',
+        action: () => {
+          if (!this.isProfileComplete) {
+            this.openWizard();
+          }
+        }
+      },
+      {
+        key: 'u',
+        ctrl: true,
+        description: 'Upload Video',
+        action: () => {
+          this.router.navigate(['/student/videos/upload']);
+        }
+      },
+      {
+        key: 'b',
+        ctrl: true,
+        description: 'Browse Bands',
+        action: () => {
+          this.router.navigate(['/bands']);
+        }
+      },
+      {
+        key: 'Escape',
+        description: 'Close Modal',
+        action: () => {
+          if (this.showWizard) {
+            this.closeWizard();
+          }
+        }
+      },
+      {
+        key: '?',
+        shift: true,
+        description: 'Show Keyboard Shortcuts',
+        action: () => {
+          this.showKeyboardHelp = !this.showKeyboardHelp;
+        }
+      }
+    ];
+  }
+
+    toggleKeyboardHelp(): void {
+    this.showKeyboardHelp = !this.showKeyboardHelp;
   }
 }
