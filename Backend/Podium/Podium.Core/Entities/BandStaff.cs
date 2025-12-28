@@ -18,6 +18,9 @@ namespace Podium.Core.Entities
         public bool IsActive { get; set; } = true; // Soft Delete Logic specific to Staff assignment
         public bool IsDirector { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? BudgetAllocation { get; set; }
+
         public DateTime JoinedDate { get; set; } = DateTime.UtcNow;
         public DateTime? DeactivatedDate { get; set; }
 

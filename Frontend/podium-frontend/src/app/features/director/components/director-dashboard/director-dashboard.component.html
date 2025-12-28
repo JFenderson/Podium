@@ -1,121 +1,566 @@
-<div class="p-6 space-y-6">
+<!-- director-dashboard.component.html - PART 1: HEADER & KEY METRICS -->
+<div class="min-h-screen bg-gray-50">
   
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div>
-      <h1 class="text-3xl font-bold text-text-primary">Director Dashboard</h1>
-      <p class="text-text-secondary">Overview of your band program and recruitment</p>
-    </div>
-    <div class="flex gap-3">
-      <button (click)="refresh()" class="px-4 py-2 border border-border rounded-md hover:bg-surface text-text-primary flex items-center gap-2 transition-colors">
-        <span class="material-icons text-sm">refresh</span> Refresh
-      </button>
-      <button (click)="exportData()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark flex items-center gap-2 transition-colors">
-        <span class="material-icons text-sm">download</span> Export Report
-      </button>
-    </div>
-  </div>
-
-  <div *ngIf="isLoading" class="flex justify-center items-center py-20">
-    <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-  </div>
-
-  <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
-    <span class="block sm:inline">{{ error }}</span>
-  </div>
-
-  <div *ngIf="!isLoading && dashboard" class="space-y-6">
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-text-secondary">Total Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalOffers || 0 }}</h3>
-          </div>
-          <div class="p-2 bg-blue-50 rounded-lg">
-            <span class="material-icons text-blue-600">local_offer</span>
-          </div>
+  <!-- HEADER -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Director Dashboard</h1>
+          <p class="text-sm text-gray-500 mt-1">Recruitment analytics and team performance</p>
         </div>
-      </div>
-      
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-text-secondary">Pending Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.pendingOffers || 0 }}</h3>
-          </div>
-          <div class="p-2 bg-orange-50 rounded-lg">
-            <span class="material-icons text-orange-600">hourglass_empty</span>
-          </div>
-        </div>
-      </div>
 
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-text-secondary">Accepted Offers</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.acceptedOffers || 0 }}</h3>
-          </div>
-          <div class="p-2 bg-green-50 rounded-lg">
-            <span class="material-icons text-green-600">check_circle</span>
-          </div>
-        </div>
-      </div>
+        <!-- Actions -->
+        <div class="flex items-center gap-3">
+          <!-- Date Range Selector -->
+          <div class="relative">
+            <button
+              (click)="showDatePicker.set(!showDatePicker())"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              {{selectedDateRange().label}}
+            </button>
 
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-text-secondary">Total Students</p>
-            <h3 class="text-2xl font-bold text-text-primary mt-1">{{ dashboard.totalStudents || 0 }}</h3>
-          </div>
-          <div class="p-2 bg-purple-50 rounded-lg">
-            <span class="material-icons text-purple-600">school</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <h3 class="text-lg font-semibold text-text-primary mb-4">Offer Status</h3>
-        <div class="space-y-4">
-          <div *ngIf="!offerStatusData || offerStatusData.length === 0" class="text-center text-text-secondary py-4">
-            No data available
-          </div>
-          <div *ngFor="let item of offerStatusData" class="flex items-center">
-            <div class="w-32 text-sm text-text-secondary">{{ item.status }}</div>
-            <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div class="h-full bg-primary" 
-                   [style.width.%]="dashboard.totalOffers ? (item.count / dashboard.totalOffers) * 100 : 0">
+            <!-- Date Picker Dropdown -->
+            <div *ngIf="showDatePicker()" class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-30">
+              <div class="p-2">
+                <button
+                  *ngFor="let range of predefinedRanges"
+                  (click)="selectDateRange(range)"
+                  class="w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100">
+                  {{range.label}}
+                </button>
+                
+                <div class="border-t border-gray-200 mt-2 pt-2">
+                  <form [formGroup]="filterForm">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Custom Range</label>
+                    <input type="date" formControlName="startDate" class="w-full text-xs rounded border-gray-300 mb-2">
+                    <input type="date" formControlName="endDate" class="w-full text-xs rounded border-gray-300 mb-2">
+                    <button
+                      type="button"
+                      (click)="applyCustomDateRange()"
+                      class="w-full bg-blue-600 text-white text-xs py-2 rounded hover:bg-blue-700">
+                      Apply
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
-            <div class="w-12 text-right text-sm font-medium">{{ item.count }}</div>
           </div>
-        </div>
-      </div>
 
-      <div class="bg-surface p-6 rounded-lg shadow-sm border border-border">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-text-primary">Recent Activity</h3>
-          <a routerLink="/director/activities" class="text-sm text-primary hover:text-primary-dark">View All</a>
-        </div>
-        <div class="space-y-4">
-          <div *ngFor="let activity of dashboard.recentActivity" class="flex items-start gap-3 pb-4 border-b border-border last:border-0">
-            <div class="p-2 rounded-full bg-background flex-shrink-0">
-              <span class="material-icons text-text-secondary text-sm">{{ getActivityIcon(activity.type) }}</span>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-text-primary">{{ activity.description }}</p>
-              <p class="text-xs text-text-secondary mt-0.5">{{ activity.timestamp | date:'short' }}</p>
-            </div>
-          </div>
-          
-          <div *ngIf="!dashboard.recentActivity || dashboard.recentActivity.length === 0" class="text-center py-6 text-text-secondary">
-            No recent activity found.
-          </div>
+          <!-- Refresh Button -->
+          <button
+            (click)="refreshDashboard()"
+            [disabled]="isRefreshing()"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+            <svg [class.animate-spin]="isRefreshing()" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+          </button>
+
+          <!-- Export Button -->
+          <button
+            (click)="showExportModal.set(true)"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Export
+          </button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- LOADING STATE -->
+    <div *ngIf="isLoading()" class="text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+      <p class="text-gray-500 mt-4">Loading dashboard...</p>
+    </div>
+
+    <!-- DASHBOARD CONTENT -->
+    <div *ngIf="!isLoading() && keyMetrics()">
+
+      <!-- KEY METRICS CARDS -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        
+        <!-- Offers Sent -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-blue-50 rounded-lg">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div [class]="getChangeClass(keyMetrics()!.offersSentChange)" class="flex items-center text-sm font-medium">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getChangeIcon(keyMetrics()!.offersSentChange)"></path>
+              </svg>
+              {{formatPercentage(Math.abs(keyMetrics()!.offersSentChange))}}
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 font-medium">Offers Sent</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{keyMetrics()!.totalOffersSent}}</p>
+          </div>
+        </div>
+
+        <!-- Acceptance Rate -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-green-50 rounded-lg">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+              </svg>
+            </div>
+            <div [class]="getChangeClass(keyMetrics()!.acceptanceRateChange)" class="flex items-center text-sm font-medium">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getChangeIcon(keyMetrics()!.acceptanceRateChange)"></path>
+              </svg>
+              {{formatPercentage(Math.abs(keyMetrics()!.acceptanceRateChange))}}
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 font-medium">Acceptance Rate</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{formatPercentage(keyMetrics()!.acceptanceRate)}}</p>
+          </div>
+        </div>
+
+        <!-- Active Recruiters -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-purple-50 rounded-lg">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+            <div [class]="getChangeClass(keyMetrics()!.activeRecruitersChange)" class="flex items-center text-sm font-medium">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getChangeIcon(keyMetrics()!.activeRecruitersChange)"></path>
+              </svg>
+              {{formatPercentage(Math.abs(keyMetrics()!.activeRecruitersChange))}}
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 font-medium">Active Recruiters</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{keyMetrics()!.activeRecruiters}}</p>
+          </div>
+        </div>
+
+        <!-- Pipeline Students -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition">
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-amber-50 rounded-lg">
+              <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              </svg>
+            </div>
+            <div [class]="getChangeClass(keyMetrics()!.pipelineStudentsChange)" class="flex items-center text-sm font-medium">
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getChangeIcon(keyMetrics()!.pipelineStudentsChange)"></path>
+              </svg>
+              {{formatPercentage(Math.abs(keyMetrics()!.pipelineStudentsChange))}}
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 font-medium">Pipeline Students</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{keyMetrics()!.pipelineStudents}}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget Overview (Additional Metric) -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 mb-6 text-white">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-blue-100 text-sm font-medium mb-1">Budget Utilization</p>
+            <p class="text-3xl font-bold">{{formatPercentage(keyMetrics()!.budgetUtilization)}}</p>
+            <p class="text-blue-100 text-sm mt-2">
+              {{formatCurrency(keyMetrics()!.totalBudgetUsed)}} of {{formatCurrency(keyMetrics()!.totalBudgetAllocated)}} allocated
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-blue-100 text-sm font-medium mb-1">Avg. Offer Amount</p>
+            <p class="text-2xl font-bold">{{formatCurrency(keyMetrics()!.averageOfferAmount)}}</p>
+          </div>
+        </div>
+        
+        <!-- Budget Progress Bar -->
+        <div class="mt-4 bg-blue-500 rounded-full h-3 overflow-hidden">
+          <div 
+            class="bg-white h-full rounded-full transition-all duration-1000"
+            [style.width.%]="keyMetrics()!.budgetUtilization">
+          </div>
+        </div>
+      </div>
+
+<!-- director-dashboard.component.html - PART 2: CHARTS & FUNNEL -->
+
+      <!-- TWO COLUMN LAYOUT -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        
+        <!-- LEFT COLUMN (2/3 width) -->
+        <div class="lg:col-span-2 space-y-6">
+          
+          <!-- RECRUITMENT FUNNEL -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-lg font-bold text-gray-900">Recruitment Funnel</h2>
+              <span class="text-sm text-gray-500">Click stages for details</span>
+            </div>
+            
+            <div class="h-80">
+              <canvas #funnelChart></canvas>
+            </div>
+
+            <!-- Funnel Stage Stats -->
+            <div class="mt-6 grid grid-cols-5 gap-2">
+              <div *ngFor="let stage of recruitmentFunnel()" 
+                   (click)="onFunnelStageClick(stage.stage)"
+                   class="text-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                   [style.border-left]="'4px solid ' + FUNNEL_COLORS[stage.stage]">
+                <p class="text-xs text-gray-500 font-medium mb-1">{{stage.stage}}</p>
+                <p class="text-xl font-bold text-gray-900">{{stage.count}}</p>
+                <p class="text-xs text-gray-500">{{formatPercentage(stage.percentage)}}</p>
+                <p *ngIf="stage.conversionRate" class="text-xs text-green-600 font-medium mt-1">
+                  {{formatPercentage(stage.conversionRate)}} conv.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- OFFERS OVER TIME -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-6">Offers Over Time</h2>
+            
+            <div class="h-80">
+              <canvas #offersTimeChart></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN (1/3 width) -->
+        <div class="space-y-6">
+          
+          <!-- PENDING APPROVALS -->
+          <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h2 class="font-bold text-gray-900">Pending Approvals</h2>
+              <span *ngIf="urgentApprovalsCount() > 0" class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">
+                {{urgentApprovalsCount()}} Urgent
+              </span>
+            </div>
+
+            <div class="max-h-96 overflow-y-auto">
+              <div *ngFor="let approval of pendingApprovals()" 
+                   class="px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition">
+                
+                <!-- Urgency Badge -->
+                <div class="flex items-start justify-between mb-2">
+                  <span [class]="
+                    approval.urgency === 'High' ? 'bg-red-100 text-red-700' :
+                    approval.urgency === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-700'
+                  " class="text-xs font-semibold px-2 py-0.5 rounded-full">
+                    {{approval.urgency}}
+                  </span>
+                  <span class="text-xs text-gray-500">{{approval.requestDate | date:'short'}}</span>
+                </div>
+
+                <!-- Student Info -->
+                <div class="mb-2">
+                  <p class="font-semibold text-gray-900">{{approval.studentName}}</p>
+                  <p class="text-sm text-gray-500">{{approval.instrument}} • {{formatCurrency(approval.amount!)}}</p>
+                </div>
+
+                <!-- Requested By -->
+                <p class="text-xs text-gray-500 mb-3">
+                  Requested by {{approval.requestedByStaffName}}
+                </p>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                  <button
+                    (click)="approveOffer(approval)"
+                    [disabled]="!approval.canApprove"
+                    class="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Approve
+                  </button>
+                  <button
+                    (click)="denyOffer(approval)"
+                    [disabled]="!approval.canDeny"
+                    class="flex-1 px-3 py-2 border border-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Deny
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="pendingApprovals().length === 0" class="px-6 py-8 text-center text-gray-500 text-sm">
+                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p>No pending approvals</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- REAL-TIME ACTIVITY FEED -->
+          <div class="bg-white rounded-xl border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h2 class="font-bold text-gray-900">Recent Activity</h2>
+              <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live updates"></span>
+            </div>
+
+            <div class="max-h-96 overflow-y-auto">
+              <div *ngFor="let activity of recentActivity()" class="px-6 py-3 border-b border-gray-100 hover:bg-gray-50 transition">
+                <div class="flex gap-3">
+                  <!-- Icon -->
+                  <div [class]="'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-' + getActivityColor(activity.activityType) + '-100'">
+                    <svg [class]="'w-4 h-4 text-' + getActivityColor(activity.activityType) + '-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="getActivityIcon(activity.activityType)"></path>
+                    </svg>
+                  </div>
+
+                  <!-- Content -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">{{activity.description}}</p>
+                    <p *ngIf="activity.details" class="text-xs text-gray-500 mt-0.5">{{activity.details}}</p>
+                    <p class="text-xs text-gray-400 mt-1">{{activity.timestamp | date:'short'}}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="recentActivity().length === 0" class="px-6 py-8 text-center text-gray-500 text-sm">
+                No recent activity
+              </div>
+            </div>
+          </div>
+
+          <!-- OFFERS BREAKDOWN CHART -->
+          <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-6">Offers by Instrument</h2>
+            
+            <div class="h-64">
+              <canvas #offersBreakdownChart></canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+<!-- director-dashboard.component.html - PART 3: STAFF PERFORMANCE & MODALS -->
+
+      <!-- STAFF PERFORMANCE TABLE -->
+      <div class="bg-white rounded-xl border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h2 class="text-lg font-bold text-gray-900">Staff Performance</h2>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th (click)="sortStaff('staffName')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none">
+                  Name
+                  <svg *ngIf="staffSortColumn() === 'staffName'" class="inline w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="staffSortDirection() === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"></path>
+                  </svg>
+                </th>
+                <th (click)="sortStaff('offersCreated')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700">
+                  Offers Created
+                  <svg *ngIf="staffSortColumn() === 'offersCreated'" class="inline w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="staffSortDirection() === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"></path>
+                  </svg>
+                </th>
+                <th (click)="sortStaff('acceptanceRate')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700">
+                  Acceptance Rate
+                  <svg *ngIf="staffSortColumn() === 'acceptanceRate'" class="inline w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="staffSortDirection() === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"></path>
+                  </svg>
+                </th>
+                <th (click)="sortStaff('responseRate')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700">
+                  Response Rate
+                </th>
+                <th (click)="sortStaff('totalBudgetAllocated')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700">
+                  Budget Allocated
+                </th>
+                <th (click)="sortStaff('averageOfferAmount')" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700">
+                  Avg. Offer
+                </th>
+                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr *ngFor="let staff of sortedStaff()" class="hover:bg-gray-50 transition group">
+                <!-- Name & Role -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow">
+                      {{staff.staffName.charAt(0)}}
+                    </div>
+                    <div class="ml-4">
+                      <div class="text-sm font-semibold text-gray-900">{{staff.staffName}}</div>
+                      <div class="text-xs text-gray-500">{{staff.role}}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Offers Created -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 font-medium">{{staff.offersCreated}}</div>
+                  <div class="text-xs text-gray-500">{{staff.offersAccepted}} accepted</div>
+                </td>
+
+                <!-- Acceptance Rate -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="flex-1">
+                      <div class="text-sm font-semibold text-gray-900">{{formatPercentage(staff.acceptanceRate)}}</div>
+                      <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div 
+                          class="h-2 rounded-full transition-all"
+                          [class]="staff.acceptanceRate >= 50 ? 'bg-green-500' : staff.acceptanceRate >= 30 ? 'bg-yellow-500' : 'bg-red-500'"
+                          [style.width.%]="staff.acceptanceRate">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Response Rate -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 font-medium">{{formatPercentage(staff.responseRate)}}</div>
+                  <div class="text-xs text-gray-500">{{staff.studentsResponded}}/{{staff.studentsContacted}}</div>
+                </td>
+
+                <!-- Budget Allocated -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-semibold text-gray-900">{{formatCurrency(staff.totalBudgetAllocated)}}</div>
+                </td>
+
+                <!-- Average Offer -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{formatCurrency(staff.averageOfferAmount)}}</div>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      (click)="viewStaffProfile(staff.staffId)"
+                      class="text-blue-600 hover:text-blue-900"
+                      title="View Profile">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      (click)="adjustBudget(staff)"
+                      class="text-green-600 hover:text-green-900"
+                      title="Adjust Budget">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="staffPerformance().length === 0">
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                  No staff data available
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EXPORT MODAL -->
+  <div *ngIf="showExportModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" (click)="$event.stopPropagation()">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-900">Export Dashboard</h2>
+        <button (click)="showExportModal.set(false)" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <p class="text-gray-600 text-sm mb-6">Choose a format to export your dashboard data</p>
+
+      <div class="space-y-3">
+        <button
+          (click)="exportDashboard('csv')"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left">
+          <div class="flex items-center">
+            <div class="p-2 bg-green-100 rounded-lg">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="font-semibold text-gray-900">CSV File</p>
+              <p class="text-xs text-gray-500">Spreadsheet data</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          (click)="exportDashboard('excel')"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left">
+          <div class="flex items-center">
+            <div class="p-2 bg-blue-100 rounded-lg">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="font-semibold text-gray-900">Excel File</p>
+              <p class="text-xs text-gray-500">Advanced spreadsheet with formulas</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          (click)="exportDashboard('pdf')"
+          class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left">
+          <div class="flex items-center">
+            <div class="p-2 bg-red-100 rounded-lg">
+              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="font-semibold text-gray-900">PDF Report</p>
+              <p class="text-xs text-gray-500">Printable report with charts</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div class="mt-6">
+        <button
+          (click)="showExportModal.set(false)"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>

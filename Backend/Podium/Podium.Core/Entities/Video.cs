@@ -41,5 +41,6 @@ namespace Podium.Core.Entities
         public string TranscodingError { get; set; }
         public DateTime CompletedAt { get; set; }
         public bool IsReviewed { get; set; }
+        public bool IsAuditionVideo { get; set; }
     }
 }

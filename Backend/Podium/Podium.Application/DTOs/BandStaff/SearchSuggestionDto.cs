@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.BandStaff
 {
-    internal class SearchSuggestionDto
+    public class SearchSuggestionDto
     {
+        public string Text { get; set; }
+        public string Type { get; set; } // student, instrument, location, school
+        public object? Metadata { get; set; }
     }
 }

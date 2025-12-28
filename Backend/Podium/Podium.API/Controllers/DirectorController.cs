@@ -65,40 +65,123 @@ namespace BandRecruitment.Controllers
 
 
         /// <summary>
-        /// Get comprehensive dashboard statistics for the director's band.
-        /// Includes interested students count, offers by status, upcoming events, and staff activity.
-        /// Optimized with single database query using projections.
+        /// Get complete director dashboard
         /// </summary>
         [HttpGet("dashboard")]
         [ProducesResponseType(typeof(DirectorDashboardDto), 200)]
-        public async Task<ActionResult<DirectorDashboardDto>> GetDashboard()
+        public async Task<ActionResult<DirectorDashboardDto>> GetDashboard(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] int? recruiterId,
+            [FromQuery] string? instrument,
+            [FromQuery] string? offerStatus)
         {
             try
             {
+                // 1. Get userId
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
-                    return Unauthorized("User ID not found in token");
+                    return Unauthorized();
 
-                var dashboard = await _directorService.GetDashboardAsync(userId);
+                // 2. Get bandId
+                var bandId = await GetDirectorBandIdAsync(userId);
+                if (bandId == null)
+                    return NotFound("Director band not found");
 
-                if (dashboard == null)
-                    return NotFound("Director profile or band not found");
+                var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+                var end = endDate ?? DateTime.UtcNow;
+
+                // Get all data in parallel
+                var metricsTask = await _directorService.GetKeyMetricsAsync(userId, start, end);
+                var funnelTask = await _directorService.GetRecruitmentFunnelAsync(bandId.Value, start, end);
+                var offersTask = await _directorService.GetOffersOverviewAsync(bandId.Value, start, end);
+                var staffTask = await _directorService.GetStaffPerformanceAsync(bandId.Value, start, end);
+                var approvalsTask = await _directorService.GetPendingApprovalsAsync(bandId.Value);
+                var activityTask = await _directorService.GetRecentActivityAsync(bandId.Value, 20);
 
 
-                _logger.LogInformation("Dashboard retrieved successfully for user {UserId}", userId);
+                var dashboard = new DirectorDashboardDto
+                {
+                    KeyMetrics = metricsTask,
+                    RecruitmentFunnel = funnelTask,
+                    OffersOverview = offersTask,
+                    StaffPerformance = staffTask,
+                    PendingApprovals = approvalsTask,
+                    RecentActivity = activityTask,
+                    DateRangeStart = start,
+                    DateRangeEnd = end
+                };
+
                 return Ok(dashboard);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogWarning(ex, "Unauthorized dashboard access attempt by user {UserId}", User.Identity?.Name);
-                return Forbid();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving director dashboard");
-                return StatusCode(500, "An error occurred while retrieving dashboard data");
+                _logger.LogError(ex, "Error loading director dashboard");
+                return StatusCode(500, "An error occurred while loading the dashboard");
             }
         }
+
+        /// <summary>
+        /// Get key metrics
+        /// </summary>
+        [HttpGet("metrics")]
+        public async Task<ActionResult<DirectorKeyMetricsDto>> GetMetrics(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+            var end = endDate ?? DateTime.UtcNow;
+
+            var metrics = await _directorService.GetKeyMetricsAsync(userId, start, end);
+            return Ok(metrics);
+        }
+
+        /// <summary>
+        /// Get recruitment funnel
+        /// </summary>
+        [HttpGet("funnel")]
+        public async Task<ActionResult<List<FunnelStageDto>>> GetFunnel(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            // 1. Get userId
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get bandId
+            var bandId = await GetDirectorBandIdAsync(userId);
+            if (bandId == null)
+                return NotFound("Director band not found");
+
+            var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+            var end = endDate ?? DateTime.UtcNow;
+
+            var funnel = await _directorService.GetRecruitmentFunnelAsync(bandId.Value, start, end);
+            return Ok(funnel);
+        }
+
+        /// <summary>
+        /// Get students in a specific funnel stage
+        /// </summary>
+        [HttpGet("funnel/{stage}/students")]
+        public async Task<ActionResult<List<FunnelStudentDto>>> GetFunnelStageStudents(
+            string stage,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+            var end = endDate ?? DateTime.UtcNow;
+
+            // Implementation would query students based on stage
+            // For now, returning placeholder
+            return Ok(new List<FunnelStudentDto>());
+        }
+
 
         /// <summary>
         /// Get detailed analytics for a specific band.
@@ -562,6 +645,32 @@ namespace BandRecruitment.Controllers
             return Ok(stats);
         }
 
+        /// <summary>
+        /// Get offers overview
+        /// </summary>
+        [HttpGet("offers-overview")]
+        public async Task<ActionResult<OffersOverviewDto>> GetOffersOverview(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+
+            // 1. Get userId
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get bandId
+            var bandId = await GetDirectorBandIdAsync(userId);
+            if (bandId == null)
+                return NotFound("Director band not found");
+
+            var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+            var end = endDate ?? DateTime.UtcNow;
+
+            var overview = await _directorService.GetOffersOverviewAsync(bandId.Value, start, end);
+            return Ok(overview);
+        }
+
         [HttpGet("band/{bandId}/engagement")]
         public async Task<ActionResult<DirectorEngagementMetricsDto>> GetEngagementMetrics(int bandId)
         {
@@ -606,27 +715,164 @@ namespace BandRecruitment.Controllers
             });
         }
 
-        [HttpGet("band/{bandId}/staff-performance")]
-        public async Task<ActionResult<List<RecruiterPerformanceDto>>> GetStaffPerformance(int bandId)
+            /// <summary>
+        /// Get staff performance
+        /// </summary>
+        [HttpGet("staff-performance")]
+        public async Task<ActionResult<List<StaffPerformanceDto>>> GetStaffPerformance(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] string? sortBy,
+            [FromQuery] string? sortDirection)
         {
-            var stats = await _unitOfWork.BandStaff.GetQueryable()
-                .Where(bs => bs.BandId == bandId)
-                .Select(bs => new RecruiterPerformanceDto
-                {
-                    StaffId = bs.Id,
-                    Name = bs.FirstName + " " + bs.LastName,
-                    ContactsInitiated = bs.TotalContactsInitiated,
-                    OffersSent = bs.TotalOffersCreated,
-                    SuccessfulPlacements = bs.SuccessfulPlacements,
-                    ConversionRate = bs.TotalOffersCreated > 0
-                        ? (decimal)bs.SuccessfulPlacements / bs.TotalOffersCreated * 100
-                        : 0
-                })
-                .OrderByDescending(x => x.OffersSent)
-                .ToListAsync();
+            // 1. Get userId
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
 
-            return Ok(stats);
+            // 2. Get bandId
+            var bandId = await GetDirectorBandIdAsync(userId);
+            if (bandId == null)
+                return NotFound("Director band not found");
+
+            var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+            var end = endDate ?? DateTime.UtcNow;
+
+            var performance = await _directorService.GetStaffPerformanceAsync(bandId.Value, start, end);
+            
+            // Apply sorting if specified
+            // ... sorting logic
+
+            return Ok(performance);
         }
+
+        /// <summary>
+        /// Get pending approvals
+        /// </summary>
+        [HttpGet("pending-approvals")]
+        public async Task<ActionResult<List<PendingApprovalDto>>> GetPendingApprovals()
+        {
+            // 1. Get userId
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get bandId
+            var bandId = await GetDirectorBandIdAsync(userId);
+            if (bandId == null)
+                return NotFound("Director band not found");
+
+            var approvals = await _directorService.GetPendingApprovalsAsync(bandId.Value);
+            return Ok(approvals);
+        }
+
+        /// <summary>
+        /// Approve scholarship offer
+        /// </summary>
+        [HttpPut("approvals/{approvalId}/approve")]
+        public async Task<ActionResult> ApproveOffer(int approvalId, [FromBody] ApprovalDecisionDto decision)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // Implementation would update approval status and notify staff
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving offer {ApprovalId}", approvalId);
+                return StatusCode(500, "An error occurred while approving the offer");
+            }
+        }
+
+        /// <summary>
+        /// Deny scholarship offer
+        /// </summary>
+        [HttpPut("approvals/{approvalId}/deny")]
+        public async Task<ActionResult> DenyOffer(int approvalId, [FromBody] ApprovalDecisionDto decision)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                // Implementation would update approval status and notify staff
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error denying offer {ApprovalId}", approvalId);
+                return StatusCode(500, "An error occurred while denying the offer");
+            }
+        }
+
+        /// <summary>
+        /// Update staff budget
+        /// </summary>
+        [HttpPut("staff/{staffId}/budget")]
+        public async Task<ActionResult> UpdateStaffBudget(int staffId, [FromBody] UpdateBudgetDto dto)
+        {
+            try
+            {
+                var staff = await _unitOfWork.BandStaff.GetByIdAsync(staffId);
+                if (staff == null)
+                    return NotFound();
+
+                staff.BudgetAllocation = dto.Budget;
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating budget for staff {StaffId}", staffId);
+                return StatusCode(500, "An error occurred while updating the budget");
+            }
+        }
+
+        /// <summary>
+        /// Get recent activity
+        /// </summary>
+        [HttpGet("activity")]
+        public async Task<ActionResult<List<ActivityItemDto>>> GetActivity([FromQuery] int limit = 20)
+        {
+            // 1. Get userId
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get bandId
+            var bandId = await GetDirectorBandIdAsync(userId);
+            if (bandId == null)
+                return NotFound("Director band not found");
+
+            var activity = await _directorService.GetRecentActivityAsync(bandId.Value, limit);
+            return Ok(activity);
+        }
+
+        /// <summary>
+        /// Export dashboard
+        /// </summary>
+        [HttpGet("export")]
+        public async Task<ActionResult> ExportDashboard(
+            [FromQuery] string format,
+            [FromQuery] bool includeCharts,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate,
+            [FromQuery] string sections)
+        {
+            try
+            {
+                // Implementation would generate export file
+                // Return appropriate file type based on format
+                return File(new byte[0], "application/octet-stream", $"dashboard.{format}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting dashboard");
+                return StatusCode(500, "An error occurred while exporting the dashboard");
+            }
+        }
+
+
 
         [HttpGet("band/{bandId}/scholarship-budget")]
         public async Task<ActionResult<BandBudgetDto>> GetScholarshipBudget(int bandId)
@@ -666,5 +912,70 @@ namespace BandRecruitment.Controllers
 
             return Ok(funnel);
         }
+
+   
+
+      
+
+        /// <summary>
+        /// Get staff member details
+        /// </summary>
+        [HttpGet("staff/{id}")]
+        [ProducesResponseType(typeof(StaffDetailsDto), 200)]
+        public async Task<ActionResult<StaffDetailsDto>> GetStaffMember(int id)
+        {
+            try
+            {
+                var staffDetails = await _directorService.GetStaffDetailsAsync(id);
+                return Ok(staffDetails);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading staff details");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+       
+
+        /// <summary>
+        /// Update staff permissions
+        /// </summary>
+        [HttpPut("staff/{staffId}/permissions")]
+        public async Task<ActionResult> UpdateStaffPermissions(int staffId, [FromBody] BandStaffPermissionsDto permissions)
+        {
+            try
+            {
+                var updatedBy = User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
+
+                await _directorService.UpdateStaffPermissionsAsync(staffId, permissions, updatedBy);
+
+                return Ok(new { Message = "Permissions updated successfully" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating permissions for staff {StaffId}", staffId);
+                return StatusCode(500, "An error occurred while updating permissions");
+            }
+        }
+
+        private async Task<int?> GetDirectorBandIdAsync(string userId)
+        {
+            var director = await _unitOfWork.BandStaff.GetQueryable()
+                .Where(bs => bs.ApplicationUserId == userId && bs.Role == "Director")
+                .Select(bs => bs.BandId)
+                .FirstOrDefaultAsync();
+
+            return director == 0 ? null : director;
+        }
+
     }
 }

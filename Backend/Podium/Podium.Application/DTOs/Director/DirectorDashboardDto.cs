@@ -37,5 +37,14 @@ namespace Podium.Application.DTOs.Director
         public int TotalVideosSubmitted { get; set; }
         public int VideosAwaitingReview { get; set; }
         public int PendingContactRequests { get; set; }
+
+        public DirectorKeyMetricsDto KeyMetrics { get; set; }
+        public List<FunnelStageDto> RecruitmentFunnel { get; set; }
+        public OffersOverviewDto OffersOverview { get; set; }
+        public List<StaffPerformanceDto> StaffPerformance { get; set; }
+        public List<PendingApprovalDto> PendingApprovals { get; set; }
+        public List<ActivityItemDto> RecentActivity { get; set; }
+        public DateTime DateRangeStart { get; set; }
+        public DateTime DateRangeEnd { get; set; }
     }
 }

@@ -6,7 +6,13 @@ using System.Threading.Tasks;
 
 namespace Podium.Application.DTOs.BandStaff
 {
-    internal class StudentSearchResponseDto
+    public class StudentSearchResponseDto
     {
+        public List<StudentSearchResultDto> Results { get; set; }
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public int AppliedFiltersCount { get; set; }
     }
 }

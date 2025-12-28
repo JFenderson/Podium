@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs.BandStaff;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
 using Podium.Application.DTOs.Video; // Required for CreateVideoRequest
@@ -22,19 +23,22 @@ namespace Podium.API.Controllers
         private readonly IStudentService _studentService;
         private readonly IVideoService _videoService;
         private readonly IVideoStorageService _storageService;
+        private readonly ILogger<StudentsController> _logger;
 
         public StudentsController(
             IUnitOfWork unitOfWork,
             IPermissionService permissionService,
             IStudentService studentService,
             IVideoService videoService,
-            IVideoStorageService storageService)
+            IVideoStorageService storageService,
+            ILogger<StudentsController> logger)
         {
             _unitOfWork = unitOfWork;
             _permissionService = permissionService;
             _studentService = studentService;
             _videoService = videoService;
             _storageService = storageService;
+            _logger = logger;
         }
 
         // ... [GetAllStudents, GetStudent, UpdateStudent, GetMyProfile, ShowInterest, RateStudent, SpecialAction] remain same ...
@@ -127,52 +131,307 @@ namespace Podium.API.Controllers
             return NoContent();
         }
 
-
         /// <summary>
-        /// Matches frontend: searchStudents(searchTerm)
-        /// Endpoint: GET api/Students/search?search=term
+        /// Advanced student search with comprehensive filtering
         /// </summary>
         [HttpGet("search")]
-        [AllowAnonymous] // Or [Authorize] depending on if public search is allowed
-public async Task<ActionResult<IEnumerable<StudentSummaryDto>>> SearchStudents([FromQuery] string search)
+        [ProducesResponseType(typeof(StudentSearchResponseDto), 200)]
+        public async Task<ActionResult<StudentSearchResponseDto>> SearchStudents(
+            [FromQuery] string? searchTerm,
+            [FromQuery] List<string>? instruments,
+            [FromQuery] List<string>? states,
+            [FromQuery] bool? isHBCU,
+            [FromQuery] int? distance,
+            [FromQuery] string? zipCode,
+            [FromQuery] double? minGPA,
+            [FromQuery] double? maxGPA,
+            [FromQuery] List<int>? graduationYears,
+            [FromQuery] List<string>? majors,
+            [FromQuery] List<string>? skillLevels,
+            [FromQuery] int? minYearsExperience,
+            [FromQuery] int? maxYearsExperience,
+            [FromQuery] bool? hasVideo,
+            [FromQuery] bool? hasAuditionVideo,
+            [FromQuery] bool? isAvailable,
+            [FromQuery] bool? isActivelyRecruiting,
+            [FromQuery] bool? hasScholarshipOffers,
+            [FromQuery] int? lastActivityDays,
+            [FromQuery] string sortBy = "relevance",
+            [FromQuery] string sortDirection = "desc",
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
         {
-            if (string.IsNullOrWhiteSpace(search)) return Ok(new List<StudentSummaryDto>());
+            try
+            {
+                var query = _unitOfWork.Students.GetQueryable()
+                    .Include(s => s.Videos)
+                    .Include(s => s.StudentRatings)
+                    .Include(s => s.ScholarshipOffers)
+                    .Where(s => !s.IsDeleted);
 
-            var query = _unitOfWork.Students.GetQueryable()
-                .Include(s => s.Videos)         // Eager load for Thumbnail access
-                .Include(s => s.StudentRatings) // Eager load for Rating calc
-                .Where(s => !s.IsDeleted &&
-                           (s.FirstName.Contains(search) ||
-                            s.LastName.Contains(search) ||
-                            s.PrimaryInstrument.Contains(search) ||
-                            s.PrimaryInstrument.Contains(search)));
+                // Text search
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    var term = searchTerm.ToLower();
+                    query = query.Where(s =>
+                        s.FirstName.ToLower().Contains(term) ||
+                        s.LastName.ToLower().Contains(term) ||
+                        s.PrimaryInstrument.ToLower().Contains(term) ||
+                        s.City.ToLower().Contains(term) ||
+                        s.State.ToLower().Contains(term) ||
+                        s.HighSchool.ToLower().Contains(term)
+                    );
+                }
 
-            var students = await query
-                .Take(20)
-                .Select(s => new StudentSummaryDto
+                // Instrument filter
+                if (instruments != null && instruments.Any())
+                {
+                    query = query.Where(s =>
+                        instruments.Contains(s.PrimaryInstrument) ||
+                        (s.SecondaryInstruments != null && instruments.Any(i => s.SecondaryInstruments.Contains(i)))
+                    );
+                }
+
+                // Location filters
+                if (states != null && states.Any())
+                {
+                    query = query.Where(s => states.Contains(s.State));
+                }
+
+                // HBCU filter - would need to check student's interested bands
+                if (isHBCU == true)
+                {
+                    // This would require joining with Bands and checking IsHBCU flag
+                    // For now, placeholder
+                }
+
+                // GPA filters
+                if (minGPA.HasValue)
+                {
+                    query = query.Where(s => s.GPA >= (decimal)minGPA.Value);
+                }
+
+                if (maxGPA.HasValue)
+                {
+                    query = query.Where(s => s.GPA <= (decimal)maxGPA.Value);
+                }
+
+                // Graduation year
+                if (graduationYears != null && graduationYears.Any())
+                {
+                    query = query.Where(s => graduationYears.Contains(s.GraduationYear));
+                }
+
+                // Majors
+                if (majors != null && majors.Any())
+                {
+                    query = query.Where(s => majors.Contains(s.IntendedMajor));
+                }
+
+                // Skill levels
+                if (skillLevels != null && skillLevels.Any())
+                {
+                    query = query.Where(s => skillLevels.Contains(s.SkillLevel));
+                }
+
+                // Years of experience
+                if (minYearsExperience.HasValue)
+                {
+                    query = query.Where(s => s.YearsExperience >= minYearsExperience.Value);
+                }
+
+                if (maxYearsExperience.HasValue)
+                {
+                    query = query.Where(s => s.YearsExperience <= maxYearsExperience.Value);
+                }
+
+                // Video filters
+                if (hasVideo == true)
+                {
+                    query = query.Where(s => s.Videos.Any());
+                }
+
+                if (hasAuditionVideo == true)
+                {
+                    query = query.Where(s => s.Videos.Any(v => v.IsAuditionVideo));
+                }
+
+                // Availability
+                if (isAvailable == true)
+                {
+                    query = query.Where(s => s.IsAvailableForRecruiting);
+                }
+
+                // Recent activity
+                if (lastActivityDays.HasValue)
+                {
+                    var cutoffDate = DateTime.UtcNow.AddDays(-lastActivityDays.Value);
+                    query = query.Where(s => s.LastActivityDate >= cutoffDate);
+                }
+
+                // Get total count before pagination
+                var totalCount = await query.CountAsync();
+
+                // Sorting
+                query = sortBy.ToLower() switch
+                {
+                    "gpa" => sortDirection == "asc"
+                        ? query.OrderBy(s => s.GPA)
+                        : query.OrderByDescending(s => s.GPA),
+                    "experience" => sortDirection == "asc"
+                        ? query.OrderBy(s => s.YearsExperience)
+                        : query.OrderByDescending(s => s.YearsExperience),
+                    "recent" => query.OrderByDescending(s => s.LastActivityDate),
+                    "rating" => query.OrderByDescending(s => s.StudentRatings.Any() ? s.StudentRatings.Average(r => r.Rating) : 0),
+                    "name" => sortDirection == "asc"
+                        ? query.OrderBy(s => s.FirstName).ThenBy(s => s.LastName)
+                        : query.OrderByDescending(s => s.FirstName).ThenByDescending(s => s.LastName),
+                    _ => query.OrderByDescending(s => s.Id) // Default relevance
+                };
+
+                // Pagination
+                var students = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(s => new StudentSearchResultDto
                 {
                     StudentId = s.Id,
                     FirstName = s.FirstName,
                     LastName = s.LastName,
+                    FullName = s.FirstName + " " + s.LastName,
+                    ProfilePhotoUrl = "", // Add this property to Student if needed
+                    PrimaryInstrument = s.PrimaryInstrument ?? "",
+                    SecondaryInstruments = s.SecondaryInstruments != null
+                                            ? s.SecondaryInstruments.ToArray()
+                                            : new string[0],
+                    SkillLevel = s.SkillLevel ?? "",
+                    YearsOfExperience = s.YearsExperience ?? 0,
+                    City = "", // Add this property to Student if needed
+                    State = s.State ?? "",
+                    ZipCode = "", // Add this property to Student if needed
+                    GPA = (double?)s.GPA ?? 0,
                     GraduationYear = s.GraduationYear,
-                    PrimaryInstrument = s.PrimaryInstrument ?? s.PrimaryInstrument,
-                    HighSchool = s.HighSchool,
-
-                    // Logic: Try to get the Primary video thumbnail, otherwise grab the first available one
-                    VideoThumbnailUrl = s.Videos
-                        .Where(v => !v.IsDeleted && v.ThumbnailUrl != null)
-                        .OrderByDescending(v => v.IsPrimary) // true comes first
-                        .Select(v => v.ThumbnailUrl)
-                        .FirstOrDefault(),
-
-                    // Calculate Ratings
-                    AverageRating = s.StudentRatings.Any() ? s.StudentRatings.Average(r => r.Rating) : (double?)null,
-                    RatingCount = s.StudentRatings.Count()
+                    IntendedMajor = s.IntendedMajor ?? "",
+                    HighSchool = s.HighSchool ?? "",
+                    VideoCount = s.Videos.Count,
+                    HasAuditionVideo = s.Videos.Any(v => v.IsAuditionVideo),
+                    ProfileViews = 0, // Add this property to Student if needed
+                    AverageRating = s.StudentRatings.Any() ? s.StudentRatings.Average(r => r.Rating) : null,
+                    RatingCount = s.StudentRatings.Count,
+                    AccountStatus = "Active", // Hardcoded since property doesn't exist
+                    IsAvailableForRecruiting = true, // Add this property to Student if needed
+                    LastActivityDate = s.LastActivityDate,
+                    IsWatchlisted = false, // Would check against recruiter's watchlist
+                    HasSentOffer = false, // Would check if current recruiter has sent offer
+                    HasContactRequest = false // Would check if current recruiter has pending request
                 })
                 .ToListAsync();
 
-            return Ok(students);
+                var response = new StudentSearchResponseDto
+                {
+                    Results = students,
+                    TotalCount = totalCount,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    AppliedFiltersCount = CountAppliedFilters(
+                        searchTerm, instruments, states, isHBCU, minGPA, maxGPA,
+                        graduationYears, skillLevels, hasVideo, isAvailable)
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching students");
+                return StatusCode(500, "An error occurred while searching students");
+            }
         }
+
+        /// <summary>
+        /// Count how many filters are applied
+        /// </summary>
+        private int CountAppliedFilters(
+            string? searchTerm,
+            List<string>? instruments,
+            List<string>? states,
+            bool? isHBCU,
+            double? minGPA,
+            double? maxGPA,
+            List<int>? graduationYears,
+            List<string>? skillLevels,
+            bool? hasVideo,
+            bool? isAvailable)
+        {
+            int count = 0;
+
+            if (!string.IsNullOrEmpty(searchTerm)) count++;
+            if (instruments != null && instruments.Any()) count++;
+            if (states != null && states.Any()) count++;
+            if (isHBCU == true) count++;
+            if (minGPA.HasValue || maxGPA.HasValue) count++;
+            if (graduationYears != null && graduationYears.Any()) count++;
+            if (skillLevels != null && skillLevels.Any()) count++;
+            if (hasVideo == true) count++;
+            if (isAvailable == true) count++;
+
+            return count;
+        }
+
+
+        /// <summary>
+        /// Get search suggestions for autocomplete
+        /// </summary>
+        [HttpGet("search/suggestions")]
+        [ProducesResponseType(typeof(List<SearchSuggestionDto>), 200)]
+        public async Task<ActionResult<List<SearchSuggestionDto>>> GetSearchSuggestions(
+            [FromQuery] string term,
+            [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+            {
+                return Ok(new List<SearchSuggestionDto>());
+            }
+
+            var suggestions = new List<SearchSuggestionDto>();
+            var lowerTerm = term.ToLower();
+
+            // Student names
+            var studentNames = await _unitOfWork.Students.GetQueryable()
+                .Where(s => s.FirstName.ToLower().Contains(lowerTerm) ||
+                           s.LastName.ToLower().Contains(lowerTerm))
+                .Take(5)
+                .Select(s => new SearchSuggestionDto
+                {
+                    Text = s.FirstName + " " + s.LastName,
+                    Type = "student"
+                })
+                .ToListAsync();
+
+            suggestions.AddRange(studentNames);
+
+            // Instruments (from predefined list)
+            var instruments = new[] { "Trumpet", "Saxophone", "Trombone", "Flute", "Clarinet", "Drum" }
+                .Where(i => i.ToLower().Contains(lowerTerm))
+                .Select(i => new SearchSuggestionDto { Text = i, Type = "instrument" })
+                .Take(3);
+
+            suggestions.AddRange(instruments);
+
+            return Ok(suggestions.Take(limit).ToList());
+        }
+
+        private int CountAppliedFilters(params object?[] filters)
+        {
+            return filters.Count(f => f != null && (
+                (f is string s && !string.IsNullOrEmpty(s)) ||
+                (f is IEnumerable<object> e && e.Any()) ||
+                (f is bool) ||
+                (f is int) ||
+                (f is double)
+            ));
+        }
+    
 
         /// <summary>
         /// Matches frontend: getStudentRatings(studentId)

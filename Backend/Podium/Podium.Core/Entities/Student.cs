@@ -51,7 +51,19 @@ namespace Podium.Core.Entities
         public string? HighSchool { get; set; }
         public string? State { get; set; }
         public string? SchoolType { get; set; }
+        // Search & Display Properties (NEW)
+        [StringLength(500)]
+        public string? ProfilePhotoUrl { get; set; }
 
+        [StringLength(100)]
+        public string? City { get; set; }
+
+        [StringLength(10)]
+        public string? ZipCode { get; set; }
+
+        public int ProfileViews { get; set; } = 0;
+
+        public bool IsAvailableForRecruiting { get; set; } = true;
         public bool IsDeleted { get; set; }
 
         [MaxLength(10)]

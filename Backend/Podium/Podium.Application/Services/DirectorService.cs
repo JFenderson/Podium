@@ -538,5 +538,685 @@ namespace Podium.Application.Services
                 })
                 .ToListAsync();
         }
+
+        // ==========================================
+        // DASHBOARD
+        // ==========================================
+
+        public async Task<DirectorDashboardDto> GetDashboardAsync(string directorUserId, DirectorDashboardFiltersDto filters)
+        {
+            try
+            {
+                // Get director's band
+                var director = await _unitOfWork.BandStaff.GetQueryable()
+                    .FirstOrDefaultAsync(bs => bs.ApplicationUserId == directorUserId && bs.Role == "Director");
+
+                if (director == null)
+                    throw new UnauthorizedAccessException("Director profile not found");
+
+                var bandId = director.BandId;
+                var start = filters.StartDate ?? DateTime.UtcNow.AddDays(-30);
+                var end = filters.EndDate ?? DateTime.UtcNow;
+
+                // Load all dashboard data in parallel
+                var metricsTask = await GetKeyMetricsAsync(directorUserId, start, end);
+                var funnelTask = await GetRecruitmentFunnelAsync(bandId, start, end);
+                var offersTask = await GetOffersOverviewAsync(bandId, start, end);
+                var staffTask = await GetStaffPerformanceAsync(bandId, start, end);
+                var approvalsTask = await GetPendingApprovalsAsync(bandId);
+                var activityTask = await GetRecentActivityAsync(bandId, 20);
+
+
+                return new DirectorDashboardDto
+                {
+                    KeyMetrics =  metricsTask,
+                    RecruitmentFunnel =  funnelTask,
+                    OffersOverview =  offersTask,
+                    StaffPerformance =  staffTask,
+                    PendingApprovals =  approvalsTask,
+                    RecentActivity =  activityTask,
+                    DateRangeStart = start,
+                    DateRangeEnd = end
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading director dashboard for user {UserId}", directorUserId);
+                throw;
+            }
+        }
+
+        public async Task<DirectorKeyMetricsDto> GetKeyMetricsAsync(string directorUserId, DateTime startDate, DateTime endDate)
+        {
+            var director = await _unitOfWork.BandStaff.GetQueryable()
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == directorUserId && bs.Role == "Director");
+
+            if (director == null)
+                throw new UnauthorizedAccessException("Director profile not found");
+
+            var bandId = director.BandId;
+
+            // Current period offers
+            var currentOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+                .ToListAsync();
+
+            // Previous period for comparison
+            var daysDiff = (endDate - startDate).Days;
+            var previousStart = startDate.AddDays(-daysDiff);
+            var previousOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId && o.CreatedAt >= previousStart && o.CreatedAt < startDate)
+                .ToListAsync();
+
+            var totalOffers = currentOffers.Count;
+            var previousTotal = previousOffers.Count;
+            var acceptedOffers = currentOffers.Count(o => o.Status == ScholarshipStatus.Accepted);
+            var previousAccepted = previousOffers.Count(o => o.Status == ScholarshipStatus.Accepted);
+
+            var acceptanceRate = totalOffers > 0 ? (double)acceptedOffers / totalOffers * 100 : 0;
+            var previousAcceptanceRate = previousTotal > 0 ? (double)previousAccepted / previousTotal * 100 : 0;
+
+            // Active recruiters (logged in within date range)
+            var activeRecruiters = await _unitOfWork.BandStaff.GetQueryable()
+                .Where(bs => bs.BandId == bandId &&
+                            bs.IsActive &&
+                            bs.Role != "Director" &&
+                            bs.LastActivityDate >= startDate)
+                .CountAsync();
+
+            var previousActiveRecruiters = await _unitOfWork.BandStaff.GetQueryable()
+                .Where(bs => bs.BandId == bandId &&
+                            bs.IsActive &&
+                            bs.Role != "Director" &&
+                            bs.LastActivityDate >= previousStart &&
+                            bs.LastActivityDate < startDate)
+                .CountAsync();
+
+            // Pipeline students (students with active contact requests or pending offers)
+            var pipelineStudents = await _unitOfWork.ContactRequests.GetQueryable()
+                .Where(cr => cr.BandId == bandId &&
+                            (cr.Status == "Pending" || cr.Status == "Approved"))
+                .Select(cr => cr.StudentId)
+                .Distinct()
+                .CountAsync();
+
+            var previousPipelineStudents = await _unitOfWork.ContactRequests.GetQueryable()
+                .Where(cr => cr.BandId == bandId &&
+                            cr.RequestedDate >= previousStart &&
+                            cr.RequestedDate < startDate &&
+                            (cr.Status == "Pending" || cr.Status == "Approved"))
+                .Select(cr => cr.StudentId)
+                .Distinct()
+                .CountAsync();
+
+            // Budget calculations
+            var totalBudgetAllocated = await _unitOfWork.BandStaff.GetQueryable()
+                .Where(bs => bs.BandId == bandId && bs.IsActive)
+                .SumAsync(bs => bs.BudgetAllocation ?? 0);
+
+            var totalBudgetUsed = currentOffers
+                .Where(o => o.Status == ScholarshipStatus.Accepted || o.Status == ScholarshipStatus.Sent)
+                .Sum(o => o.ScholarshipAmount);
+
+            var budgetUtilization = totalBudgetAllocated > 0
+                ? (double)(totalBudgetUsed / totalBudgetAllocated) * 100
+                : 0;
+
+            return new DirectorKeyMetricsDto
+            {
+                TotalOffersSent = totalOffers,
+                OffersSentChange = CalculatePercentageChange(totalOffers, previousTotal),
+                AcceptanceRate = acceptanceRate,
+                AcceptanceRateChange = acceptanceRate - previousAcceptanceRate,
+                ActiveRecruiters = activeRecruiters,
+                ActiveRecruitersChange = CalculatePercentageChange(activeRecruiters, previousActiveRecruiters),
+                PipelineStudents = pipelineStudents,
+                PipelineStudentsChange = CalculatePercentageChange(pipelineStudents, previousPipelineStudents),
+                TotalBudgetAllocated = totalBudgetAllocated,
+                TotalBudgetUsed = totalBudgetUsed,
+                BudgetUtilization = budgetUtilization,
+                AverageOfferAmount = totalOffers > 0 ? currentOffers.Average(o => o.ScholarshipAmount) : 0
+            };
+        }
+
+        // ==========================================
+        // RECRUITMENT FUNNEL
+        // ==========================================
+
+        public async Task<List<FunnelStageDto>> GetRecruitmentFunnelAsync(int bandId, DateTime startDate, DateTime endDate)
+        {
+            // Stage 1: Contacted (students with contact requests)
+            var contactedStudentIds = await _unitOfWork.ContactRequests.GetQueryable()
+                .Where(cr => cr.BandId == bandId && cr.RequestedDate >= startDate && cr.RequestedDate <= endDate)
+                .Select(cr => cr.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            var contactedCount = contactedStudentIds.Count;
+
+            // Stage 2: Interested (students who responded or approved contact)
+            var interestedCount = await _unitOfWork.ContactRequests.GetQueryable()
+                .Where(cr => cr.BandId == bandId &&
+                            cr.RequestedDate >= startDate &&
+                            cr.RequestedDate <= endDate &&
+                            (cr.Status == "Approved"))
+                .Select(cr => cr.StudentId)
+                .Distinct()
+                .CountAsync();
+
+            // Stage 3: Offered (students who received offers)
+            var offeredStudentIds = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId && o.CreatedAt >= startDate && o.CreatedAt <= endDate)
+                .Select(o => o.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            var offeredCount = offeredStudentIds.Count;
+
+            // Stage 4: Accepted (students who accepted offers)
+            var acceptedCount = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId &&
+                           o.CreatedAt >= startDate &&
+                           o.CreatedAt <= endDate &&
+                           o.Status == ScholarshipStatus.Accepted)
+                .Select(o => o.StudentId)
+                .Distinct()
+                .CountAsync();
+
+            // Stage 5: Enrolled (accepted students who confirmed enrollment)
+            // Note: You may need to add an Enrollment entity/status
+            var enrolledCount = (int)(acceptedCount * 0.85); // Placeholder: assume 85% enrollment rate
+
+            var total = Math.Max(contactedCount, 1); // Prevent division by zero
+
+            return new List<FunnelStageDto>
+            {
+                new FunnelStageDto
+                {
+                    Stage = "Contacted",
+                    Count = contactedCount,
+                    Percentage = 100,
+                    ConversionRate = null
+                },
+                new FunnelStageDto
+                {
+                    Stage = "Interested",
+                    Count = interestedCount,
+                    Percentage = (double)interestedCount / total * 100,
+                    ConversionRate = contactedCount > 0 ? (double)interestedCount / contactedCount * 100 : 0
+                },
+                new FunnelStageDto
+                {
+                    Stage = "Offered",
+                    Count = offeredCount,
+                    Percentage = (double)offeredCount / total * 100,
+                    ConversionRate = interestedCount > 0 ? (double)offeredCount / interestedCount * 100 : 0
+                },
+                new FunnelStageDto
+                {
+                    Stage = "Accepted",
+                    Count = acceptedCount,
+                    Percentage = (double)acceptedCount / total * 100,
+                    ConversionRate = offeredCount > 0 ? (double)acceptedCount / offeredCount * 100 : 0
+                },
+                new FunnelStageDto
+                {
+                    Stage = "Enrolled",
+                    Count = enrolledCount,
+                    Percentage = (double)enrolledCount / total * 100,
+                    ConversionRate = acceptedCount > 0 ? (double)enrolledCount / acceptedCount * 100 : 0
+                }
+            };
+        }
+
+        public async Task<List<FunnelStudentDto>> GetFunnelStageStudentsAsync(int bandId, string stage, DateTime startDate, DateTime endDate)
+        {
+            // Implementation would return students in specific stage
+            // For brevity, returning placeholder
+            return new List<FunnelStudentDto>();
+        }
+
+        // ==========================================
+        // OFFERS OVERVIEW
+        // ==========================================
+
+        public async Task<OffersOverviewDto> GetOffersOverviewAsync(int bandId, DateTime startDate, DateTime endDate)
+        {
+            var offers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Include(o => o.Student)
+                .Include(o => o.CreatedByStaff)
+                .Where(o => o.BandId == bandId && o.CreatedAt >= startDate && o.CreatedAt <= endDate) // updated CreatedDate to CreatedAt
+                .ToListAsync();
+
+            // Group by month for time series
+            var offersByMonth = offers
+                .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month }) // updated CreatedDate to CreatedAt
+                .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+                .Select(g => new OfferTimeSeriesDto
+                {
+                    Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                    Date = new DateTime(g.Key.Year, g.Key.Month, 1),    
+                    TotalOffers = g.Count(),
+                    AcceptedOffers = g.Count(o => o.Status == ScholarshipStatus.Accepted),
+                    DeclinedOffers = g.Count(o => o.Status == ScholarshipStatus.Declined),
+                    AverageAmount = g.Average(o => o.ScholarshipAmount)
+                })
+                .ToList();
+
+            // Breakdown by instrument
+            var offersByInstrument = offers
+                .GroupBy(o => o.Student.PrimaryInstrument)
+                .Select(g => new OfferBreakdownDto
+                {
+                    Label = g.Key,
+                    Count = g.Count(),
+                    Percentage = (double)g.Count() / Math.Max(offers.Count, 1) * 100,
+                    TotalAmount = g.Sum(o => o.ScholarshipAmount),
+                    AverageAmount = g.Average(o => o.ScholarshipAmount) // updated Amount to ScholarshipAmount
+                })
+                .OrderByDescending(b => b.Count)
+                .ToList();
+
+            // Breakdown by status
+            var offersByStatus = offers
+                .GroupBy(o => o.Status)
+                .Select(g => new OfferBreakdownDto
+                {
+                    Label = g.Key.ToString(),
+                    Count = g.Count(),
+                    Percentage = (double)g.Count() / Math.Max(offers.Count, 1) * 100
+                })
+                .ToList();
+
+            // Breakdown by recruiter
+            var offersByRecruiter = offers
+                .GroupBy(o => new { o.CreatedByStaffId, StaffName = $"{o.CreatedByStaff.FirstName} {o.CreatedByStaff.LastName}" })
+                .Select(g => new OfferBreakdownDto
+                {
+                    Label = g.Key.StaffName,
+                    Count = g.Count(),
+                    Percentage = (double)g.Count() / Math.Max(offers.Count, 1) * 100,
+                    TotalAmount = g.Sum(o => o.ScholarshipAmount),
+                    AverageAmount = g.Average(o => o.ScholarshipAmount) // updated Amount to ScholarshipAmount
+                })
+                .OrderByDescending(b => b.Count)
+                .ToList();
+
+            return new OffersOverviewDto
+            {
+                OffersByMonth = offersByMonth,
+                OffersByInstrument = offersByInstrument,
+                OffersByStatus = offersByStatus,
+                OffersByRecruiter = offersByRecruiter,
+                TotalOffers = offers.Count,
+                AcceptedOffers = offers.Count(o => o.Status == ScholarshipStatus.Accepted),
+                PendingOffers = offers.Count(o => o.Status == ScholarshipStatus.Sent || o.Status == ScholarshipStatus.Pending),
+                DeclinedOffers = offers.Count(o => o.Status == ScholarshipStatus.Declined),
+                ExpiredOffers = offers.Count(o => o.Status == ScholarshipStatus.Expired)
+            };
+        }
+
+        // ==========================================
+        // STAFF PERFORMANCE
+        // ==========================================
+
+        public async Task<List<StaffPerformanceDto>> GetStaffPerformanceAsync(int bandId, DateTime startDate, DateTime endDate)
+        {
+            // Get all staff first
+            var staff = await _unitOfWork.BandStaff.GetQueryable()
+                .Include(bs => bs.ApplicationUser)
+                .Where(bs => bs.BandId == bandId && bs.IsActive && bs.Role != "Director")
+                .ToListAsync();
+
+            // Get ALL offers for this band and date range (single query)
+            var allOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Where(o => o.BandId == bandId &&
+                           o.CreatedAt >= startDate &&
+                           o.CreatedAt <= endDate)
+                .ToListAsync();
+
+            // Get ALL contacts for this band and date range (single query)
+            var allContacts = await _unitOfWork.ContactRequests.GetQueryable()
+                .Where(cr => cr.BandId == bandId &&
+                            cr.RequestedDate >= startDate &&
+                            cr.RequestedDate <= endDate)
+                .ToListAsync();
+
+            // Now process in memory (no more DB queries)
+            var performanceList = new List<StaffPerformanceDto>();
+
+            foreach (var member in staff)
+            {
+                // Filter offers for this staff member (in memory)
+                var offers = allOffers
+                    .Where(o => o.CreatedByStaffId == member.Id)
+                    .ToList();
+
+                // Filter contacts for this staff member (in memory)
+                var contacts = allContacts
+                    .Where(cr => cr.RecruiterStaffId == member.Id)
+                    .ToList();
+
+                var totalOffers = offers.Count;
+                var acceptedOffers = offers.Count(o => o.Status == ScholarshipStatus.Accepted);
+                var acceptanceRate = totalOffers > 0 ? (double)acceptedOffers / totalOffers * 100 : 0;
+
+                var totalContacts = contacts.Count;
+                var respondedContacts = contacts.Count(c => c.Status == "Approved");
+                var responseRate = totalContacts > 0 ? (double)respondedContacts / totalContacts * 100 : 0;
+
+                var daysActive = member.LastActivityDate.HasValue
+                    ? (DateTime.UtcNow - member.LastActivityDate.Value).Days
+                    : 999;
+
+                performanceList.Add(new StaffPerformanceDto
+                {
+                    StaffId = member.Id,
+                    StaffName = $"{member.FirstName} {member.LastName}",
+                    Role = member.Role,
+                    Email = member.ApplicationUser?.Email ?? "",
+                    OffersCreated = totalOffers,
+                    OffersAccepted = acceptedOffers,
+                    AcceptanceRate = acceptanceRate,
+                    StudentsContacted = totalContacts,
+                    StudentsResponded = respondedContacts,
+                    ResponseRate = responseRate,
+                    TotalBudgetAllocated = member.BudgetAllocation ?? 0,
+                    AverageOfferAmount = totalOffers > 0 ? offers.Average(o => o.ScholarshipAmount) : 0,
+                    LastActivityDate = member.LastActivityDate ?? DateTime.MinValue,
+                    DaysActive = daysActive
+                });
+            }
+
+            // Calculate rankings
+            for (int i = 0; i < performanceList.Count; i++)
+            {
+                performanceList[i].PerformanceRank = i + 1;
+                performanceList[i].AcceptanceRateRank = i + 1;
+            }
+
+            return performanceList;
+        }
+
+
+
+
+        public async Task<StaffDetailsDto> GetStaffDetailsAsync(int staffId)
+        {
+            var staff = await _unitOfWork.BandStaff.GetQueryable()
+                .Include(bs => bs.ApplicationUser)
+                .Include(bs => bs.Band)
+                .FirstOrDefaultAsync(bs => bs.Id == staffId);
+
+            if (staff == null)
+                throw new KeyNotFoundException($"Staff member {staffId} not found");
+
+            return new StaffDetailsDto
+            {
+                StaffId = staff.Id,
+                FirstName = staff.FirstName,
+                LastName = staff.LastName,
+                Email = staff.ApplicationUser?.Email ?? "",
+                Role = staff.Role,
+                Title = staff.Title,
+                BandName = staff.Band?.BandName ?? "",
+                IsActive = staff.IsActive,
+                JoinedDate = staff.JoinedDate,
+                LastActivityDate = staff.LastActivityDate,
+                BudgetAllocation = staff.BudgetAllocation ?? 0,
+                // Permissions
+                CanContact = staff.CanContact,
+                CanViewStudents = staff.CanViewStudents,
+                CanMakeOffers = staff.CanMakeOffers,
+                CanViewFinancials = staff.CanViewFinancials,
+                CanRateStudents = staff.CanRateStudents,
+                CanSendOffers = staff.CanSendOffers,
+                CanManageEvents = staff.CanManageEvents,
+                CanManageStaff = staff.CanManageStaff
+            };
+        }
+
+        public async Task UpdateStaffBudgetAsync(int staffId, decimal newBudget, string updatedBy)
+        {
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(staffId);
+            if (staff == null)
+                throw new KeyNotFoundException($"Staff member {staffId} not found");
+
+            staff.BudgetAllocation = newBudget;
+            staff.ModifiedBy = updatedBy;
+            staff.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Budget updated for staff {StaffId} to {Budget} by {UpdatedBy}",
+                staffId, newBudget, updatedBy);
+        }
+
+        public async Task UpdateStaffPermissionsAsync(int staffId, BandStaffPermissionsDto permissions, string updatedBy)
+        {
+            var staff = await _unitOfWork.BandStaff.GetByIdAsync(staffId);
+            if (staff == null)
+                throw new KeyNotFoundException($"Staff member {staffId} not found");
+
+            staff.CanContact = permissions.CanContact;
+            staff.CanViewStudents = permissions.CanViewStudents;
+            staff.CanMakeOffers = permissions.CanMakeOffers;
+            staff.CanViewFinancials = permissions.CanViewFinancials;
+            staff.CanRateStudents = permissions.CanRateStudents;
+            staff.CanSendOffers = permissions.CanSendOffers;
+            staff.CanManageEvents = permissions.CanManageEvents;
+            staff.CanManageStaff = permissions.CanManageStaff;
+            staff.ModifiedBy = updatedBy;
+            staff.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.BandStaff.Update(staff);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Permissions updated for staff {StaffId} by {UpdatedBy}", staffId, updatedBy);
+        }
+
+        // ==========================================
+        // APPROVALS
+        // ==========================================
+
+        public async Task<List<PendingApprovalDto>> GetPendingApprovalsAsync(int bandId)
+        {
+            // Get offers requiring director approval
+            var pendingOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Include(o => o.Student)
+                .Include(o => o.CreatedByStaff)
+                .Where(o => o.BandId == bandId &&
+                           o.RequiresDirectorApproval &&
+                           o.DirectorApprovalStatus == "Pending")
+                .OrderBy(o => o.ExpirationDate)
+                .ToListAsync();
+
+            return pendingOffers.Select(o =>
+            {
+                var daysUntilExpiration = (o.ExpirationDate - DateTime.UtcNow).Days;
+                   
+
+                return new PendingApprovalDto
+                {
+                    ApprovalId = o.Id,
+                    Type = "ScholarshipOffer",
+                    StudentId = o.StudentId,
+                    StudentName = $"{o.Student.FirstName} {o.Student.LastName}",
+                    Instrument = o.Student.PrimaryInstrument,
+                    Amount = o.ScholarshipAmount,
+                    OfferType = o.OfferType,
+                    Description = o.Description,
+                    RequestedByStaffId = o.CreatedByStaffId,
+                    RequestedByStaffName = $"{o.CreatedByStaff.FirstName} {o.CreatedByStaff.LastName}",
+                    RequestDate = o.CreatedAt,
+                    Urgency = daysUntilExpiration <= 3 ? "High" : daysUntilExpiration <= 7 ? "Medium" : "Low",
+                    Reason = o.DirectorApprovalReason,
+                    CanApprove = true,
+                    CanDeny = true
+                };
+            }).ToList();
+        }
+
+        public async Task<bool> ApproveOfferAsync(int approvalId, string directorUserId, string? notes)
+        {
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(approvalId);
+            if (offer == null)
+                throw new KeyNotFoundException($"Offer {approvalId} not found");
+
+            var director = await _unitOfWork.BandStaff.GetQueryable()
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == directorUserId && bs.Role == "Director");
+
+            if (director == null)
+                throw new UnauthorizedAccessException("Director profile not found");
+
+            offer.DirectorApprovalStatus = "Approved";
+            offer.DirectorApprovalDate = DateTime.UtcNow;
+            offer.DirectorApprovalNotes = notes;
+            offer.ApprovedByDirectorId = director.Id;
+            offer.Status = ScholarshipStatus.Sent; // Change status to Sent after approval
+
+            _unitOfWork.ScholarshipOffers.Update(offer);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Offer {OfferId} approved by director {DirectorId}", approvalId, director.Id);
+
+            // TODO: Send notification to staff member
+            // TODO: Trigger SignalR update
+
+            return true;
+        }
+
+        public async Task<bool> DenyOfferAsync(int approvalId, string directorUserId, string reason)
+        {
+            var offer = await _unitOfWork.ScholarshipOffers.GetByIdAsync(approvalId);
+            if (offer == null)
+                throw new KeyNotFoundException($"Offer {approvalId} not found");
+
+            var director = await _unitOfWork.BandStaff.GetQueryable()
+                .FirstOrDefaultAsync(bs => bs.ApplicationUserId == directorUserId && bs.Role == "Director");
+
+            if (director == null)
+                throw new UnauthorizedAccessException("Director profile not found");
+
+            offer.DirectorApprovalStatus = "Denied";
+            offer.DirectorApprovalDate = DateTime.UtcNow;
+            offer.DirectorApprovalNotes = reason;
+            offer.DeniedByDirectorId = director.Id;
+            offer.Status = ScholarshipStatus.Draft; // Revert to draft status
+
+            _unitOfWork.ScholarshipOffers.Update(offer);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Offer {OfferId} denied by director {DirectorId}. Reason: {Reason}",
+                approvalId, director.Id, reason);
+
+            // TODO: Send notification to staff member
+            // TODO: Trigger SignalR update
+
+            return true;
+        }
+
+        // ==========================================
+        // ACTIVITY
+        // ==========================================
+
+        public async Task<List<ActivityItemDto>> GetRecentActivityAsync(int bandId, int limit)
+        {
+            var activities = new List<ActivityItemDto>();
+
+            // Get recent offers
+            var recentOffers = await _unitOfWork.ScholarshipOffers.GetQueryable()
+                .Include(o => o.Student)
+                .Include(o => o.CreatedByStaff)
+                .Where(o => o.BandId == bandId)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(limit / 2)
+                .ToListAsync();
+
+            foreach (var offer in recentOffers)
+            {
+                var activityType = offer.Status switch
+                {
+                    ScholarshipStatus.Accepted => "OfferAccepted",
+                    ScholarshipStatus.Declined => "OfferDeclined",
+                    _ => "OfferSent"
+                };
+
+                activities.Add(new ActivityItemDto
+                {
+                    Id = offer.Id,
+                    Timestamp = offer.UpdatedAt ?? offer.CreatedAt,
+                    ActivityType = activityType,
+                    ActorType = "Staff",
+                    ActorId = offer.CreatedByStaffId,
+                    ActorName = $"{offer.CreatedByStaff.FirstName} {offer.CreatedByStaff.LastName}",
+                    StudentId = offer.StudentId,
+                    StudentName = $"{offer.Student.FirstName} {offer.Student.LastName}",
+                    StaffId = offer.CreatedByStaffId,
+                    StaffName = $"{offer.CreatedByStaff.FirstName} {offer.CreatedByStaff.LastName}",
+                    OfferId = offer.Id,
+                    Description = $"{offer.Student.FirstName} {offer.Student.LastName} - ${offer.ScholarshipAmount:N0} scholarship {offer.Status.ToString().ToLower()}",
+                    Details = offer.OfferType
+                });
+            }
+
+            // Get recent contact requests
+            var recentContacts = await _unitOfWork.ContactRequests.GetQueryable()
+                .Include(cr => cr.Student)
+                .Include(cr => cr.RecruiterStaff)
+                .Where(cr => cr.BandId == bandId)
+                .OrderByDescending(cr => cr.RequestedDate)
+                .Take(limit / 2)
+                .ToListAsync();
+
+            foreach (var contact in recentContacts)
+            {
+                activities.Add(new ActivityItemDto
+                {
+                    Id = contact.Id,
+                    Timestamp = contact.RequestedDate,
+                    ActivityType = "ContactMade",
+                    ActorType = "Staff",
+                    ActorId = contact.RecruiterStaffId,
+                    ActorName = $"{contact.RecruiterStaff.FirstName} {contact.RecruiterStaff.LastName}",
+                    StudentId = contact.StudentId,
+                    StudentName = $"{contact.Student.FirstName} {contact.Student.LastName}",
+                    StaffId = contact.RecruiterStaffId,
+                    StaffName = $"{contact.RecruiterStaff.FirstName} {contact.RecruiterStaff.LastName}",
+                    Description = $"Contact request sent to {contact.Student.FirstName} {contact.Student.LastName}",
+                    Details = $"Status: {contact.Status}"
+                });
+            }
+
+            return activities
+                .OrderByDescending(a => a.Timestamp)
+                .Take(limit)
+                .ToList();
+        }
+
+        // ==========================================
+        // EXPORT
+        // ==========================================
+
+        public async Task<byte[]> ExportDashboardAsync(ExportOptionsDto options)
+        {
+            // Implementation would generate CSV/Excel/PDF
+            // For now, returning placeholder
+            return Array.Empty<byte>();
+        }
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+
+        private double CalculatePercentageChange(int current, int previous)
+        {
+            if (previous == 0) return current > 0 ? 100 : 0;
+            return ((double)(current - previous) / previous) * 100;
+        }
+
+
+
     }
 }

@@ -27,7 +27,7 @@ namespace Podium.Core.Entities
         // Audit Trail
         public string? CreatedByUserId { get; set; }
 
-        public int? CreatedByStaffId { get; set; }
+        public int CreatedByStaffId { get; set; }
 
 
         public string? ApprovedByUserId { get; set; }
@@ -47,6 +47,29 @@ namespace Podium.Core.Entities
         public bool RequiresGuardianApproval { get; set; } = true;
 
         public bool IsDeleted { get; set; }
+
+        public bool RequiresDirectorApproval { get; set; } = false;
+
+        [MaxLength(50)]
+        public string? DirectorApprovalStatus { get; set; } // Pending, Approved, Denied
+
+        public DateTime? DirectorApprovalDate { get; set; }
+
+        [MaxLength(1000)]
+        public string? DirectorApprovalNotes { get; set; }
+
+        [MaxLength(500)]
+        public string? DirectorApprovalReason { get; set; }
+
+        public int? ApprovedByDirectorId { get; set; }
+        public int? DeniedByDirectorId { get; set; }
+
+        // Navigation Properties
+        [ForeignKey(nameof(ApprovedByDirectorId))]
+        public virtual BandStaff? ApprovedByDirector { get; set; }
+
+        [ForeignKey(nameof(DeniedByDirectorId))]
+        public virtual BandStaff? DeniedByDirector { get; set; }
 
         // Navigation
         [ForeignKey(nameof(BandId))]
