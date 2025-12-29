@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Podium.Application.DTOs.Video
 {
     /// <summary>
-    /// Request to rate a video (recruiters only)
+    /// Request to rate a video (bandstaff only)
     /// </summary>
     public class RateVideoRequest
     {

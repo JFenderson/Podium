@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Podium.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialRefactor : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -205,9 +205,11 @@ namespace Podium.Infrastructure.Migrations
                     DirectorApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     ScholarshipBudget = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    IsHbcu = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -218,6 +220,42 @@ namespace Podium.Infrastructure.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Document",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileExtension = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileSizeInBytes = table.Column<long>(type: "bigint", nullable: false),
+                    StoragePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UploadedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Document", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Document_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -260,6 +298,8 @@ namespace Podium.Infrastructure.Migrations
                     Message = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     RelatedEntityId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false)
@@ -312,25 +352,31 @@ namespace Podium.Infrastructure.Migrations
                     FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Instrument = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PrimaryInstrument = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Bio = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     GPA = table.Column<decimal>(type: "decimal(3,2)", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     RequiresGuardianApproval = table.Column<bool>(type: "bit", nullable: false),
-                    LastActivityDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    SecondaryInstruments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastActivityDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SecondaryInstruments = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Achievements = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IntendedMajor = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PrimaryInstrument = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SkillLevel = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    YearsExperience = table.Column<int>(type: "int", nullable: false),
+                    YearsExperience = table.Column<int>(type: "int", nullable: true),
                     GraduationYear = table.Column<int>(type: "int", nullable: false),
                     HighSchool = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     State = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     SchoolType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProfilePhotoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ZipCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    ProfileViews = table.Column<int>(type: "int", nullable: false),
+                    IsAvailableForRecruiting = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    GuardianInviteCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -341,6 +387,34 @@ namespace Podium.Infrastructure.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BandBudgets",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    BandId = table.Column<int>(type: "int", nullable: false),
+                    FiscalYear = table.Column<int>(type: "int", nullable: false),
+                    TotalBudget = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AllocatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RemainingAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BandBudgets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_BandBudgets_Bands_BandId",
+                        column: x => x.BandId,
+                        principalTable: "Bands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -362,9 +436,9 @@ namespace Podium.Infrastructure.Migrations
                     IsVirtual = table.Column<bool>(type: "bit", nullable: false),
                     MeetingLink = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     IsArchived = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -391,6 +465,7 @@ namespace Podium.Infrastructure.Migrations
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsDirector = table.Column<bool>(type: "bit", nullable: false),
+                    BudgetAllocation = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     JoinedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DeactivatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CanViewStudents = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
@@ -425,6 +500,29 @@ namespace Podium.Infrastructure.Migrations
                         name: "FK_BandStaff_Bands_BandId",
                         column: x => x.BandId,
                         principalTable: "Bands",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "DocumentTag",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DocumentId = table.Column<int>(type: "int", nullable: false),
+                    TagName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DocumentTag", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DocumentTag_Document_DocumentId",
+                        column: x => x.DocumentId,
+                        principalTable: "Document",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -491,6 +589,7 @@ namespace Podium.Infrastructure.Migrations
                     IsUrgent = table.Column<bool>(type: "bit", nullable: false),
                     ActionUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     MetadataJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Priority = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false)
@@ -646,16 +745,18 @@ namespace Podium.Infrastructure.Migrations
                     ThumbnailUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsPrimary = table.Column<bool>(type: "bit", nullable: false),
                     AverageRating = table.Column<decimal>(type: "decimal(3,2)", nullable: false, defaultValue: 0m),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     Instrument = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ViewCount = table.Column<int>(type: "int", nullable: false),
-                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
+                    IsPublic = table.Column<bool>(type: "bit", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     TranscodingStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TranscodingError = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsReviewed = table.Column<bool>(type: "bit", nullable: false),
+                    IsAuditionVideo = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -707,7 +808,7 @@ namespace Podium.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     StudentId = table.Column<int>(type: "int", nullable: false),
                     BandId = table.Column<int>(type: "int", nullable: false),
-                    RecruiterStaffId = table.Column<int>(type: "int", nullable: false),
+                    BandStaffId = table.Column<int>(type: "int", nullable: false),
                     ContactMethod = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Purpose = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
@@ -719,8 +820,8 @@ namespace Podium.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_ContactLogs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ContactLogs_BandStaff_RecruiterStaffId",
-                        column: x => x.RecruiterStaffId,
+                        name: "FK_ContactLogs_BandStaff_BandStaffId",
+                        column: x => x.BandStaffId,
                         principalTable: "BandStaff",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -746,7 +847,7 @@ namespace Podium.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     StudentId = table.Column<int>(type: "int", nullable: false),
                     BandId = table.Column<int>(type: "int", nullable: false),
-                    RecruiterStaffId = table.Column<int>(type: "int", nullable: false),
+                    BandStaffId = table.Column<int>(type: "int", nullable: false),
                     Purpose = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     PreferredContactMethod = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     RequestedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -756,6 +857,9 @@ namespace Podium.Infrastructure.Migrations
                     ResponseNotes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     DeclineReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     IsUrgent = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeclined = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false)
@@ -764,8 +868,8 @@ namespace Podium.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_ContactRequests", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ContactRequests_BandStaff_RecruiterStaffId",
-                        column: x => x.RecruiterStaffId,
+                        name: "FK_ContactRequests_BandStaff_BandStaffId",
+                        column: x => x.BandStaffId,
                         principalTable: "BandStaff",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -784,7 +888,40 @@ namespace Podium.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Offers",
+                name: "SavedSearches",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    BandStaffId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    FilterCriteria = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AlertsEnabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    AlertFrequencyDays = table.Column<int>(type: "int", nullable: true),
+                    LastAlertSent = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastResultCount = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    IsShared = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    ShareToken = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsTemplate = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    LastUsed = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TimesUsed = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SavedSearches", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SavedSearches_BandStaff_BandStaffId",
+                        column: x => x.BandStaffId,
+                        principalTable: "BandStaff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ScholarshipOffer",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -799,7 +936,7 @@ namespace Podium.Infrastructure.Migrations
                     Requirements = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ExpirationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedByStaffId = table.Column<int>(type: "int", nullable: true),
+                    CreatedByStaffId = table.Column<int>(type: "int", nullable: false),
                     ApprovedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RescindedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -811,33 +948,52 @@ namespace Podium.Infrastructure.Migrations
                     ResponseNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ResponseDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RequiresGuardianApproval = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    RequiresDirectorApproval = table.Column<bool>(type: "bit", nullable: false),
+                    DirectorApprovalStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DirectorApprovalDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DirectorApprovalNotes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DirectorApprovalReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ApprovedByDirectorId = table.Column<int>(type: "int", nullable: true),
+                    DeniedByDirectorId = table.Column<int>(type: "int", nullable: true),
                     ApprovedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Offers", x => x.Id);
+                    table.PrimaryKey("PK_ScholarshipOffer", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Offers_AspNetUsers_ApprovedByUserId",
+                        name: "FK_ScholarshipOffer_AspNetUsers_ApprovedByUserId",
                         column: x => x.ApprovedByUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Offers_BandStaff_CreatedByStaffId",
+                        name: "FK_ScholarshipOffer_BandStaff_ApprovedByDirectorId",
+                        column: x => x.ApprovedByDirectorId,
+                        principalTable: "BandStaff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ScholarshipOffer_BandStaff_CreatedByStaffId",
                         column: x => x.CreatedByStaffId,
                         principalTable: "BandStaff",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Offers_Bands_BandId",
+                        name: "FK_ScholarshipOffer_BandStaff_DeniedByDirectorId",
+                        column: x => x.DeniedByDirectorId,
+                        principalTable: "BandStaff",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ScholarshipOffer_Bands_BandId",
                         column: x => x.BandId,
                         principalTable: "Bands",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Offers_Students_StudentId",
+                        name: "FK_ScholarshipOffer_Students_StudentId",
                         column: x => x.StudentId,
                         principalTable: "Students",
                         principalColumn: "Id",
@@ -854,6 +1010,7 @@ namespace Podium.Infrastructure.Migrations
                     BandStaffId = table.Column<int>(type: "int", nullable: false),
                     Rating = table.Column<int>(type: "int", nullable: false),
                     Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StudentId1 = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false)
@@ -873,6 +1030,11 @@ namespace Podium.Infrastructure.Migrations
                         principalTable: "Students",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_StudentRatings_Students_StudentId1",
+                        column: x => x.StudentId1,
+                        principalTable: "Students",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -902,6 +1064,30 @@ namespace Podium.Infrastructure.Migrations
                         name: "FK_VideoRatings_Videos_VideoId",
                         column: x => x.VideoId,
                         principalTable: "Videos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SearchAlerts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SavedSearchId = table.Column<int>(type: "int", nullable: false),
+                    NewMatchesCount = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    WasEmailSent = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    EmailError = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    NewMatchIds = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SearchAlerts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SearchAlerts_SavedSearches_SavedSearchId",
+                        column: x => x.SavedSearchId,
+                        principalTable: "SavedSearches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -956,6 +1142,11 @@ namespace Podium.Infrastructure.Migrations
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BandBudgets_BandId",
+                table: "BandBudgets",
+                column: "BandId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BandEvents_BandId",
                 table: "BandEvents",
                 column: "BandId");
@@ -988,9 +1179,9 @@ namespace Podium.Infrastructure.Migrations
                 column: "BandId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ContactLogs_RecruiterStaffId",
+                name: "IX_ContactLogs_BandStaffId",
                 table: "ContactLogs",
-                column: "RecruiterStaffId");
+                column: "BandStaffId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactLogs_StudentId",
@@ -1003,14 +1194,24 @@ namespace Podium.Infrastructure.Migrations
                 column: "BandId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ContactRequests_RecruiterStaffId",
+                name: "IX_ContactRequests_BandStaffId",
                 table: "ContactRequests",
-                column: "RecruiterStaffId");
+                column: "BandStaffId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactRequests_StudentId",
                 table: "ContactRequests",
                 column: "StudentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Document_UserId",
+                table: "Document",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DocumentTag_DocumentId",
+                table: "DocumentTag",
+                column: "DocumentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EventRegistrations_BandEventId_StudentId",
@@ -1051,26 +1252,6 @@ namespace Podium.Infrastructure.Migrations
                 columns: new[] { "UserId", "IsRead" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Offers_ApprovedByUserId",
-                table: "Offers",
-                column: "ApprovedByUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Offers_BandId",
-                table: "Offers",
-                column: "BandId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Offers_CreatedByStaffId",
-                table: "Offers",
-                column: "CreatedByStaffId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Offers_StudentId",
-                table: "Offers",
-                column: "StudentId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ProfileViews_BandId",
                 table: "ProfileViews",
                 column: "BandId");
@@ -1095,6 +1276,58 @@ namespace Podium.Infrastructure.Migrations
                 table: "RefreshTokens",
                 column: "Token",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SavedSearches_CreatedAt",
+                table: "SavedSearches",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SavedSearches_RecruiterId_IsTemplate",
+                table: "SavedSearches",
+                columns: new[] { "BandStaffId", "IsTemplate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SavedSearches_ShareToken",
+                table: "SavedSearches",
+                column: "ShareToken",
+                unique: true,
+                filter: "[ShareToken] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_ApprovedByDirectorId",
+                table: "ScholarshipOffer",
+                column: "ApprovedByDirectorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_ApprovedByUserId",
+                table: "ScholarshipOffer",
+                column: "ApprovedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_BandId",
+                table: "ScholarshipOffer",
+                column: "BandId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_CreatedByStaffId",
+                table: "ScholarshipOffer",
+                column: "CreatedByStaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_DeniedByDirectorId",
+                table: "ScholarshipOffer",
+                column: "DeniedByDirectorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScholarshipOffer_StudentId",
+                table: "ScholarshipOffer",
+                column: "StudentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SearchAlerts_SavedSearchId_SentAt",
+                table: "SearchAlerts",
+                columns: new[] { "SavedSearchId", "SentAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudentGuardian_Guardian",
@@ -1134,6 +1367,11 @@ namespace Podium.Infrastructure.Migrations
                 column: "StudentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StudentRatings_StudentId1",
+                table: "StudentRatings",
+                column: "StudentId1");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Students_ApplicationUserId",
                 table: "Students",
                 column: "ApplicationUserId");
@@ -1144,14 +1382,14 @@ namespace Podium.Infrastructure.Migrations
                 column: "GraduationYear");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Students_Instrument",
+                name: "IX_Students_PrimaryInstrument",
                 table: "Students",
-                column: "Instrument");
+                column: "PrimaryInstrument");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Students_State_Instrument",
+                name: "IX_Students_State_PrimaryInstrument",
                 table: "Students",
-                columns: new[] { "State", "Instrument" });
+                columns: new[] { "State", "PrimaryInstrument" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_VideoRatings_BandStaffId",
@@ -1191,10 +1429,16 @@ namespace Podium.Infrastructure.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
+                name: "BandBudgets");
+
+            migrationBuilder.DropTable(
                 name: "ContactLogs");
 
             migrationBuilder.DropTable(
                 name: "ContactRequests");
+
+            migrationBuilder.DropTable(
+                name: "DocumentTag");
 
             migrationBuilder.DropTable(
                 name: "EventRegistrations");
@@ -1209,13 +1453,16 @@ namespace Podium.Infrastructure.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Offers");
-
-            migrationBuilder.DropTable(
                 name: "ProfileViews");
 
             migrationBuilder.DropTable(
                 name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
+                name: "ScholarshipOffer");
+
+            migrationBuilder.DropTable(
+                name: "SearchAlerts");
 
             migrationBuilder.DropTable(
                 name: "StudentGuardians");
@@ -1233,22 +1480,28 @@ namespace Podium.Infrastructure.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
+                name: "Document");
+
+            migrationBuilder.DropTable(
                 name: "BandEvents");
+
+            migrationBuilder.DropTable(
+                name: "SavedSearches");
 
             migrationBuilder.DropTable(
                 name: "Guardians");
 
             migrationBuilder.DropTable(
-                name: "BandStaff");
-
-            migrationBuilder.DropTable(
                 name: "Videos");
 
             migrationBuilder.DropTable(
-                name: "Bands");
+                name: "BandStaff");
 
             migrationBuilder.DropTable(
                 name: "Students");
+
+            migrationBuilder.DropTable(
+                name: "Bands");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

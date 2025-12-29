@@ -38,6 +38,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Notification> Notifications { get; set; } = null!;
     public DbSet<BandBudget> BandBudgets { get; set; }
     public DbSet<ScholarshipOffer> ScholarshipOffers { get; set; }
+    public DbSet<SavedSearch> SavedSearches { get; set; }
+    public DbSet<SearchAlert> SearchAlerts { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

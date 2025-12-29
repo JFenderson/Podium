@@ -15,6 +15,7 @@ using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using Podium.Infrastructure.Authorization;
+using Podium.Infrastructure.BackgroundJobs;
 using Podium.Infrastructure.Data;
 using Podium.Infrastructure.Services;
 using System.Security.Claims;
@@ -217,6 +218,7 @@ namespace Podium.API.Extensions
             services.AddScoped<CleanOldAuditLogsJob>();
             services.AddScoped<ProcessTranscodingQueueJob>();
             services.AddScoped<SendEmailNotificationsJob>();
+            services.AddScoped<SearchAlertJob>();
 
             // Infrastructure Services
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -233,6 +235,8 @@ namespace Podium.API.Extensions
             services.AddScoped<IDirectorService, DirectorService>();
             services.AddScoped<IGuardianService, GuardianService>();
             services.AddScoped<IBandService, BandService>();
+            services.AddScoped<IBandStaffService, BandStaffService>();
+            services.AddScoped<ISavedSearchService, SavedSearchService>();
 
             // EMAIL SERVICE (Conditional Registration)
             if (environment.IsDevelopment())

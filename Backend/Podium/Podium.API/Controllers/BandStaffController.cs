@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
 using Podium.Application.DTOs.Band;
 using Podium.Application.DTOs.BandStaff;
+using Podium.Application.Interfaces;
 using Podium.Core.Constants; // For Roles constant
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
@@ -20,15 +21,236 @@ namespace Podium.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPermissionService _permissionService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IBandStaffService _bandStaffService;
+        private readonly ILogger<BandStaffController> _logger;
 
         public BandStaffController(
             IUnitOfWork unitOfWork,
             IPermissionService permissionService,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IBandStaffService bandStaffService,
+            ILogger<BandStaffController> logger)
         {
             _unitOfWork = unitOfWork;
             _permissionService = permissionService;
             _userManager = userManager;
+            _bandStaffService = bandStaffService;
+            _logger = logger;
+        }
+
+
+        /// <summary>
+        /// Get complete band staff dashboard
+        /// </summary>
+        [HttpGet("dashboard")]
+        [ProducesResponseType(typeof(BandStaffDashboardDto), 200)]
+        public async Task<ActionResult<BandStaffDashboardDto>> GetDashboard(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] string? instrument,
+            [FromQuery] string? contactStatus)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var filters = new BandStaffDashboardFiltersDto
+                {
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    Instrument = instrument,
+                    ContactStatus = contactStatus
+                };
+
+                var dashboard = await _bandStaffService.GetDashboardAsync(userId, filters);
+                return Ok(dashboard);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Unauthorized dashboard access attempt");
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading band staff dashboard");
+                return StatusCode(500, "An error occurred while loading the dashboard");
+            }
+        }
+
+        /// <summary>
+        /// Get personal metrics only
+        /// </summary>
+        [HttpGet("metrics")]
+        [ProducesResponseType(typeof(BandStaffPersonalMetricsDto), 200)]
+        public async Task<ActionResult<BandStaffPersonalMetricsDto>> GetMetrics(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+                var end = endDate ?? DateTime.UtcNow;
+
+                var metrics = await _bandStaffService.GetPersonalMetricsAsync(userId, start, end);
+                return Ok(metrics);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading metrics");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Get my students
+        /// </summary>
+        [HttpGet("my-students")]
+        [ProducesResponseType(typeof(List<MyStudentDto>), 200)]
+        public async Task<ActionResult<List<MyStudentDto>>> GetMyStudents([FromQuery] string? status)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var students = await _bandStaffService.GetMyStudentsAsync(userId, status);
+                return Ok(students);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading my students");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Get my performance
+        /// </summary>
+        [HttpGet("performance")]
+        [ProducesResponseType(typeof(BandStaffPerformanceDto), 200)]
+        public async Task<ActionResult<BandStaffPerformanceDto>> GetPerformance(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var start = startDate ?? DateTime.UtcNow.AddDays(-30);
+                var end = endDate ?? DateTime.UtcNow;
+
+                var performance = await _bandStaffService.GetMyPerformanceAsync(userId, start, end);
+                return Ok(performance);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading performance");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Get my recent activity
+        /// </summary>
+        [HttpGet("activity")]
+        [ProducesResponseType(typeof(List<MyActivityDto>), 200)]
+        public async Task<ActionResult<List<MyActivityDto>>> GetActivity([FromQuery] int limit = 20)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var activity = await _bandStaffService.GetMyActivityAsync(userId, limit);
+                return Ok(activity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading activity");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Get my pending tasks
+        /// </summary>
+        [HttpGet("tasks")]
+        [ProducesResponseType(typeof(List<MyPendingTaskDto>), 200)]
+        public async Task<ActionResult<List<MyPendingTaskDto>>> GetTasks()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var tasks = await _bandStaffService.GetMyPendingTasksAsync(userId);
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading tasks");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Get quick stats
+        /// </summary>
+        [HttpGet("quick-stats")]
+        [ProducesResponseType(typeof(QuickStatsDto), 200)]
+        public async Task<ActionResult<QuickStatsDto>> GetQuickStats()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var stats = await _bandStaffService.GetQuickStatsAsync(userId);
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading quick stats");
+                return StatusCode(500, "An error occurred");
+            }
+        }
+
+        /// <summary>
+        /// Search students
+        /// </summary>
+        [HttpGet("search-students")]
+        [ProducesResponseType(typeof(StaffStudentSearchDto), 200)]
+        public async Task<ActionResult<StaffStudentSearchDto>> SearchStudents(
+            [FromQuery] string? searchTerm,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var results = await _bandStaffService.SearchStudentsAsync(userId, searchTerm, page, pageSize);
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching students");
+                return StatusCode(500, "An error occurred");
+            }
         }
 
         // ==========================================

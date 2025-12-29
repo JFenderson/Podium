@@ -279,12 +279,12 @@ namespace Podium.Application.Services
             var contacts = await _unitOfWork.ContactLogs.GetQueryable()
                 .Where(cl => cl.StudentId == studentId && cl.CreatedAt >= startDate)
                 .Include(cl => cl.Band)
-                .Include(cl => cl.RecruiterStaff)
+                .Include(cl => cl.BandStaff)
                 .OrderByDescending(cl => cl.CreatedAt)
                 .Select(cl => new ContactActivityDto
                 {
                     ContactId = cl.Id,
-                    RecruiterName = cl.RecruiterStaff != null ? cl.RecruiterStaff.ApplicationUserId : "Unknown Recruiter",
+                    RecruiterName = cl.BandStaff != null ? cl.BandStaff.ApplicationUserId : "Unknown Recruiter",
                     BandName = cl.Band != null ? cl.Band.BandName : "Unknown Band",
                     ContactDate = cl.CreatedAt,
                     ContactMethod = cl.ContactMethod,
@@ -368,7 +368,7 @@ namespace Podium.Application.Services
             else query = query.Where(cr => cr.Status == "Pending");
 
             return await query
-                .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.RecruiterStaff)
+                .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.BandStaff)
                 .OrderByDescending(cr => cr.RequestedDate)
                 .Select(cr => new ContactRequestDto
                 {
@@ -396,7 +396,7 @@ namespace Podium.Application.Services
         public async Task<ContactRequestDto> ApproveContactRequestAsync(int requestId, string guardianUserId, string? notes)
         {
             var request = await _unitOfWork.ContactRequests.GetQueryable()
-                .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.RecruiterStaff)
+                .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.BandStaff)
                 .FirstOrDefaultAsync(cr => cr.Id == requestId);
 
             if (request == null) throw new KeyNotFoundException($"Contact request {requestId} not found");
@@ -410,11 +410,11 @@ namespace Podium.Application.Services
             _unitOfWork.ContactRequests.Update(request);
             await _unitOfWork.SaveChangesAsync();
 
-            if (request.RecruiterStaff != null)
+            if (request.BandStaff != null)
             {
                 var studentName = $"{request.Student.FirstName} {request.Student.LastName}";
                 await _notificationService.NotifyUserAsync(
-                    request.RecruiterStaff.ApplicationUserId,
+                    request.BandStaff.ApplicationUserId,
                     "ContactApproved",
                     "Contact Request Approved",
                     $"A guardian has approved your request to contact {studentName}.",
@@ -427,7 +427,7 @@ namespace Podium.Application.Services
         public async Task<ContactRequestDto> DeclineContactRequestAsync(int requestId, string guardianUserId, string? reason)
         {
             var request = await _unitOfWork.ContactRequests.GetQueryable()
-                 .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.RecruiterStaff)
+                 .Include(cr => cr.Student).Include(cr => cr.Band).Include(cr => cr.BandStaff)
                  .FirstOrDefaultAsync(cr => cr.Id == requestId);
 
             if (request == null) throw new KeyNotFoundException($"Contact request {requestId} not found");

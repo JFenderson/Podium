@@ -13,9 +13,9 @@ namespace Podium.Infrastructure.Data.Configurations
                    .HasForeignKey(cr => cr.BandId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(cr => cr.RecruiterStaff)
+            builder.HasOne(cr => cr.BandStaff)
                    .WithMany()
-                   .HasForeignKey(cr => cr.RecruiterStaffId)
+                   .HasForeignKey(cr => cr.BandStaffId)
                    .OnDelete(DeleteBehavior.Restrict);
         }
     }

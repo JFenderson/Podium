@@ -46,5 +46,6 @@ namespace Podium.Core.Entities
         public virtual ICollection<ScholarshipOffer> Offers { get; set; } = new List<ScholarshipOffer>();
         public virtual ICollection<BandEvent> Events { get; set; } = new List<BandEvent>();
         public virtual ICollection<BandBudget> Budgets { get; set; } = new List<BandBudget>();
+        public bool IsHbcu { get; set; }
     }
 }

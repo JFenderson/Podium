@@ -6,7 +6,7 @@
 ```csharp
 [Authorize(Policy = "StudentOnly")]        // Only students
 [Authorize(Policy = "GuardianOnly")]       // Only guardians
-[Authorize(Policy = "RecruiterOnly")]      // Only recruiters
+[Authorize(Policy = "BandStaffOnly")]      // Only recruiters
 [Authorize(Policy = "DirectorOnly")]       // Only directors
 [Authorize(Policy = "BandStaffOnly")]      // Any BandStaff (Recruiter or Director)
 ```

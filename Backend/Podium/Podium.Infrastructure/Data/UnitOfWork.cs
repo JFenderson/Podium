@@ -34,6 +34,8 @@ namespace Podium.Infrastructure.Data
         private IRepository<GuardianNotification>? _guardianNotifications;
         private IRepository<GuardianNotificationPreferences>? _guardianNotificationPreferences;
         private IRepository<BandBudget>? _bandBudgets;
+        private IRepository<SavedSearch>? _savedSearches;
+        private IRepository<SearchAlert>? _searchAlerts;
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
@@ -88,6 +90,11 @@ namespace Podium.Infrastructure.Data
         public IRepository<GuardianNotification> GuardianNotifications => _guardianNotifications ??= new Repository<GuardianNotification>(_context);
         public IRepository<GuardianNotificationPreferences> GuardianNotificationPreferences => _guardianNotificationPreferences ??= new Repository<GuardianNotificationPreferences>(_context);
         public IRepository<BandBudget> BandBudgets => _bandBudgets ??= new Repository<BandBudget>(_context);
+        public IRepository<SavedSearch> SavedSearches =>
+      _savedSearches ??= new Repository<SavedSearch>(_context);
+
+        public IRepository<SearchAlert> SearchAlerts =>
+            _searchAlerts ??= new Repository<SearchAlert>(_context);
 
 
         // Ensure proper disposal and transaction handling

@@ -332,6 +332,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsHbcu")
+                        .HasColumnType("bit");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -617,6 +620,9 @@ namespace Podium.Infrastructure.Migrations
                     b.Property<int>("BandId")
                         .HasColumnType("int");
 
+                    b.Property<int>("BandStaffId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ContactMethod")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -636,9 +642,6 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("RecruiterStaffId")
-                        .HasColumnType("int");
-
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
@@ -649,7 +652,7 @@ namespace Podium.Infrastructure.Migrations
 
                     b.HasIndex("BandId");
 
-                    b.HasIndex("RecruiterStaffId");
+                    b.HasIndex("BandStaffId");
 
                     b.HasIndex("StudentId");
 
@@ -665,6 +668,9 @@ namespace Podium.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BandId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BandStaffId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
@@ -700,9 +706,6 @@ namespace Podium.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("RecruiterStaffId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("RequestedDate")
                         .HasColumnType("datetime2");
 
@@ -732,7 +735,7 @@ namespace Podium.Infrastructure.Migrations
 
                     b.HasIndex("BandId");
 
-                    b.HasIndex("RecruiterStaffId");
+                    b.HasIndex("BandStaffId");
 
                     b.HasIndex("StudentId");
 
@@ -1256,6 +1259,93 @@ namespace Podium.Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Podium.Core.Entities.SavedSearch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AlertFrequencyDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AlertsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("BandStaffId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("FilterCriteria")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsShared")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsTemplate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastAlertSent")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LastResultCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("LastUsed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShareToken")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TimesUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_SavedSearches_CreatedAt");
+
+                    b.HasIndex("ShareToken")
+                        .IsUnique()
+                        .HasFilter("[ShareToken] IS NOT NULL");
+
+                    b.HasIndex("BandStaffId", "IsTemplate")
+                        .HasDatabaseName("IX_SavedSearches_RecruiterId_IsTemplate");
+
+                    b.ToTable("SavedSearches");
+                });
+
             modelBuilder.Entity("Podium.Core.Entities.ScholarshipOffer", b =>
                 {
                     b.Property<int>("Id")
@@ -1384,6 +1474,48 @@ namespace Podium.Infrastructure.Migrations
                     b.ToTable("ScholarshipOffer");
                 });
 
+            modelBuilder.Entity("Podium.Core.Entities.SearchAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EmailError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NewMatchIds")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("NewMatchesCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("SavedSearchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SentAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("WasEmailSent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedSearchId", "SentAt")
+                        .HasDatabaseName("IX_SearchAlerts_SavedSearchId_SentAt");
+
+                    b.ToTable("SearchAlerts");
+                });
+
             modelBuilder.Entity("Podium.Core.Entities.Student", b =>
                 {
                     b.Property<int>("Id")
@@ -1436,6 +1568,9 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Property<string>("IntendedMajor")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsAvailableForRecruiting")
                         .HasColumnType("bit");
@@ -1934,9 +2069,9 @@ namespace Podium.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Podium.Core.Entities.BandStaff", "RecruiterStaff")
+                    b.HasOne("Podium.Core.Entities.BandStaff", "BandStaff")
                         .WithMany("ContactsInitiated")
-                        .HasForeignKey("RecruiterStaffId")
+                        .HasForeignKey("BandStaffId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1948,7 +2083,7 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Navigation("Band");
 
-                    b.Navigation("RecruiterStaff");
+                    b.Navigation("BandStaff");
 
                     b.Navigation("Student");
                 });
@@ -1961,9 +2096,9 @@ namespace Podium.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Podium.Core.Entities.BandStaff", "RecruiterStaff")
+                    b.HasOne("Podium.Core.Entities.BandStaff", "BandStaff")
                         .WithMany()
-                        .HasForeignKey("RecruiterStaffId")
+                        .HasForeignKey("BandStaffId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1975,7 +2110,7 @@ namespace Podium.Infrastructure.Migrations
 
                     b.Navigation("Band");
 
-                    b.Navigation("RecruiterStaff");
+                    b.Navigation("BandStaff");
 
                     b.Navigation("Student");
                 });
@@ -2108,6 +2243,17 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("ApplicationUser");
                 });
 
+            modelBuilder.Entity("Podium.Core.Entities.SavedSearch", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.BandStaff", "BandStaff")
+                        .WithMany()
+                        .HasForeignKey("BandStaffId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BandStaff");
+                });
+
             modelBuilder.Entity("Podium.Core.Entities.ScholarshipOffer", b =>
                 {
                     b.HasOne("Podium.Core.Entities.BandStaff", "ApprovedByDirector")
@@ -2153,6 +2299,17 @@ namespace Podium.Infrastructure.Migrations
                     b.Navigation("DeniedByDirector");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Podium.Core.Entities.SearchAlert", b =>
+                {
+                    b.HasOne("Podium.Core.Entities.SavedSearch", "SavedSearch")
+                        .WithMany()
+                        .HasForeignKey("SavedSearchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SavedSearch");
                 });
 
             modelBuilder.Entity("Podium.Core.Entities.Student", b =>

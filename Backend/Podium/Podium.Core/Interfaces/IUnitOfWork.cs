@@ -30,6 +30,8 @@ namespace Podium.Core.Interfaces
         IRepository<ContactLog> ContactLogs { get; }
         IRepository<GuardianNotification> GuardianNotifications { get; }
         IRepository<GuardianNotificationPreferences> GuardianNotificationPreferences { get; }
+        IRepository<SavedSearch> SavedSearches { get; }
+        IRepository<SearchAlert> SearchAlerts { get; }
         /// <summary>
         /// Save all changes to the database
         /// </summary>

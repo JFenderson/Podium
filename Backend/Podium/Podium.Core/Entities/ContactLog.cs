@@ -17,7 +17,7 @@ namespace Podium.Core.Entities
         public int BandId { get; set; }
 
         [Required]
-        public int RecruiterStaffId { get; set; }
+        public int BandStaffId { get; set; }
 
 
         [Required]
@@ -37,7 +37,7 @@ namespace Podium.Core.Entities
         [ForeignKey(nameof(BandId))]
         public virtual Band Band { get; set; } = null!;
 
-        [ForeignKey(nameof(RecruiterStaffId))]
-        public virtual BandStaff RecruiterStaff { get; set; } = null!;
+        [ForeignKey(nameof(BandStaffId))]
+        public virtual BandStaff BandStaff { get; set; } = null!;
     }
 }

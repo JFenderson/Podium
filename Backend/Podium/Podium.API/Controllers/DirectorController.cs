@@ -72,7 +72,7 @@ namespace BandRecruitment.Controllers
         public async Task<ActionResult<DirectorDashboardDto>> GetDashboard(
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
-            [FromQuery] int? recruiterId,
+            [FromQuery] int? bandStaffId,
             [FromQuery] string? instrument,
             [FromQuery] string? offerStatus)
         {
@@ -223,7 +223,7 @@ namespace BandRecruitment.Controllers
         }
 
         /// <summary>
-        /// Add a new staff member (recruiter) to the band.
+        /// Add a new staff member (BandStaff) to the band.
         /// Creates BandStaff relationship with specified permissions.
         /// Audit: Logs all staff additions for compliance.
         /// </summary>

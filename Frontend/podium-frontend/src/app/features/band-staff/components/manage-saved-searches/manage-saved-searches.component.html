@@ -1,0 +1,215 @@
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Saved Searches</h1>
+      <p class="mt-1 text-sm text-gray-600">Manage your saved search criteria and alerts</p>
+    </div>
+    <a
+      routerLink="/recruiter/students/search"
+      class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+    >
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      New Search
+    </a>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+    <svg class="animate-spin h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && savedSearches.length === 0" class="text-center py-12">
+    <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+    <h3 class="mt-4 text-lg font-medium text-gray-900">No saved searches</h3>
+    <p class="mt-2 text-sm text-gray-600">Get started by creating your first saved search</p>
+    <a
+      routerLink="/recruiter/students/search"
+      class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+    >
+      Create Search
+    </a>
+  </div>
+
+  <!-- Saved Searches Table -->
+  <div *ngIf="!isLoading && savedSearches.length > 0" class="bg-white shadow-sm rounded-lg overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Search Name
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Filters
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Results
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Alerts
+          </th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Last Used
+          </th>
+          <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <tr *ngFor="let search of savedSearches" class="hover:bg-gray-50 transition-colors">
+          <!-- Name & Description -->
+          <td class="px-6 py-4">
+            <div class="flex items-center">
+              <div>
+                <div class="text-sm font-medium text-gray-900">
+                  {{ search.name }}
+                </div>
+                <div *ngIf="search.description" class="text-sm text-gray-500 mt-1">
+                  {{ search.description }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Filter Summary -->
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-600">
+              {{ search.filterSummary || 'No filters' }}
+            </div>
+          </td>
+
+          <!-- Result Count -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {{ search.currentResultCount || 0 }} matches
+            </span>
+          </td>
+
+          <!-- Alerts Status -->
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div *ngIf="search.alertsEnabled" class="flex items-center text-sm text-gray-900">
+              <svg class="w-4 h-4 mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+              </svg>
+              <span class="text-xs text-gray-600">{{ getAlertFrequencyLabel(search.alertFrequencyDays) }}</span>
+            </div>
+            <div *ngIf="!search.alertsEnabled" class="text-sm text-gray-400">
+              Off
+            </div>
+          </td>
+
+          <!-- Last Used -->
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            {{ formatDate(search.lastUsed) }}
+          </td>
+
+          <!-- Actions -->
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <div class="flex items-center justify-end gap-2">
+              <!-- Run Search -->
+              <button
+                (click)="runSearch(search.id)"
+                class="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                title="Run search"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+
+              <!-- Edit -->
+              <button
+                (click)="editSearch(search.id)"
+                class="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50 transition-colors"
+                title="Edit search"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+
+              <!-- Share -->
+              <button
+                (click)="shareSearch(search.id)"
+                class="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50 transition-colors"
+                title="Share search"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </button>
+
+              <!-- Delete -->
+              <button
+                (click)="deleteSearch(search.id, search.name)"
+                class="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                title="Delete search"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<app-save-search-modal
+  [isOpen]="isEditModalOpen"
+  [editMode]="true"
+  [savedSearchId]="editingSearchId"
+  [filters]="{}"
+  (close)="isEditModalOpen = false"
+  (saved)="onSearchUpdated()"
+></app-save-search-modal>
+
+<!-- Share Modal -->
+<div *ngIf="showShareModal" class="fixed inset-0 z-50 overflow-y-auto">
+  <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" (click)="closeShareModal()"></div>
+  
+  <div class="flex min-h-full items-center justify-center p-4">
+    <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Share Search</h3>
+        <button (click)="closeShareModal()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="text-sm text-gray-600 mb-4">
+        Share this link with team members to give them access to this search:
+      </p>
+
+      <div class="flex items-center gap-2">
+        <input
+          type="text"
+          [value]="shareUrl"
+          readonly
+          class="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm"
+        />
+        <button
+          (click)="copyShareUrl()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+        >
+          {{ copiedToClipboard ? '✓ Copied' : 'Copy' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

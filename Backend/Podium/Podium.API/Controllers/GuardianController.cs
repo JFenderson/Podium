@@ -135,7 +135,7 @@ namespace BandRecruitment.Controllers
 
         /// <summary>
         /// Get all pending contact requests for linked students.
-        /// Returns requests that require guardian approval before recruiters can contact students.
+        /// Returns requests that require guardian approval before BandStaff can contact students.
         /// Authorization: Only shows requests for students linked to this guardian.
         /// Performance: Optimized query with includes for band and recruiter details.
         /// </summary>

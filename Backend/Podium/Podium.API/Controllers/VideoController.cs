@@ -169,7 +169,7 @@ namespace Podium.API.Controllers
 
         /// <summary>
         /// Rate a video.
-        /// Only BandStaff (Recruiters/Directors) with 'CanRateStudents' permission.
+        /// Only BandStaff (BandStaff/Directors) with 'CanRateStudents' permission.
         /// </summary>
         [HttpPost("{id}/rate")]
         [Authorize(Policy = "CanRateStudents")]
@@ -225,7 +225,7 @@ namespace Podium.API.Controllers
 
         /// <summary>
         /// Get all ratings for a specific video.
-        /// Only accessible by BandStaff (Recruiters/Directors).
+        /// Only accessible by BandStaff (BandStaff/Directors).
         /// </summary>
         [HttpGet("{id}/ratings")]
         [Authorize(Policy = "CanRateStudents")] // Or "CanViewStudents" depending on your preference

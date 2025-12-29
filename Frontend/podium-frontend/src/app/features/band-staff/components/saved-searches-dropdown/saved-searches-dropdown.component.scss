@@ -1,0 +1,49 @@
+// saved-searches-dropdown.component.scss
+
+:host {
+  display: block;
+}
+
+// Line clamp utility (in case Tailwind doesn't have it)
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Smooth dropdown animation
+.absolute {
+  animation: dropdownSlide 0.2s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Custom scrollbar for the list
+.max-h-96 {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a0aec0;
+    }
+  }
+}

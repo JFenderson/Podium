@@ -83,5 +83,6 @@ namespace Podium.Core.Entities
         public virtual ICollection<Guardian> Guardians { get; set; } = new List<Guardian>();
         public virtual ICollection<StudentRating> StudentRatings { get; set; } = new List<StudentRating>();
         public virtual ICollection<StudentGuardian>? StudentGuardianLinks { get; set; }
+        public bool IsActive { get; set; }
     }
 }

@@ -1,3 +1,6 @@
+<!-- ENHANCED band-staff-dashboard.component.html -->
+<!-- Replace your existing file with this enhanced version -->
+
 <div class="h-full bg-background py-8">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     
@@ -21,6 +24,7 @@
 
     <div *ngIf="!isLoading && isBandStaff" class="space-y-8">
       
+      <!-- Profile Card -->
       <div *ngIf="profile" class="bg-primary rounded-lg shadow-lg p-6 text-white">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
@@ -54,6 +58,7 @@
         </div>
       </div>
 
+      <!-- Stats Grid - ENHANCED -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-surface rounded-lg shadow-sm border border-border p-6">
           <div class="flex items-center justify-between">
@@ -79,14 +84,16 @@
           </div>
         </div>
 
+        <!-- NEW: Acceptance Rate Card -->
         <div *ngIf="canSendOffers" class="bg-surface rounded-lg shadow-sm border border-border p-6">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-text-secondary mb-1">Offers Sent</p>
-              <p class="text-3xl font-bold text-text-primary">{{ totalOffersSent }}</p>
+              <p class="text-sm text-text-secondary mb-1">Acceptance Rate</p>
+              <p class="text-3xl font-bold text-text-primary">{{ acceptanceRate | number:'1.0-0' }}%</p>
+              <p class="text-xs text-text-secondary mt-1">{{ acceptedOffers }} of {{ totalOffersSent }} accepted</p>
             </div>
             <div class="p-3 bg-green-50 rounded-full">
-              <span class="material-icons text-green-600">send</span>
+              <span class="material-icons text-green-600">trending_up</span>
             </div>
           </div>
         </div>
@@ -104,8 +111,28 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- NEW: Budget Progress Bar -->
+      <div *ngIf="canSendOffers && budgetAllocated > 0" class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div>
+            <h3 class="text-lg font-bold">Budget Allocation</h3>
+            <p class="text-sm text-white/80">{{ budgetUsed | currency }} of {{ budgetAllocated | currency }} used</p>
+          </div>
+          <div class="text-right">
+            <p class="text-2xl font-bold">{{ budgetUtilization | number:'1.0-0' }}%</p>
+            <p class="text-sm text-white/80">{{ budgetRemaining | currency }} remaining</p>
+          </div>
+        </div>
+        <div class="bg-white/20 rounded-full h-3 overflow-hidden">
+          <div class="bg-white h-full rounded-full transition-all duration-500" 
+               [style.width.%]="budgetUtilization"></div>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        <!-- Recent Students - Takes 1 column -->
         <div *ngIf="canViewStudents" class="bg-surface rounded-lg shadow-sm border border-border p-6">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-text-primary">Recent Students</h3>
@@ -144,6 +171,19 @@
           </div>
         </div>
 
+        <!-- NEW: Offers Chart - Takes 2 columns -->
+        <div *ngIf="canSendOffers" class="lg:col-span-2 bg-surface rounded-lg shadow-sm border border-border p-6">
+          <h3 class="text-lg font-bold text-text-primary mb-6">Offers Trend</h3>
+          <div style="height: 250px;">
+            <canvas id="offersChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Row: My Offers and Activity -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- My Recent Offers -->
         <div *ngIf="canSendOffers" class="bg-surface rounded-lg shadow-sm border border-border p-6">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-text-primary">My Recent Offers</h3>
@@ -181,8 +221,30 @@
             <p class="text-sm">No offers yet</p>
           </div>
         </div>
+
+        <!-- NEW: Recent Activity -->
+        <div class="bg-surface rounded-lg shadow-sm border border-border p-6">
+          <h3 class="text-lg font-bold text-text-primary mb-6">Recent Activity</h3>
+
+          <div *ngIf="recentActivity.length > 0" class="space-y-4">
+            <div *ngFor="let activity of recentActivity" 
+                 class="flex items-start gap-3 pb-3 border-b border-border last:border-0">
+              <span class="material-icons text-sm {{ activity.color }}">{{ activity.icon }}</span>
+              <div class="flex-1">
+                <p class="text-sm text-text-primary">{{ activity.description }}</p>
+                <p class="text-xs text-text-secondary mt-1">{{ getTimeAgo(activity.timestamp) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="recentActivity.length === 0" class="text-center py-8 text-text-secondary">
+            <span class="material-icons text-4xl text-gray-300 mb-2 block">history</span>
+            <p class="text-sm">No recent activity</p>
+          </div>
+        </div>
       </div>
 
+      <!-- Quick Actions -->
       <div class="bg-surface rounded-lg shadow-sm border border-border p-6">
         <h3 class="text-lg font-bold text-text-primary mb-6">Quick Actions</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -236,6 +298,7 @@
         </div>
       </div>
 
+      <!-- Limited Permissions Warning -->
       <div *ngIf="!canViewStudents && !canSendOffers" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <div class="flex items-start gap-3">
           <span class="material-icons text-yellow-600">lock</span>

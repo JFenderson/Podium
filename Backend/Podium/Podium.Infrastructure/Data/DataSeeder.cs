@@ -173,7 +173,7 @@ namespace Podium.Infrastructure.Data
                     RequestedDate = DateTime.UtcNow.AddDays(-1),
                     IsUrgent = true, // To test "High Priority" badge
                     CreatedBy = staffMember.ApplicationUserId, // Use real user ID
-                    RecruiterStaffId = staffMember.Id
+                    BandStaffId = staffMember.Id
                 });
             }
 

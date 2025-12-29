@@ -63,6 +63,13 @@ export const routes: Routes = [
     loadChildren: () => import('./features/director/director.routes').then(m => m.DIRECTOR_ROUTES)
   },
   {
+  path: 'staff',
+  canActivate: [authGuard, roleGuard],
+  data: { roles: [Roles.BandStaff, Roles.Director] },
+  loadChildren: () => import('./features/band-staff/band-staff.routes')
+    .then(m => m.BAND_STAFF_ROUTES)
+},
+  {
   path: 'recruiter/search',
   component: StudentSearchComponent,
   canActivate: [authGuard, roleGuard],

@@ -15,9 +15,9 @@ namespace Podium.Infrastructure.Data.Configurations
                    .OnDelete(DeleteBehavior.Restrict);
 
             // Prevent cascade delete from BandStaff -> ContactLog
-            builder.HasOne(cl => cl.RecruiterStaff)
+            builder.HasOne(cl => cl.BandStaff)
                    .WithMany(bs => bs.ContactsInitiated)
-                   .HasForeignKey(cl => cl.RecruiterStaffId)
+                   .HasForeignKey(cl => cl.BandStaffId)
                    .OnDelete(DeleteBehavior.Restrict);
         }
     }

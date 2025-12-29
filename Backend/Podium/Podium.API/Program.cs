@@ -2,10 +2,10 @@ using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Podium.API.Extensions;
-using Podium.API.Extensions;
 using Podium.API.Jobs;
 using Podium.API.Middleware;
 using Podium.Core.Entities;
+using Podium.Infrastructure.BackgroundJobs;
 using Podium.Infrastructure.Data;
 using Podium.Infrastructure.Hubs;
 using System.Text.Json;
@@ -44,8 +44,6 @@ builder.Services.AddPodiumSwagger();
 builder.Services.AddPodiumIdentity(builder.Configuration);
 builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
 // ---------------------------------------------------------
-
-
 
 var app = builder.Build();
 
@@ -128,6 +126,12 @@ using (var scope = app.Services.CreateScope())
         "process-transcoding",
         job => job.ExecuteAsync(),
         "*/5 * * * *");
+
+    // Hourly Job - Search Alerts
+    recurringJobManager.AddOrUpdate<SearchAlertJob>(
+        "process-search-alerts",
+        job => job.ProcessSearchAlerts(),
+        Cron.Hourly);
 }
 
 app.MapHub<NotificationHub>("/notificationHub");

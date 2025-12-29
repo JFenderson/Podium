@@ -1,3 +1,4 @@
+// sidebar.ts - FIXED VERSION
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -8,12 +9,17 @@ import { AuthService } from '../../features/auth/services/auth.service';
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.html',
-  styleUrls: ['./sidebar.scss'], // Corrected from styleUrl to styleUrls
+  styleUrls: ['./sidebar.scss'],
 })
 export class Sidebar {
   private authService = inject(AuthService);
 
-get isStaff(): boolean {
+  // Add hasRole method for template
+  hasRole(role: string): boolean {
+    return this.authService.hasRole(role);
+  }
+
+  get isStaff(): boolean {
     return this.authService.hasAnyRole(['Director', 'BandStaff']);
   }
 
@@ -21,7 +27,6 @@ get isStaff(): boolean {
     return this.authService.hasRole('Guardian');
   }
 
-  // FIX: This property was missing
   get isStudent(): boolean {
     return this.authService.hasRole('Student');
   }

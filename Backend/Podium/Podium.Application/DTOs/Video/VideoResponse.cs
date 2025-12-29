@@ -31,7 +31,7 @@ namespace Podium.Application.DTOs.Video
         public double AverageRating { get; set; }
         public int TotalRatings { get; set; }
 
-        // Only populated for the video owner or recruiters
+        // Only populated for the video owner or bandstaff
         public VideoRatingByCurrentUser? MyRating { get; set; }
     }
 }

@@ -10,9 +10,9 @@
         public double AcceptanceRate { get; set; }
         public double AcceptanceRateChange { get; set; }
 
-        // Recruiters
-        public int ActiveRecruiters { get; set; }
-        public double ActiveRecruitersChange { get; set; }
+        // BandStaff
+        public int ActiveBandStaff { get; set; }
+        public double ActiveBandStaffChange { get; set; }
 
         // Pipeline
         public int PipelineStudents { get; set; }

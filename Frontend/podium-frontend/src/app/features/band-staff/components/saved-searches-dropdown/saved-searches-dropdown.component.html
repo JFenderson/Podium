@@ -1,0 +1,117 @@
+<div class="relative">
+  <!-- Dropdown Button -->
+  <button
+    type="button"
+    (click)="toggleDropdown()"
+    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+  >
+    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+    Saved Searches
+    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+
+  <!-- Dropdown Menu -->
+  <div
+    *ngIf="isOpen"
+    class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+  >
+    <!-- Header -->
+    <div class="px-4 py-3 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-900">My Saved Searches</h3>
+        <a
+          routerLink="/recruiter/saved-searches"
+          class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+          (click)="isOpen = false"
+        >
+          Manage All
+        </a>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="px-4 py-8 text-center">
+      <svg class="animate-spin h-8 w-8 mx-auto text-blue-600" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p class="mt-2 text-sm text-gray-500">Loading searches...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && savedSearches.length === 0" class="px-4 py-8 text-center">
+      <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+      </svg>
+      <p class="mt-2 text-sm text-gray-600">No saved searches yet</p>
+      <p class="mt-1 text-xs text-gray-500">Save your searches for quick access</p>
+    </div>
+
+    <!-- Saved Searches List -->
+    <div *ngIf="!isLoading && savedSearches.length > 0" class="max-h-96 overflow-y-auto">
+      <div
+        *ngFor="let search of savedSearches"
+        (click)="selectSearch(search.id)"
+        class="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center">
+              <h4 class="text-sm font-medium text-gray-900 truncate">
+                {{ search.name }}
+              </h4>
+              <span *ngIf="search.alertsEnabled" class="ml-2 text-xs" title="Email alerts enabled">
+                🔔
+              </span>
+            </div>
+            
+            <p *ngIf="search.description" class="mt-1 text-xs text-gray-500 line-clamp-2">
+              {{ search.description }}
+            </p>
+            
+            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500">
+              <span class="flex items-center">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {{ search.currentResultCount || 0 }} matches
+              </span>
+              <span class="flex items-center">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ formatLastUsed(search.lastUsed) }}
+              </span>
+            </div>
+
+            <p *ngIf="search.filterSummary" class="mt-1 text-xs text-gray-400">
+              {{ search.filterSummary }}
+            </p>
+          </div>
+
+          <svg class="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div *ngIf="!isLoading && savedSearches.length > 0" class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+      <a
+        routerLink="/recruiter/saved-searches"
+        class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center"
+        (click)="isOpen = false"
+      >
+        View All Saved Searches
+        <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</div>

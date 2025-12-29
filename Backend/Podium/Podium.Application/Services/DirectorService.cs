@@ -617,14 +617,14 @@ namespace Podium.Application.Services
             var previousAcceptanceRate = previousTotal > 0 ? (double)previousAccepted / previousTotal * 100 : 0;
 
             // Active recruiters (logged in within date range)
-            var activeRecruiters = await _unitOfWork.BandStaff.GetQueryable()
+            var activeBandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .Where(bs => bs.BandId == bandId &&
                             bs.IsActive &&
                             bs.Role != "Director" &&
                             bs.LastActivityDate >= startDate)
                 .CountAsync();
 
-            var previousActiveRecruiters = await _unitOfWork.BandStaff.GetQueryable()
+            var previousActiveBandStaff = await _unitOfWork.BandStaff.GetQueryable()
                 .Where(bs => bs.BandId == bandId &&
                             bs.IsActive &&
                             bs.Role != "Director" &&
@@ -668,8 +668,8 @@ namespace Podium.Application.Services
                 OffersSentChange = CalculatePercentageChange(totalOffers, previousTotal),
                 AcceptanceRate = acceptanceRate,
                 AcceptanceRateChange = acceptanceRate - previousAcceptanceRate,
-                ActiveRecruiters = activeRecruiters,
-                ActiveRecruitersChange = CalculatePercentageChange(activeRecruiters, previousActiveRecruiters),
+                ActiveBandStaff = activeBandStaff,
+                ActiveBandStaffChange = CalculatePercentageChange(activeBandStaff, previousActiveBandStaff),
                 PipelineStudents = pipelineStudents,
                 PipelineStudentsChange = CalculatePercentageChange(pipelineStudents, previousPipelineStudents),
                 TotalBudgetAllocated = totalBudgetAllocated,
@@ -894,7 +894,7 @@ namespace Podium.Application.Services
 
                 // Filter contacts for this staff member (in memory)
                 var contacts = allContacts
-                    .Where(cr => cr.RecruiterStaffId == member.Id)
+                    .Where(cr => cr.BandStaffId == member.Id)
                     .ToList();
 
                 var totalOffers = offers.Count;
@@ -1164,7 +1164,7 @@ namespace Podium.Application.Services
             // Get recent contact requests
             var recentContacts = await _unitOfWork.ContactRequests.GetQueryable()
                 .Include(cr => cr.Student)
-                .Include(cr => cr.RecruiterStaff)
+                .Include(cr => cr.BandStaff)
                 .Where(cr => cr.BandId == bandId)
                 .OrderByDescending(cr => cr.RequestedDate)
                 .Take(limit / 2)
@@ -1178,12 +1178,12 @@ namespace Podium.Application.Services
                     Timestamp = contact.RequestedDate,
                     ActivityType = "ContactMade",
                     ActorType = "Staff",
-                    ActorId = contact.RecruiterStaffId,
-                    ActorName = $"{contact.RecruiterStaff.FirstName} {contact.RecruiterStaff.LastName}",
+                    ActorId = contact.BandStaffId,
+                    ActorName = $"{contact.BandStaff.FirstName} {contact.BandStaff.LastName}",
                     StudentId = contact.StudentId,
                     StudentName = $"{contact.Student.FirstName} {contact.Student.LastName}",
-                    StaffId = contact.RecruiterStaffId,
-                    StaffName = $"{contact.RecruiterStaff.FirstName} {contact.RecruiterStaff.LastName}",
+                    StaffId = contact.BandStaffId,
+                    StaffName = $"{contact.BandStaff.FirstName} {contact.BandStaff.LastName}",
                     Description = $"Contact request sent to {contact.Student.FirstName} {contact.Student.LastName}",
                     Details = $"Status: {contact.Status}"
                 });

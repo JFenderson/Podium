@@ -1,0 +1,50 @@
+// manage-saved-searches.component.scss
+
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+// Table hover effects
+tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+// Action button hover states
+button {
+  transition: all 0.15s ease;
+  
+  &:hover svg {
+    transform: scale(1.1);
+  }
+}
+
+// Modal animations
+.fixed.inset-0 {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.relative.bg-white {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
