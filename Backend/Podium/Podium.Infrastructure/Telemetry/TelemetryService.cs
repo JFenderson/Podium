@@ -78,13 +78,16 @@ public class TelemetryService : ITelemetryService
 
         _telemetryClient.TrackEvent("DatabaseQuery", properties);
 
+        // Determine success based on duration (queries that complete are successful)
+        var success = duration.TotalMilliseconds < 30000; // Timeout threshold
+
         // Track as dependency for Application Insights
         var dependency = new DependencyTelemetry
         {
             Name = queryName,
             Type = "SQL",
             Duration = duration,
-            Success = true
+            Success = success
         };
         _telemetryClient.TrackDependency(dependency);
 

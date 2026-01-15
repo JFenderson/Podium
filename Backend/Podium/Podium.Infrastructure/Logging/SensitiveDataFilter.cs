@@ -38,21 +38,12 @@ public class SensitiveDataFilter : ILogEventEnricher
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        // Filter message template
-        if (logEvent.MessageTemplate != null)
-        {
-            var messageText = logEvent.MessageTemplate.Text;
-            if (!string.IsNullOrEmpty(messageText) && ContainsSensitiveData(messageText))
-            {
-                // We can't modify the message template directly, but we can add a warning
-                logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(
-                    "SensitiveDataWarning", 
-                    "Message may contain sensitive data"));
-            }
-        }
+        // Note: Message template filtering is informational only. 
+        // The actual message text cannot be modified here.
+        // The SensitiveDataFilter works on log properties, not the message template itself.
+        // For full protection, avoid logging sensitive data in the first place.
 
         // Filter properties
-        var propertiesToRemove = new List<string>();
         var propertiesToReplace = new Dictionary<string, LogEventPropertyValue>();
 
         foreach (var property in logEvent.Properties)

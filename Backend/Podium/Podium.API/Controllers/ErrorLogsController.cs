@@ -56,9 +56,17 @@ public class ErrorLogsController : ControllerBase
         if (string.IsNullOrEmpty(url))
             return "Unknown";
 
-        // Remove query parameters that might contain sensitive data
-        var uri = new Uri(url, UriKind.RelativeOrAbsolute);
-        return uri.IsAbsoluteUri ? $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}" : url;
+        try
+        {
+            // Remove query parameters that might contain sensitive data
+            var uri = new Uri(url, UriKind.RelativeOrAbsolute);
+            return uri.IsAbsoluteUri ? $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}" : url;
+        }
+        catch (UriFormatException)
+        {
+            // If URL is malformed, return sanitized version
+            return url.Split('?')[0]; // Remove query string
+        }
     }
 
     private static string SanitizeMessage(string? message)

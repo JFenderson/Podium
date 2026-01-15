@@ -42,7 +42,7 @@ public class BlobStorageHealthCheck : IHealthCheck
             var blobServiceClient = new BlobServiceClient(connectionString);
             var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
-            // Check if container exists
+            // Check if container exists (lightweight operation)
             var exists = await containerClient.ExistsAsync(cancellationToken);
 
             if (!exists)
@@ -56,11 +56,8 @@ public class BlobStorageHealthCheck : IHealthCheck
                     });
             }
 
-            // Test read permissions by listing (with max 1 item)
-            await containerClient.GetBlobsAsync(cancellationToken: cancellationToken)
-                .AsPages(pageSizeHint: 1)
-                .GetAsyncEnumerator(cancellationToken)
-                .MoveNextAsync();
+            // Verify we have read permissions by checking properties (lightweight)
+            await containerClient.GetPropertiesAsync(cancellationToken: cancellationToken);
 
             _logger.LogInformation("Azure Storage health check passed for container '{ContainerName}'", containerName);
             return HealthCheckResult.Healthy(
