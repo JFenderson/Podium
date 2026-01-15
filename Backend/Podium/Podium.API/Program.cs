@@ -196,8 +196,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-    Log.Information("Podium API stopped cleanly");
 }
 catch (Exception ex)
 {

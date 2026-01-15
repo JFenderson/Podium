@@ -34,7 +34,11 @@ public class SecurityHeadersMiddleware
         var enableCSP = _configuration.GetValue<bool>("SecurityHeaders:EnableCSP", true);
         if (enableCSP)
         {
-            // Relaxed CSP for development - should be stricter in production
+            // NOTE: For production, tighten CSP policy - avoid 'unsafe-inline' and 'unsafe-eval'
+            // Use nonces or hashes for inline scripts/styles. This relaxed policy is for development compatibility.
+            // Production recommendation:
+            // default-src 'self'; script-src 'self' 'nonce-{NONCE}'; style-src 'self' 'nonce-{NONCE}'; 
+            // img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'
             context.Response.Headers.Append("Content-Security-Policy",
                 "default-src 'self'; " +
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
