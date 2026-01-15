@@ -21,7 +21,7 @@ Log.Logger = new LoggerConfiguration()
         .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
         .AddEnvironmentVariables()
         .Build())
-    .Enrich.FromLogContext()
+    .UsePodiumLogging() // Apply Podium logging configuration with enrichers
     .Enrich.WithProperty("Application", "Podium.API")
     .CreateLogger();
 
@@ -71,12 +71,25 @@ try
     builder.Services.AddPodiumSwagger();
     builder.Services.AddPodiumIdentity(builder.Configuration);
     builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
+    
+    // ---------------------------------------------------------
+    // MONITORING: Application Insights, Health Checks, Telemetry
+    // ---------------------------------------------------------
+    builder.Services.AddPodiumApplicationInsights(builder.Configuration);
+    builder.Services.AddPodiumTelemetryServices();
+    builder.Services.AddPodiumHealthChecks(builder.Configuration);
     // ---------------------------------------------------------
 
     var app = builder.Build();
 
+    // Use custom request logging middleware (adds correlation IDs)
+    app.UseMiddleware<RequestLoggingMiddleware>();
+
     // Use Serilog request logging
     app.UseSerilogRequestLogging();
+
+    // Use performance tracking middleware
+    app.UseMiddleware<PerformanceTrackingMiddleware>();
 
     // Use Security Headers
     app.UseSecurityHeaders();
@@ -186,10 +199,27 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint for container orchestration
-// Placed after middleware configuration to ensure proper handling
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
-    .AllowAnonymous();
+// Health check endpoints for container orchestration and monitoring
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => !check.Tags.Contains("ready"),
+    ResponseWriter = HealthChecks.UI.Client.UIResponseWriter.WriteHealthCheckUIResponse
+}).AllowAnonymous();
+
+// Health Checks UI endpoint (optional, for dashboard)
+app.MapHealthChecksUI(options => options.UIPath = "/healthchecks-ui");
 
 // Apply Migrations - Skip in Testing environment
 if (!app.Environment.IsEnvironment("Testing"))

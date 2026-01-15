@@ -17,6 +17,12 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.22" />
 		<PackageReference Include="SendGrid" Version="9.29.3" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+		
+		<!-- Application Insights for Telemetry -->
+		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
+		
+		<!-- Serilog for Logging -->
+		<PackageReference Include="Serilog" Version="4.2.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Podium.Core\Podium.Core.csproj" />

@@ -31,9 +31,6 @@ public static class MonitoringExtensions
                 options.ConnectionString = connectionString;
                 options.EnableAdaptiveSampling = true;
                 options.EnableQuickPulseMetricStream = true;
-                options.EnableDependencyTracking = true;
-                options.EnableRequestTrackingTelemetryModule = true;
-                options.EnablePerformanceCounterCollectionModule = true;
             });
 
             // Add custom telemetry initializer for enriching data
@@ -97,7 +94,7 @@ public static class MonitoringExtensions
             setup.MaximumHistoryEntriesPerEndpoint(50);
             setup.AddHealthCheckEndpoint("Podium API", "/health");
         })
-        .AddInMemoryStorage(); // Use in-memory storage for development
+        .AddSqlServerStorage(configuration.GetConnectionString("DefaultConnection")!); // Use SQL Server storage
 
         return services;
     }
