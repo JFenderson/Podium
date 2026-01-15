@@ -1,0 +1,147 @@
+version: '3.8'
+
+# ============================================
+# Docker Compose for Local Development
+# ============================================
+
+services:
+  # ============================================
+  # SQL Server Database
+  # ============================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: podium-sqlserver
+    environment:
+      # Accept the End-User License Agreement
+      ACCEPT_EULA: "Y"
+      # Set the SA (System Administrator) password
+      # IMPORTANT: Change this in production!
+      SA_PASSWORD: ${SQL_SA_PASSWORD:-YourStrong!Passw0rd}
+      # Configure memory limits for SQL Server
+      MSSQL_PID: Express
+    ports:
+      # Expose SQL Server on default port
+      - "1433:1433"
+    volumes:
+      # Persist database data to avoid data loss on container restart
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - podium-network
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$${SA_PASSWORD}" -Q "SELECT 1" || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ============================================
+  # Azurite - Azure Storage Emulator
+  # ============================================
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: podium-azurite
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+    ports:
+      # Blob service port
+      - "10000:10000"
+      # Queue service port
+      - "10001:10001"
+      # Table service port
+      - "10002:10002"
+    volumes:
+      # Persist Azurite data
+      - azurite-data:/data
+    networks:
+      - podium-network
+
+  # ============================================
+  # Backend API Service
+  # ============================================
+  backend:
+    build:
+      # Build context is the Podium directory containing the solution
+      context: ./Backend/Podium
+      dockerfile: Podium.API/Dockerfile
+    container_name: podium-backend
+    environment:
+      # ASP.NET Core environment
+      ASPNETCORE_ENVIRONMENT: Development
+      # API URLs configuration
+      ASPNETCORE_URLS: http://+:5044
+      # Database connection string
+      # Using sqlserver service name as hostname
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PodiumDb;User Id=sa;Password=${SQL_SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      # JWT configuration
+      JWT__Secret: ${JWT_SECRET:-YourSuperSecretKeyThatIsAtLeast32CharactersLong!}
+      JWT__Issuer: ${JWT_ISSUER:-PodiumAPI}
+      JWT__Audience: ${JWT_AUDIENCE:-PodiumClient}
+      JWT__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
+      # Azure Storage configuration (using Azurite)
+      StorageProvider: Azure
+      AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AzureStorage__ContainerName: ${AZURE_CONTAINER_NAME:-podium-videos}
+      # Video configuration
+      Video__TranscodingSecret: ${VIDEO_TRANSCODING_SECRET:-YourSecureRandomStringHere123!}
+      Video__MaxFileSizeMB: ${VIDEO_MAX_FILE_SIZE_MB:-500}
+      # CORS configuration - allow frontend
+      AllowedOrigins__0: "http://localhost:4200"
+      AllowedOrigins__1: "http://frontend:80"
+      # Frontend URL for callbacks
+      App__ClientUrl: ${CLIENT_URL:-http://localhost:4200}
+    ports:
+      # Expose API on port 5044
+      - "5044:5044"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      azurite:
+        condition: service_started
+    networks:
+      - podium-network
+    healthcheck:
+      test: curl --fail http://localhost:5044/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # ============================================
+  # Frontend Angular Application
+  # ============================================
+  frontend:
+    build:
+      context: ./Frontend/podium-frontend
+      dockerfile: Dockerfile
+    container_name: podium-frontend
+    environment:
+      # API URL that Angular app will use
+      # This should match the backend service URL
+      API_URL: ${API_URL:-http://localhost:5044}
+    ports:
+      # Map container port 80 to host port 4200 for consistency with dev server
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - podium-network
+
+# ============================================
+# Named Volumes
+# ============================================
+volumes:
+  # SQL Server database files
+  sqlserver-data:
+    driver: local
+  # Azurite storage files
+  azurite-data:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  # Custom bridge network for service communication
+  podium-network:
+    driver: bridge
+    name: podium-network

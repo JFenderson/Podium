@@ -135,6 +135,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapHub<NotificationHub>("/notificationHub");
+
+// Health check endpoint for container orchestration
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
+    .AllowAnonymous();
+
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
 app.UseAuthentication();
