@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # SQL Server for Integration Tests
+  test-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: podium-test-db
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Test123!Strong"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1434:1433"
+    volumes:
+      - test-db-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Test123!Strong -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Backend API for testing
+  backend-test:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: podium-backend-test
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Testing"
+      ConnectionStrings__DefaultConnection: "Server=test-db,1433;Database=PodiumTest;User Id=sa;Password=Test123!Strong;TrustServerCertificate=True"
+      Jwt__Secret: "TestSecretKeyForJwtTokenGeneration123456789"
+      Jwt__Issuer: "PodiumTestIssuer"
+      Jwt__Audience: "PodiumTestAudience"
+      AzureStorage__ConnectionString: "UseDevelopmentStorage=true"
+    ports:
+      - "5001:8080"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    networks:
+      - test-network
+    # Run tests and keep container running for inspection
+    # Override with: docker-compose -f docker-compose.test.yml run backend-test dotnet test
+    command: tail -f /dev/null
+
+  # Frontend for E2E testing
+  frontend-test:
+    build:
+      context: ./Frontend/podium-frontend
+      dockerfile: Dockerfile
+    container_name: podium-frontend-test
+    environment:
+      NODE_ENV: "test"
+    ports:
+      - "4201:80"
+    networks:
+      - test-network
+
+volumes:
+  test-db-data:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge

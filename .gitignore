@@ -361,3 +361,38 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Application logs
+logs/
+*.log
+
+# Docker environment files (may contain secrets)
+.env
+.env.local
+.env.prod
+.env.production
+.env.*.local
+
+# Frontend build artifacts
+dist/
+.angular/
+
+# Test results and coverage
+TestResults/
+coverage/
+coverage-report/
+code-coverage-results.md
+playwright-report/
+test-results/
+*.cobertura.xml
+*.opencover.xml
+load-tests/results/
+
+# GitHub Actions artifacts
+deployment/
+*.trx

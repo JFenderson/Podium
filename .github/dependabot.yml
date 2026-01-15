@@ -1,0 +1,129 @@
+version: 2
+updates:
+  # Backend - NuGet packages
+  - package-ecosystem: "nuget"
+    directory: "/Backend/Podium"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+      - "nuget"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group Microsoft packages together
+      microsoft-packages:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      # Group testing packages together
+      testing-packages:
+        patterns:
+          - "*Test*"
+          - "xunit*"
+          - "Moq"
+          - "FluentAssertions"
+          - "coverlet*"
+      # Group security packages
+      security-packages:
+        patterns:
+          - "*Security*"
+          - "*Authentication*"
+          - "*Authorization*"
+
+  # Frontend - npm packages
+  - package-ecosystem: "npm"
+    directory: "/Frontend/podium-frontend"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group Angular packages together
+      angular-packages:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+      # Group development dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@angular/*"
+      # Group production dependencies
+      prod-dependencies:
+        dependency-type: "production"
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@angular/*"
+          - "@microsoft/signalr"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group all GitHub Actions updates together
+      github-actions:
+        patterns:
+          - "*"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/Backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  - package-ecosystem: "docker"
+    directory: "/Frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"

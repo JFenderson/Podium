@@ -5,23 +5,23 @@ using FluentAssertions;
 namespace Podium.Tests.Integration
 {
     // This tells xUnit to spin up your API in memory
-    public class HealthCheckTests : IClassFixture<WebApplicationFactory<Program>>
+    public class HealthCheckTests : IClassFixture<PodiumWebApplicationFactory<Program>>
     {
-        private readonly WebApplicationFactory<Program> _factory;
+        private readonly PodiumWebApplicationFactory<Program> _factory;
 
-        public HealthCheckTests(WebApplicationFactory<Program> factory)
+        public HealthCheckTests(PodiumWebApplicationFactory<Program> factory)
         {
             _factory = factory;
         }
 
         [Fact]
-        public async Task Get_SwaggerUI_Returns_Success()
+        public async Task Get_Health_Returns_Success()
         {
             // Arrange: Create a client that talks to the in-memory API
             var client = _factory.CreateClient();
 
-            // Act: Hit the swagger endpoint
-            var response = await client.GetAsync("/swagger/index.html");
+            // Act: Hit the health endpoint
+            var response = await client.GetAsync("/health");
 
             // Assert: Verify we got a 200 OK
             response.EnsureSuccessStatusCode();
