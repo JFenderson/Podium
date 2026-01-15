@@ -135,11 +135,12 @@ jobs:
           BUILD_DIR="dist/podium-frontend/browser"
           if [ -d "$BUILD_DIR" ]; then
             TOTAL_SIZE=$(du -sb "$BUILD_DIR" | cut -f1)
-            TOTAL_SIZE_MB=$(echo "scale=2; $TOTAL_SIZE / 1024 / 1024" | bc)
+            TOTAL_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $TOTAL_SIZE / 1024 / 1024}")
             echo "📦 Total bundle size: ${TOTAL_SIZE_MB}MB"
             
             # Warning if bundle is larger than 2MB
-            if (( $(echo "$TOTAL_SIZE_MB > 2" | bc -l) )); then
+            THRESHOLD=2097152  # 2MB in bytes
+            if [ "$TOTAL_SIZE" -gt "$THRESHOLD" ]; then
               echo "⚠️ WARNING: Bundle size (${TOTAL_SIZE_MB}MB) exceeds 2MB threshold"
               echo "::warning::Bundle size (${TOTAL_SIZE_MB}MB) exceeds 2MB threshold. Consider code splitting or lazy loading."
             else
@@ -148,7 +149,7 @@ jobs:
             
             # List largest files
             echo "📊 Largest files in bundle:"
-            find "$BUILD_DIR" -type f -exec du -h {} + | sort -rh | head -10
+            du -ah "$BUILD_DIR" | sort -rh | head -10
           else
             echo "❌ Build directory not found at $BUILD_DIR"
             exit 1
