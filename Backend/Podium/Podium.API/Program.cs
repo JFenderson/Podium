@@ -107,9 +107,13 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-        // This ensures the DB has the latest columns (RowVersion, BandBudget)
-        await context.Database.MigrateAsync();
+        // Skip database migrations in Testing environment
+        if (!app.Environment.IsEnvironment("Testing"))
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            // This ensures the DB has the latest columns (RowVersion, BandBudget)
+            await context.Database.MigrateAsync();
+        }
     }
     catch (Exception ex)
     {
@@ -131,7 +135,9 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Configure Scheduled Jobs
+// Configure Scheduled Jobs - Skip in Testing environment
+if (!app.Environment.IsEnvironment("Testing"))
+{
 using (var scope = app.Services.CreateScope())
 {
     var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
@@ -170,6 +176,7 @@ using (var scope = app.Services.CreateScope())
         job => job.ProcessSearchAlerts(),
         Cron.Hourly);
 }
+}
 
 app.MapHub<NotificationHub>("/notificationHub");
 app.UseHttpsRedirection();
@@ -184,19 +191,22 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
     .AllowAnonymous();
 
-// Apply Migrations
-using (var scope = app.Services.CreateScope())
+// Apply Migrations - Skip in Testing environment
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var services = scope.ServiceProvider;
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        var context = services.GetRequiredService<ApplicationDbContext>();
-        await context.Database.MigrateAsync();
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+            await context.Database.MigrateAsync();
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while migrating the database.");
+        }
     }
 }
 
