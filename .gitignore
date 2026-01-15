@@ -377,3 +377,16 @@ logs/
 .env.prod
 .env.production
 .env.*.local
+
+# Frontend build artifacts
+dist/
+.angular/
+
+# Test results and coverage
+TestResults/
+coverage/
+code-coverage-results.md
+
+# GitHub Actions artifacts
+deployment/
+*.trx
