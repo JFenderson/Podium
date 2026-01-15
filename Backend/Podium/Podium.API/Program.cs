@@ -1,3 +1,4 @@
+using AspNetCoreRateLimit;
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -8,47 +9,83 @@ using Podium.Core.Entities;
 using Podium.Infrastructure.BackgroundJobs;
 using Podium.Infrastructure.Data;
 using Podium.Infrastructure.Hubs;
+using Serilog;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-var builder = WebApplication.CreateBuilder(args);
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json")
+        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+        .AddEnvironmentVariables()
+        .Build())
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "Podium.API")
+    .CreateLogger();
 
-// Add services to the container
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddHttpContextAccessor();
-
-builder.Services.AddCors(options =>
+try
 {
-    options.AddPolicy("AllowAngularDev", policy =>
+    Log.Information("Starting Podium API");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // Add Serilog
+    builder.Host.UseSerilog();
+
+    // Add services to the container
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        });
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddHttpContextAccessor();
+
+    // Configure Rate Limiting
+    builder.Services.AddMemoryCache();
+    builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+    builder.Services.AddInMemoryRateLimiting();
+    builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+
+    // Configure CORS with environment variable support
+    var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+        ?? new[] { "http://localhost:4200", "https://localhost:4200" };
+
+    builder.Services.AddCors(options =>
     {
-        policy.WithOrigins(
-            "http://localhost:4200",      // Angular dev server
-            "http://localhost:4201"       // Backup port
-        )
-        .AllowAnyMethod()                 // GET, POST, PUT, DELETE, etc.
-        .AllowAnyHeader()                 // Authorization, Content-Type, etc.
-        .AllowCredentials();              // Allow cookies/credentials
+        options.AddPolicy("AllowAngularDev", policy =>
+        {
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
     });
-});
 
-// ---------------------------------------------------------
-// REFACTORED: Custom Extension Methods
-// ---------------------------------------------------------
-builder.Services.AddPodiumSwagger();
-builder.Services.AddPodiumIdentity(builder.Configuration);
-builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
-// ---------------------------------------------------------
+    // ---------------------------------------------------------
+    // REFACTORED: Custom Extension Methods
+    // ---------------------------------------------------------
+    builder.Services.AddPodiumSwagger();
+    builder.Services.AddPodiumIdentity(builder.Configuration);
+    builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
+    // ---------------------------------------------------------
 
-var app = builder.Build();
+    var app = builder.Build();
 
-//Register Global Exception Middleware
-app.UseMiddleware<ExceptionMiddleware>();
+    // Use Serilog request logging
+    app.UseSerilogRequestLogging();
+
+    // Use Security Headers
+    app.UseSecurityHeaders();
+
+    // Use IP Rate Limiting
+    app.UseIpRateLimiting();
+
+    //Register Global Exception Middleware
+    app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -159,5 +196,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+    Log.Information("Podium API stopped cleanly");
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Podium API terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 public partial class Program { }

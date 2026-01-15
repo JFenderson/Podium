@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: podium-db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-YourStrongPassword123!}
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - podium-db-data:/var/opt/mssql
+    networks:
+      - podium-network
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${DB_SA_PASSWORD:-YourStrongPassword123!}" -C -Q "SELECT 1" || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: podium-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      - JWT__Secret=${JWT__Secret}
+      - JWT__Issuer=${JWT__Issuer:-PodiumAPI}
+      - JWT__Audience=${JWT__Audience:-PodiumClient}
+      - JWT__ExpirationMinutes=${JWT__ExpirationMinutes:-60}
+      - Video__TranscodingSecret=${Video__TranscodingSecret}
+      - Video__MaxFileSizeMB=${Video__MaxFileSizeMB:-500}
+      - StorageProvider=${StorageProvider:-Azure}
+      - AzureStorage__ConnectionString=${AzureStorage__ConnectionString}
+      - AzureStorage__ContainerName=${AzureStorage__ContainerName:-podium-videos}
+      - AWS__Region=${AWS__Region:-us-east-1}
+      - AWS__BucketName=${AWS__BucketName:-podium-videos-bucket}
+      - AWS__AccessKey=${AWS__AccessKey}
+      - AWS__SecretKey=${AWS__SecretKey}
+      - SendGrid__ApiKey=${SendGrid__ApiKey}
+      - SendGrid__FromEmail=${SendGrid__FromEmail:-noreply@podiumapp.com}
+      - SendGrid__FromName=${SendGrid__FromName:-Podium Application}
+      - AllowedOrigins__0=${AllowedOrigins__0:-http://localhost}
+      - AllowedOrigins__1=${AllowedOrigins__1:-http://localhost:4200}
+      - App__ClientUrl=${App__ClientUrl:-http://localhost:4200}
+      - RateLimit__EnableRateLimiting=${RateLimit__EnableRateLimiting:-true}
+      - RateLimit__PermitLimit=${RateLimit__PermitLimit:-10}
+      - RateLimit__WindowSeconds=${RateLimit__WindowSeconds:-60}
+      - SecurityHeaders__EnableHSTS=${SecurityHeaders__EnableHSTS:-true}
+      - SecurityHeaders__HSTSMaxAge=${SecurityHeaders__HSTSMaxAge:-31536000}
+      - SecurityHeaders__EnableCSP=${SecurityHeaders__EnableCSP:-true}
+      - Serilog__MinimumLevel__Default=${Serilog__MinimumLevel__Default:-Information}
+      - Serilog__MinimumLevel__Override__Microsoft=${Serilog__MinimumLevel__Override__Microsoft:-Warning}
+    ports:
+      - "5000:5000"
+    volumes:
+      - podium-backend-logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - podium-network
+    healthcheck:
+      test: curl -f http://localhost:5000/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Frontend
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: podium-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - podium-network
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+networks:
+  podium-network:
+    driver: bridge
+
+volumes:
+  podium-db-data:
+    driver: local
+  podium-backend-logs:
+    driver: local
