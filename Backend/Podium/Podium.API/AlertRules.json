@@ -1,0 +1,148 @@
+{
+  "alerts": [
+    {
+      "name": "High Error Rate",
+      "description": "Triggers when the percentage of failed requests exceeds 5% over a 5-minute window",
+      "condition": "requests/failed percentage > 5%",
+      "timeWindow": "5 minutes",
+      "severity": "Critical",
+      "query": "requests | where timestamp > ago(5m) | summarize FailureRate = (countif(success == false) * 100.0) / count() | where FailureRate > 5",
+      "actionGroups": ["email-admins", "sms-oncall"],
+      "evaluationFrequency": "1 minute",
+      "notes": "High error rates may indicate a system-wide issue. Investigate immediately."
+    },
+    {
+      "name": "Slow API Responses",
+      "description": "Triggers when average API response time exceeds 2000ms over a 5-minute window",
+      "condition": "requests/duration average > 2000ms",
+      "timeWindow": "5 minutes",
+      "severity": "Warning",
+      "query": "requests | where timestamp > ago(5m) | summarize AvgDuration = avg(duration) | where AvgDuration > 2000",
+      "actionGroups": ["email-devops"],
+      "evaluationFrequency": "5 minutes",
+      "notes": "Slow responses impact user experience. Check database performance and API dependencies."
+    },
+    {
+      "name": "Failed Authentication Spike",
+      "description": "Triggers when authentication failures exceed 10 attempts in 1 minute",
+      "condition": "customMetrics/authFailures > 10",
+      "timeWindow": "1 minute",
+      "severity": "Critical",
+      "query": "customEvents | where name == 'AuthenticationFailure' and timestamp > ago(1m) | summarize count() | where count_ > 10",
+      "actionGroups": ["email-security", "sms-oncall"],
+      "evaluationFrequency": "1 minute",
+      "notes": "Multiple failed authentication attempts may indicate a brute force attack. Review security logs."
+    },
+    {
+      "name": "Database Connection Failures",
+      "description": "Triggers when any database dependency fails",
+      "condition": "dependencies/failed (type: SQL) > 0",
+      "timeWindow": "1 minute",
+      "severity": "Critical",
+      "query": "dependencies | where type == 'SQL' and success == false and timestamp > ago(1m) | summarize count() | where count_ > 0",
+      "actionGroups": ["email-admins", "sms-oncall"],
+      "evaluationFrequency": "1 minute",
+      "notes": "Database connection failures will cause application-wide issues. Check database availability and connection strings."
+    },
+    {
+      "name": "High Memory Usage",
+      "description": "Triggers when memory usage exceeds 80%",
+      "condition": "performanceCounters/memoryUsage > 80%",
+      "timeWindow": "5 minutes",
+      "severity": "Warning",
+      "query": "customMetrics | where name == 'MemoryUsage' and timestamp > ago(5m) | summarize avg(value) | where avg_value > 80",
+      "actionGroups": ["email-devops"],
+      "evaluationFrequency": "5 minutes",
+      "notes": "High memory usage may lead to application instability. Consider scaling resources or investigating memory leaks."
+    },
+    {
+      "name": "Low Disk Space",
+      "description": "Triggers when available disk space is less than 10GB",
+      "condition": "diskSpace/available < 10GB",
+      "timeWindow": "10 minutes",
+      "severity": "Warning",
+      "query": "customMetrics | where name == 'DiskSpaceFree' and timestamp > ago(10m) | summarize min(value) | where min_value < 10",
+      "actionGroups": ["email-devops"],
+      "evaluationFrequency": "10 minutes",
+      "notes": "Low disk space can prevent logging and cause application failures. Clean up logs or expand storage."
+    },
+    {
+      "name": "Hangfire Job Failures",
+      "description": "Triggers when Hangfire background jobs fail more than 5 times in 10 minutes",
+      "condition": "hangfire/failed > 5",
+      "timeWindow": "10 minutes",
+      "severity": "Warning",
+      "query": "customEvents | where name startswith 'Hangfire' and customDimensions.Status == 'Failed' and timestamp > ago(10m) | summarize count() | where count_ > 5",
+      "actionGroups": ["email-devops"],
+      "evaluationFrequency": "10 minutes",
+      "notes": "Failed background jobs may affect scheduled tasks like email notifications and video transcoding."
+    },
+    {
+      "name": "Video Upload Failure Rate High",
+      "description": "Triggers when video upload failure rate exceeds 20% over 15 minutes",
+      "condition": "videoUpload/failureRate > 20%",
+      "timeWindow": "15 minutes",
+      "severity": "Warning",
+      "query": "customEvents | where name in ('VideoUploadSuccess', 'VideoUploadFailure') and timestamp > ago(15m) | summarize FailureRate = (countif(name == 'VideoUploadFailure') * 100.0) / count() | where FailureRate > 20",
+      "actionGroups": ["email-devops"],
+      "evaluationFrequency": "5 minutes",
+      "notes": "High video upload failure rates may indicate storage issues or network problems."
+    },
+    {
+      "name": "Exception Spike",
+      "description": "Triggers when exception count exceeds 20 in 5 minutes",
+      "condition": "exceptions/count > 20",
+      "timeWindow": "5 minutes",
+      "severity": "Critical",
+      "query": "exceptions | where timestamp > ago(5m) | summarize count() | where count_ > 20",
+      "actionGroups": ["email-admins", "sms-oncall"],
+      "evaluationFrequency": "1 minute",
+      "notes": "Sudden spike in exceptions indicates a critical issue. Check recent deployments and error logs."
+    },
+    {
+      "name": "Health Check Failures",
+      "description": "Triggers when any health check reports unhealthy status",
+      "condition": "healthCheck/status == 'Unhealthy'",
+      "timeWindow": "2 minutes",
+      "severity": "Critical",
+      "query": "traces | where message contains 'health check' and message contains 'Unhealthy' and timestamp > ago(2m) | summarize count() | where count_ > 0",
+      "actionGroups": ["email-admins", "sms-oncall"],
+      "evaluationFrequency": "1 minute",
+      "notes": "Failed health checks indicate degraded service. Investigate immediately before user impact."
+    }
+  ],
+  "actionGroups": {
+    "email-admins": {
+      "description": "Sends email notifications to system administrators",
+      "type": "email",
+      "recipients": ["admin@podiumapp.com"]
+    },
+    "email-devops": {
+      "description": "Sends email notifications to DevOps team",
+      "type": "email",
+      "recipients": ["devops@podiumapp.com"]
+    },
+    "email-security": {
+      "description": "Sends email notifications to security team",
+      "type": "email",
+      "recipients": ["security@podiumapp.com"]
+    },
+    "sms-oncall": {
+      "description": "Sends SMS to on-call engineer",
+      "type": "sms",
+      "recipients": ["+1234567890"]
+    }
+  },
+  "notes": [
+    "This configuration file defines alert rules for Azure Application Insights.",
+    "To configure alerts:",
+    "1. Go to Azure Portal > Application Insights > Alerts > New alert rule",
+    "2. Select the signal (metric or log query) matching the query above",
+    "3. Set the threshold and time window as specified",
+    "4. Add action groups for notifications",
+    "5. Save the alert rule",
+    "",
+    "Adjust thresholds based on your application's baseline performance.",
+    "Test alerts after configuration to ensure notifications work correctly."
+  ]
+}
