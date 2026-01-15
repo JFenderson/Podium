@@ -1,7 +1,7 @@
 // director-dashboard.component.ts
 // Frontend/podium-frontend/src/app/features/director/components/director-dashboard/director-dashboard.component.ts
 
-import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject, interval } from 'rxjs';
@@ -39,9 +39,10 @@ export class DirectorDashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   Math = Math; // For template usage
   // Chart references
-  @ViewChild('funnelChart') funnelChartRef?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('offersTimeChart') offersTimeChartRef?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('offersBreakdownChart') offersBreakdownChartRef?: ElementRef<HTMLCanvasElement>;
+// NEW (Signal-based queries - Angular 21+)
+  @ViewChild('funnelChart', { static: false }) funnelChartRef?:  ElementRef<HTMLCanvasElement>;
+  @ViewChild('offersTimeChart', { static: false }) offersTimeChartRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('offersBreakdownChart', { static: false }) offersBreakdownChartRef?: ElementRef<HTMLCanvasElement>;
   
   private funnelChart?: Chart;
   private offersTimeChart?: Chart;
@@ -101,6 +102,11 @@ export class DirectorDashboardComponent implements OnInit, OnDestroy {
   // Auto-refresh interval (5 minutes)
   private refreshInterval = 5 * 60 * 1000;
 
+  ngAfterViewInit(): void {
+    // Render charts after view initialization
+    setTimeout(() => this.renderCharts(), 100);
+  }
+
   ngOnInit(): void {
     this.initFilterForm();
     this.loadDashboard();
@@ -132,36 +138,38 @@ export class DirectorDashboardComponent implements OnInit, OnDestroy {
   // ============================================
 
   loadDashboard(): void {
-    this.isLoading.set(true);
-    
-    const filters: DirectorDashboardFilters = {
-      dateRangeStart: this.filterForm.value.startDate,
-      dateRangeEnd: this.filterForm.value.endDate,
-      recruiterId: this.filterForm.value.recruiterId,
-      instrument: this.filterForm.value.instrument,
-      offerStatus: this.filterForm.value.offerStatus
-    };
+  this.isLoading. set(true);
+  
+  const filters:  DirectorDashboardFilters = {
+    dateRangeStart: this.filterForm.value.startDate,
+    dateRangeEnd: this.filterForm.value.endDate,
+    recruiterId: this.filterForm.value.recruiterId,
+    instrument: this.filterForm.value. instrument,
+    offerStatus: this.filterForm.value. offerStatus
+  };
 
-    this.dashboardService.getDashboard(filters).subscribe({
-      next: (data) => {
-        this.keyMetrics.set(data.keyMetrics);
-        this.recruitmentFunnel.set(data.recruitmentFunnel);
-        this.offersOverview.set(data.offersOverview);
-        this.staffPerformance.set(data.staffPerformance);
-        this.pendingApprovals.set(data.pendingApprovals);
-        this.recentActivity.set(data.recentActivity);
-        
-        this.isLoading.set(false);
-        
-        // Render charts after data loads
+  this.dashboardService.getDashboard(filters).subscribe({
+    next: (data) => {
+      this.keyMetrics. set(data.keyMetrics);
+      this.recruitmentFunnel.set(data.recruitmentFunnel);
+      this.offersOverview.set(data. offersOverview);
+      this.staffPerformance.set(data.staffPerformance);
+      this.pendingApprovals.set(data.pendingApprovals);
+      this.recentActivity.set(data.recentActivity);
+      
+      this.isLoading.set(false);
+      
+      // Render charts after view is ready
+      if (this.funnelChartRef) {
         setTimeout(() => this.renderCharts(), 100);
-      },
-      error: (error) => {
-        console.error('Dashboard load error:', error);
-        this.isLoading.set(false);
       }
-    });
-  }
+    },
+    error: (error) => {
+      console.error('Dashboard load error:', error);
+      this.isLoading.set(false);
+    }
+  });
+}
 
   refreshDashboard(): void {
     this.isRefreshing.set(true);
@@ -225,161 +233,161 @@ export class DirectorDashboardComponent implements OnInit, OnDestroy {
     this.renderOffersBreakdownChart();
   }
 
-  private renderFunnelChart(): void {
-    if (!this.funnelChartRef) return;
-    
-    const funnel = this.recruitmentFunnel();
-    const ctx = this.funnelChartRef.nativeElement.getContext('2d');
-    if (!ctx) return;
+ private renderFunnelChart(): void {
+  if (!this.funnelChartRef) return;
+  
+  const funnel = this.recruitmentFunnel(); // Get the signal value
+  const ctx = this.funnelChartRef.nativeElement.getContext('2d');
+  if (!ctx) return;
 
-    // Destroy existing chart
-    if (this.funnelChart) {
-      this.funnelChart.destroy();
-    }
+  // Destroy existing chart
+  if (this.funnelChart) {
+    this.funnelChart.destroy();
+  }
 
-    const config: ChartConfiguration = {
-      type: 'bar',
-      data: {
-        labels: funnel.map(s => s.stage),
-        datasets: [{
-          label: 'Students',
-          data: funnel.map(s => s.count),
-          backgroundColor: funnel.map(s => FUNNEL_STAGE_COLORS[s.stage]),
-          borderRadius: 8
-        }]
+  const config:  ChartConfiguration = {
+    type:  'bar',
+    data: {
+      labels: funnel.map((s: FunnelStageDto) => s.stage),
+      datasets: [{
+        label: 'Students',
+        data: funnel. map((s: FunnelStageDto) => s.count),
+        backgroundColor: funnel.map((s: FunnelStageDto) => FUNNEL_STAGE_COLORS[s.stage]),
+        borderRadius: 8
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const stage = funnel[index].stage;
+          this.onFunnelStageClick(stage);
+        }
       },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        onClick: (event, elements) => {
-          if (elements.length > 0) {
-            const index = elements[0].index;
-            const stage = funnel[index].stage;
-            this.onFunnelStageClick(stage);
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              afterLabel: (context) => {
-                const stage = funnel[context.dataIndex];
-                return `${stage.percentage.toFixed(1)}% of total`;
-              }
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: (context) => {
+              const stage = funnel[context. dataIndex];
+              return `${stage.percentage.toFixed(1)}% of total`;
             }
           }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { display: false }
         },
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: { display: false }
-          },
-          y: {
-            grid: { display: false }
-          }
+        y: {
+          grid: { display: false }
         }
       }
-    };
+    }
+  };
 
-    this.funnelChart = new Chart(ctx, config);
-  }
+  this.funnelChart = new Chart(ctx, config);
+}
 
   private renderOffersTimeChart(): void {
-    if (!this.offersTimeChartRef) return;
-    
-    const overview = this.offersOverview();
-    if (!overview) return;
-    
-    const ctx = this.offersTimeChartRef.nativeElement.getContext('2d');
-    if (!ctx) return;
+  if (!this.offersTimeChartRef) return;
+  
+  const overview = this.offersOverview();
+  if (!overview) return;
+  
+  const ctx = this.offersTimeChartRef. nativeElement.getContext('2d');
+  if (!ctx) return;
 
-    if (this.offersTimeChart) {
-      this.offersTimeChart.destroy();
-    }
-
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels: overview.offersByMonth.map((d: any) => d.month),
-        datasets: [
-          {
-            label: 'Total Offers',
-            data: overview.offersByMonth.map((d: any) => d.totalOffers),
-            borderColor: '#3B82F6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Accepted',
-            data: overview.offersByMonth.map((d: any) => d.acceptedOffers),
-            borderColor: '#10B981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            fill: true,
-            tension: 0.4
-          },
-          {
-            label: 'Declined',
-            data: overview.offersByMonth.map((d: any) => d.declinedOffers),
-            borderColor: '#EF4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            fill: true,
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' }
-        },
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    };
-
-    this.offersTimeChart = new Chart(ctx, config);
+  if (this.offersTimeChart) {
+    this.offersTimeChart.destroy();
   }
+
+  const config: ChartConfiguration = {
+    type: 'line',
+    data: {
+      labels: overview.offersByMonth.map((d: any) => d.month),
+      datasets: [
+        {
+          label: 'Total Offers',
+          data: overview.offersByMonth.map((d: any) => d.totalOffers),
+          borderColor:  '#3B82F6',
+          backgroundColor:  'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label: 'Accepted',
+          data: overview.offersByMonth.map((d: any) => d.acceptedOffers),
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label:  'Declined',
+          data: overview.offersByMonth.map((d: any) => d.declinedOffers),
+          borderColor:  '#EF4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  };
+
+  this.offersTimeChart = new Chart(ctx, config);
+}
 
   private renderOffersBreakdownChart(): void {
-    if (!this.offersBreakdownChartRef) return;
-    
-    const overview = this.offersOverview();
-    if (!overview) return;
-    
-    const ctx = this.offersBreakdownChartRef.nativeElement.getContext('2d');
-    if (!ctx) return;
+  if (!this.offersBreakdownChartRef) return;
+  
+  const overview = this.offersOverview();
+  if (!overview) return;
+  
+  const ctx = this.offersBreakdownChartRef.nativeElement.getContext('2d');
+  if (!ctx) return;
 
-    if (this.offersBreakdownChart) {
-      this.offersBreakdownChart.destroy();
-    }
-
-    const config: ChartConfiguration = {
-      type: 'doughnut',
-      data: {
-        labels: overview.offersByInstrument.map((d: any) => d.label),
-        datasets: [{
-          data: overview.offersByInstrument.map((d: any) => d.count),
-          backgroundColor: [
-            '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', 
-            '#10B981', '#6366F1', '#14B8A6', '#F97316'
-          ]
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right' }
-        }
-      }
-    };
-
-    this.offersBreakdownChart = new Chart(ctx, config);
+  if (this.offersBreakdownChart) {
+    this.offersBreakdownChart.destroy();
   }
+
+  const config: ChartConfiguration = {
+    type: 'doughnut',
+    data: {
+      labels: overview.offersByInstrument.map((d: any) => d.label),
+      datasets: [{
+        data: overview.offersByInstrument.map((d: any) => d.count),
+        backgroundColor: [
+          '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', 
+          '#10B981', '#6366F1', '#14B8A6', '#F97316'
+        ]
+      }]
+    },
+    options:  {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right' }
+      }
+    }
+  };
+
+  this.offersBreakdownChart = new Chart(ctx, config);
+}
 
   private updateCharts(): void {
     // Update chart data without recreating

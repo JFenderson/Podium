@@ -11,7 +11,7 @@ public class PerformanceTrackingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<PerformanceTrackingMiddleware> _logger;
-    private readonly TelemetryClient _telemetryClient;
+    private readonly TelemetryClient? _telemetryClient;
 
     public PerformanceTrackingMiddleware(
         RequestDelegate next,

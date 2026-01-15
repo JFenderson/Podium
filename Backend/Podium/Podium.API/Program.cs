@@ -91,7 +91,7 @@ try
     app.UseSerilogRequestLogging();
 
     // Use performance tracking middleware
-    app.UseMiddleware<PerformanceTrackingMiddleware>();
+    //app.UseMiddleware<PerformanceTrackingMiddleware>();
 
     // Use Security Headers
     app.UseSecurityHeaders();
