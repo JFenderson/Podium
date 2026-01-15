@@ -48,11 +48,27 @@ public static class MonitoringExtensions
 
     /// <summary>
     /// Adds custom telemetry tracking services.
+    /// Conditionally registers real or no-op implementations based on Application Insights configuration.
     /// </summary>
-    public static IServiceCollection AddPodiumTelemetryServices(this IServiceCollection services)
+    public static IServiceCollection AddPodiumTelemetryServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<ITelemetryService, TelemetryService>();
-        services.AddScoped<MetricsService>();
+        var connectionString = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"] 
+            ?? configuration["ApplicationInsights:ConnectionString"];
+        var isEnabled = configuration.GetValue<bool>("ENABLE_APPLICATION_INSIGHTS", true);
+
+        if (!string.IsNullOrWhiteSpace(connectionString) && isEnabled)
+        {
+            // Application Insights is enabled - register real implementations
+            services.AddScoped<ITelemetryService, TelemetryService>();
+            services.AddScoped<MetricsService>();
+            Console.WriteLine("Telemetry services registered (Application Insights enabled)");
+        }
+        else
+        {
+            // Application Insights is disabled - register no-op implementation
+            services.AddScoped<ITelemetryService, NoOpTelemetryService>();
+            Console.WriteLine("No-op telemetry service registered (Application Insights disabled)");
+        }
 
         return services;
     }

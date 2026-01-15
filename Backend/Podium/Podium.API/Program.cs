@@ -78,7 +78,7 @@ try
     // MONITORING: Application Insights, Health Checks, Telemetry
     // ---------------------------------------------------------
     builder.Services.AddPodiumApplicationInsights(builder.Configuration);
-    builder.Services.AddPodiumTelemetryServices();
+    builder.Services.AddPodiumTelemetryServices(builder.Configuration);
     builder.Services.AddPodiumHealthChecks(builder.Configuration);
     // ---------------------------------------------------------
 
