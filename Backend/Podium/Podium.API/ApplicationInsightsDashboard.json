@@ -1,0 +1,95 @@
+{
+  "name": "Podium Application Dashboard",
+  "version": "1.0",
+  "tiles": [
+    {
+      "name": "Request Rate",
+      "tileType": "BarChart",
+      "position": { "x": 0, "y": 0, "width": 6, "height": 4 },
+      "query": "requests | summarize RequestCount = count() by bin(timestamp, 5m) | order by timestamp desc",
+      "description": "Number of requests over time (5-minute intervals)"
+    },
+    {
+      "name": "Average Response Time by Endpoint",
+      "tileType": "LineChart",
+      "position": { "x": 6, "y": 0, "width": 6, "height": 4 },
+      "query": "requests | summarize AvgDuration = avg(duration) by name | order by AvgDuration desc | take 10",
+      "description": "Top 10 slowest API endpoints by average response time"
+    },
+    {
+      "name": "Failed Requests Percentage",
+      "tileType": "SingleNumber",
+      "position": { "x": 0, "y": 4, "width": 3, "height": 3 },
+      "query": "requests | summarize FailureRate = (countif(success == false) * 100.0) / count()",
+      "description": "Percentage of failed requests"
+    },
+    {
+      "name": "Active Users (Last Hour)",
+      "tileType": "SingleNumber",
+      "position": { "x": 3, "y": 4, "width": 3, "height": 3 },
+      "query": "customMetrics | where name == 'ActiveUsers' and timestamp > ago(1h) | summarize max(value)",
+      "description": "Maximum active users in the last hour"
+    },
+    {
+      "name": "Video Upload Success Rate",
+      "tileType": "PieChart",
+      "position": { "x": 6, "y": 4, "width": 3, "height": 3 },
+      "query": "customEvents | where name in ('VideoUploadSuccess', 'VideoUploadFailure') | summarize count() by name",
+      "description": "Success vs. failure rate for video uploads"
+    },
+    {
+      "name": "Database Query Performance",
+      "tileType": "BarChart",
+      "position": { "x": 9, "y": 4, "width": 3, "height": 3 },
+      "query": "dependencies | where type == 'SQL' | summarize AvgDuration = avg(duration), Count = count() by name | order by AvgDuration desc | take 10",
+      "description": "Top 10 slowest database queries"
+    },
+    {
+      "name": "Exception Count by Type",
+      "tileType": "Table",
+      "position": { "x": 0, "y": 7, "width": 6, "height": 4 },
+      "query": "exceptions | summarize Count = count() by type, outerMessage | order by Count desc | take 20",
+      "description": "Most common exceptions in the application"
+    },
+    {
+      "name": "Authentication Success vs Failure",
+      "tileType": "TimeChart",
+      "position": { "x": 6, "y": 7, "width": 6, "height": 4 },
+      "query": "customEvents | where name in ('AuthenticationSuccess', 'AuthenticationFailure') | summarize count() by name, bin(timestamp, 1h)",
+      "description": "Authentication attempts over time"
+    },
+    {
+      "name": "Slow Requests (>2s)",
+      "tileType": "Table",
+      "position": { "x": 0, "y": 11, "width": 6, "height": 4 },
+      "query": "requests | where duration > 2000 | project timestamp, name, duration, url, resultCode | order by duration desc | take 50",
+      "description": "Recent slow API requests taking more than 2 seconds"
+    },
+    {
+      "name": "Hangfire Job Status",
+      "tileType": "BarChart",
+      "position": { "x": 6, "y": 11, "width": 6, "height": 4 },
+      "query": "customEvents | where name startswith 'Hangfire' | summarize count() by name",
+      "description": "Hangfire background job execution statistics"
+    },
+    {
+      "name": "API Calls by Endpoint",
+      "tileType": "PieChart",
+      "position": { "x": 0, "y": 15, "width": 6, "height": 4 },
+      "query": "requests | summarize count() by name | order by count_ desc | take 10",
+      "description": "Distribution of API calls across top endpoints"
+    },
+    {
+      "name": "Scholarship Offer Conversions",
+      "tileType": "BarChart",
+      "position": { "x": 6, "y": 15, "width": 6, "height": 4 },
+      "query": "customMetrics | where name == 'ScholarshipOfferConversion' | summarize count() by tostring(customDimensions.Status)",
+      "description": "Accepted vs. rejected scholarship offers"
+    }
+  ],
+  "notes": [
+    "This dashboard provides a comprehensive view of the Podium application's health and performance.",
+    "Tiles use Kusto Query Language (KQL) to retrieve data from Application Insights.",
+    "To import: Go to Azure Portal > Application Insights > Workbooks > New > Advanced Editor > Paste JSON"
+  ]
+}
