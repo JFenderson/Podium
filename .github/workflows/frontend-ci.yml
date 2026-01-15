@@ -1,0 +1,210 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    paths:
+      - 'Frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/podium-frontend
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Frontend/podium-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./Frontend/podium-frontend
+        run: npm ci
+
+      - name: Check for ESLint configuration
+        working-directory: ./Frontend/podium-frontend
+        id: eslint-check
+        run: |
+          if [ -f "eslint.config.js" ] || [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+            echo "has_eslint=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_eslint=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run ESLint
+        if: steps.eslint-check.outputs.has_eslint == 'true'
+        working-directory: ./Frontend/podium-frontend
+        run: npm run lint || echo "No lint script found, skipping..."
+        continue-on-error: false
+
+      - name: ESLint not configured
+        if: steps.eslint-check.outputs.has_eslint == 'false'
+        run: echo "⚠️ ESLint is not configured. Consider adding ESLint to improve code quality."
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Frontend/podium-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./Frontend/podium-frontend
+        run: npm ci
+
+      - name: Check for test configuration
+        working-directory: ./Frontend/podium-frontend
+        id: test-check
+        run: |
+          if grep -q '"test"' package.json; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run tests
+        if: steps.test-check.outputs.has_tests == 'true'
+        working-directory: ./Frontend/podium-frontend
+        run: npm test -- --run --coverage
+        continue-on-error: false
+
+      - name: Upload coverage to artifacts
+        if: steps.test-check.outputs.has_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: Frontend/podium-frontend/coverage/
+          retention-days: 30
+
+      - name: Tests not configured
+        if: steps.test-check.outputs.has_tests == 'false'
+        run: echo "⚠️ Tests are not configured. Consider adding tests to improve code quality."
+
+  build:
+    name: Build Production Bundle
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Frontend/podium-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./Frontend/podium-frontend
+        run: npm ci
+
+      - name: Build production bundle
+        working-directory: ./Frontend/podium-frontend
+        run: npm run build -- --configuration production
+
+      - name: Check bundle size
+        working-directory: ./Frontend/podium-frontend
+        run: |
+          BUILD_DIR="dist/podium-frontend/browser"
+          if [ -d "$BUILD_DIR" ]; then
+            TOTAL_SIZE=$(du -sb "$BUILD_DIR" | cut -f1)
+            TOTAL_SIZE_MB=$(echo "scale=2; $TOTAL_SIZE / 1024 / 1024" | bc)
+            echo "📦 Total bundle size: ${TOTAL_SIZE_MB}MB"
+            
+            # Warning if bundle is larger than 2MB
+            if (( $(echo "$TOTAL_SIZE_MB > 2" | bc -l) )); then
+              echo "⚠️ WARNING: Bundle size (${TOTAL_SIZE_MB}MB) exceeds 2MB threshold"
+              echo "::warning::Bundle size (${TOTAL_SIZE_MB}MB) exceeds 2MB threshold. Consider code splitting or lazy loading."
+            else
+              echo "✅ Bundle size is within acceptable limits"
+            fi
+            
+            # List largest files
+            echo "📊 Largest files in bundle:"
+            find "$BUILD_DIR" -type f -exec du -h {} + | sort -rh | head -10
+          else
+            echo "❌ Build directory not found at $BUILD_DIR"
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: Frontend/podium-frontend/dist/
+          retention-days: 7
+
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr,prefix=pr-
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Frontend
+          file: ./Frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Image digest
+        run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"

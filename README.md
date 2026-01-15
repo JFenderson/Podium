@@ -1,5 +1,10 @@
 # Podium - College Band Recruitment Platform
 
+[![Backend CI](https://github.com/JFenderson/Podium/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/JFenderson/Podium/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/JFenderson/Podium/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/JFenderson/Podium/actions/workflows/frontend-ci.yml)
+[![Deploy to Staging](https://github.com/JFenderson/Podium/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/JFenderson/Podium/actions/workflows/deploy-staging.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Podium is a comprehensive web application designed to streamline the college band recruitment process, connecting high school students with college band programs.
 
 ## Table of Contents
@@ -28,6 +33,119 @@ Podium is a comprehensive web application designed to streamline the college ban
 - **Real-time Notifications**: SignalR-based notifications
 - **Event Management**: Coordinate auditions and recruitment events
 - **Guardian Access**: Parents/guardians can manage student profiles
+
+## CI/CD Pipeline
+
+Podium uses GitHub Actions for continuous integration and deployment. The pipeline ensures code quality, runs automated tests, builds Docker images, and deploys to staging and production environments.
+
+### Workflow Overview
+
+```mermaid
+graph LR
+    A[Code Push] --> B[Backend CI]
+    A --> C[Frontend CI]
+    B --> D[Build Docker Images]
+    C --> D
+    D --> E[Push to GHCR]
+    E --> F[Deploy to Staging]
+    F --> G{Manual Approval}
+    G -->|Approved| H[Deploy to Production]
+    G -->|Rejected| I[End]
+    H --> J[Health Checks]
+    J --> K[Deployment Complete]
+```
+
+### Workflows
+
+#### Backend CI (`backend-ci.yml`)
+- **Triggers**: Push to `main`, Pull Requests, Manual dispatch
+- **Jobs**:
+  - Run unit tests with coverage reporting
+  - Build .NET application with NuGet caching
+  - Build and push Docker image to GitHub Container Registry
+- **Features**: Test result annotations, code coverage reports in PRs
+
+#### Frontend CI (`frontend-ci.yml`)
+- **Triggers**: Push to `main`, Pull Requests, Manual dispatch
+- **Jobs**:
+  - Lint Angular codebase with ESLint
+  - Run unit tests with coverage
+  - Build production bundle with size checks
+  - Build and push Docker image to GitHub Container Registry
+- **Features**: Bundle size warnings (>2MB), artifact uploads
+
+#### Staging Deployment (`deploy-staging.yml`)
+- **Triggers**: Push to `main`, Manual dispatch
+- **Jobs**:
+  - Pull latest Docker images from GHCR
+  - Run database migrations
+  - Deploy to staging environment
+  - Execute smoke tests
+  - Send deployment notifications
+- **Features**: Automatic rollback on failure
+
+#### Production Deployment (`deploy-production.yml`)
+- **Triggers**: Manual dispatch only
+- **Jobs**:
+  - Pre-deployment checks (image availability, configuration validation)
+  - Deploy with manual approval gate
+  - Database migrations with automatic rollback
+  - Post-deployment health checks
+  - Cache warming and monitoring updates
+- **Features**: Manual approval required, comprehensive error handling
+
+### Docker Images
+
+All Docker images are stored in GitHub Container Registry (GHCR) and tagged with:
+- `latest` - Latest build from main branch
+- `sha-{commit}` - Specific commit SHA
+- `pr-{number}` - Pull request builds
+
+**Image Locations:**
+- Backend: `ghcr.io/jfenderson/podium/podium-backend`
+- Frontend: `ghcr.io/jfenderson/podium/podium-frontend`
+
+### Manual Deployments
+
+To trigger a manual deployment:
+
+1. **Staging Deployment**:
+   - Go to Actions → Deploy to Staging
+   - Click "Run workflow"
+   - Select branch (typically `main`)
+   - Click "Run workflow"
+
+2. **Production Deployment**:
+   - Go to Actions → Deploy to Production
+   - Click "Run workflow"
+   - Enter the Docker image tag (e.g., `latest` or `sha-abc1234`)
+   - Optionally skip health checks
+   - Click "Run workflow"
+   - Approve the deployment in the Environments section
+
+### Required Secrets
+
+See [.github/GITHUB-SECRETS.md](.github/GITHUB-SECRETS.md) for detailed information on all required secrets and how to configure them.
+
+**Key Secrets:**
+- `DATABASE_CONNECTION_STRING` - Database connection
+- `JWT_SECRET` - JWT signing key (32+ characters)
+- `AZURE_STORAGE_CONNECTION_STRING` - File storage
+- `GITHUB_TOKEN` - Automatically provided for GHCR access
+
+### Caching Strategy
+
+- **Backend**: NuGet packages cached by `packages.lock.json` hash
+- **Frontend**: `node_modules` cached by `package-lock.json` hash
+- **Docker**: Build cache using GitHub Actions cache
+
+### Monitoring
+
+- Workflow status badges displayed at the top of this README
+- Deployment summaries posted to GitHub Actions
+- Health check endpoints:
+  - Backend: `/health` and `/ready`
+  - Frontend: `/health`
 
 ## Prerequisites
 
