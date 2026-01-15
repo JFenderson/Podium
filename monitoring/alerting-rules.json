@@ -1,0 +1,419 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name (staging or production)"
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the action group for alert notifications"
+      }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[concat('podium-', parameters('environment'))]",
+    "appInsightsName": "[concat(variables('resourcePrefix'), '-insights')]",
+    "backendAppServiceName": "[concat(variables('resourcePrefix'), '-backend')]",
+    "frontendAppServiceName": "[concat(variables('resourcePrefix'), '-frontend')]",
+    "sqlDatabaseName": "PodiumDb",
+    "storageAccountName": "[concat('podiumstorage', parameters('environment'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "High-CPU-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when CPU usage exceeds 80% for 5 minutes",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', variables('backendAppServiceName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighCPU",
+              "metricName": "CpuPercentage",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "High-Memory-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when memory usage exceeds 85% for 5 minutes",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', variables('backendAppServiceName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighMemory",
+              "metricName": "MemoryPercentage",
+              "operator": "GreaterThan",
+              "threshold": 85,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "High-Response-Time-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when P95 response time exceeds 2 seconds",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "SlowResponse",
+              "metricName": "requests/duration",
+              "operator": "GreaterThan",
+              "threshold": 2000,
+              "timeAggregation": "Average",
+              "dimensions": []
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "High-Error-Rate-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when HTTP 5xx error rate exceeds 5% for 5 minutes",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighErrorRate",
+              "metricName": "requests/failed",
+              "operator": "GreaterThan",
+              "threshold": 5,
+              "timeAggregation": "Count"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "Failed-Login-Attempts-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when failed login attempts exceed 20 per minute",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT1M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "ManyFailedLogins",
+              "metricName": "customMetrics/FailedLoginAttempts",
+              "operator": "GreaterThan",
+              "threshold": 20,
+              "timeAggregation": "Total"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2021-08-01",
+      "name": "Unhandled-Exceptions-Alert",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "description": "Alert when unhandled exceptions exceed 10 per minute",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT1M",
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "windowSize": "PT5M",
+        "criteria": {
+          "allOf": [
+            {
+              "query": "exceptions | where timestamp > ago(5m) | summarize count() by bin(timestamp, 1m)",
+              "timeAggregation": "Total",
+              "operator": "GreaterThan",
+              "threshold": 10,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupId')]"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "Database-Connection-Failures-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when database connection failures exceed 5 per minute",
+        "severity": 0,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT1M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "DatabaseConnectionFailures",
+              "metricName": "dependencies/failed",
+              "operator": "GreaterThan",
+              "threshold": 5,
+              "timeAggregation": "Count",
+              "dimensions": [
+                {
+                  "name": "dependency/type",
+                  "operator": "Include",
+                  "values": ["SQL"]
+                }
+              ]
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "Database-DTU-High-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when database DTU exceeds 80% for 10 minutes",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Sql/servers/databases', concat(variables('resourcePrefix'), '-sql'), variables('sqlDatabaseName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT10M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighDTU",
+              "metricName": "dtu_consumption_percent",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "Storage-Availability-Low-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when blob storage availability falls below 99.9%",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "LowAvailability",
+              "metricName": "Availability",
+              "operator": "LessThan",
+              "threshold": 99.9,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "High-Instance-Count-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Cost alert: App Service instance count exceeds 8",
+        "severity": 3,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', variables('backendAppServiceName'))]"
+        ],
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "TooManyInstances",
+              "metricName": "Instances",
+              "operator": "GreaterThan",
+              "threshold": 8,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "Request-Queue-Length-Alert",
+      "location": "global",
+      "properties": {
+        "description": "Alert when request queue length exceeds 50",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', variables('backendAppServiceName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "LongQueue",
+              "metricName": "HttpQueueLength",
+              "operator": "GreaterThan",
+              "threshold": 50,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "alertRules": {
+      "type": "array",
+      "value": [
+        "[resourceId('Microsoft.Insights/metricAlerts', 'High-CPU-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'High-Memory-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'High-Response-Time-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'High-Error-Rate-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'Failed-Login-Attempts-Alert')]",
+        "[resourceId('Microsoft.Insights/scheduledQueryRules', 'Unhandled-Exceptions-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'Database-Connection-Failures-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'Database-DTU-High-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'Storage-Availability-Low-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'High-Instance-Count-Alert')]",
+        "[resourceId('Microsoft.Insights/metricAlerts', 'Request-Queue-Length-Alert')]"
+      ]
+    }
+  }
+}
