@@ -74,7 +74,9 @@ services:
       JWT__Issuer: ${JWT_ISSUER:-PodiumAPI}
       JWT__Audience: ${JWT_AUDIENCE:-PodiumClient}
       JWT__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
-      # Azure Storage configuration (using Azurite)
+      # Azure Storage configuration (using Azurite for local development)
+      # Note: The connection string below uses Azurite's well-known development credentials
+      # which are safe for local development only. Never use these in production.
       StorageProvider: Azure
       AzureStorage__ConnectionString: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
       AzureStorage__ContainerName: ${AZURE_CONTAINER_NAME:-podium-videos}

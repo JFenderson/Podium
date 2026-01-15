@@ -135,17 +135,17 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapHub<NotificationHub>("/notificationHub");
-
-// Health check endpoint for container orchestration
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
-    .AllowAnonymous();
-
 app.UseHttpsRedirection();
 app.UseCors("AllowAngularDev");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoint for container orchestration
+// Placed after middleware configuration to ensure proper handling
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
+    .AllowAnonymous();
 
 // Apply Migrations
 using (var scope = app.Services.CreateScope())

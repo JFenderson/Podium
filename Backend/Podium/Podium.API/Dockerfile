@@ -50,6 +50,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 # Set the working directory for the runtime
 WORKDIR /app
 
+# Define build argument for API port (can be overridden at build time)
+ARG API_PORT=5044
+
 # Install curl for health checks (needed before switching to non-root user)
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
@@ -66,18 +69,18 @@ RUN chown -R podiumuser:podiumuser /app
 # Switch to the non-root user
 USER podiumuser
 
-# Expose port 5044 for the API
-EXPOSE 5044
+# Expose the API port
+EXPOSE ${API_PORT}
 
 # Configure environment variables
 # These can be overridden at runtime via docker-compose or docker run
-ENV ASPNETCORE_URLS=http://+:5044
+ENV ASPNETCORE_URLS=http://+:${API_PORT}
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Add health check to monitor container health
-# This endpoint should be implemented in the API
+# Uses the same port as configured in ASPNETCORE_URLS
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl --fail http://localhost:5044/health || exit 1
+    CMD curl --fail http://localhost:${API_PORT}/health || exit 1
 
 # Set the entry point to run the application
 ENTRYPOINT ["dotnet", "Podium.API.dll"]

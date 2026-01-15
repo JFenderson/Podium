@@ -33,7 +33,9 @@ FROM nginx:alpine AS runtime
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy the built Angular app from the build stage to nginx html directory
-# The output path might be dist/podium-frontend/browser based on Angular 21
+# Note: Angular 21 outputs to dist/podium-frontend/browser by default
+# If using a different Angular version or project name, adjust the path accordingly
+# Check angular.json "outputPath" configuration if the build fails
 COPY --from=build /app/dist/podium-frontend/browser /usr/share/nginx/html
 
 # Expose port 80 for HTTP traffic

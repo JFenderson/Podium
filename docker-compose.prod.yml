@@ -39,8 +39,9 @@ services:
       Video__TranscodingSecret: ${VIDEO_TRANSCODING_SECRET}
       Video__MaxFileSizeMB: ${VIDEO_MAX_FILE_SIZE_MB:-500}
       # CORS configuration - set production frontend URLs
+      # At least FRONTEND_URL_0 is required; FRONTEND_URL_1 is optional for multiple domains
       AllowedOrigins__0: ${FRONTEND_URL_0}
-      AllowedOrigins__1: ${FRONTEND_URL_1}
+      AllowedOrigins__1: ${FRONTEND_URL_1:-}
       # Frontend URL for callbacks
       App__ClientUrl: ${CLIENT_URL}
       # SendGrid configuration (if using email)
