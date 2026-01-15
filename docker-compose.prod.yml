@@ -1,0 +1,115 @@
+# ============================================
+# Docker Compose for Production Deployment
+# ============================================
+# This configuration is optimized for production use with:
+# - External database connections
+# - Real Azure Storage (not Azurite)
+# - Health checks and restart policies
+# - Resource limits
+# - No development tools or volume mounts
+
+services:
+  # ============================================
+  # Backend API Service
+  # ============================================
+  backend:
+    build:
+      context: ./Backend/Podium
+      dockerfile: Podium.API/Dockerfile
+    container_name: podium-backend-prod
+    restart: unless-stopped
+    environment:
+      # Production environment
+      ASPNETCORE_ENVIRONMENT: Production
+      # API URLs configuration
+      ASPNETCORE_URLS: http://+:5044
+      # Database connection string - use external production database
+      # IMPORTANT: Set this via environment variables or .env file, not hardcoded
+      ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING}
+      # JWT configuration - use secure secrets in production
+      JWT__Secret: ${JWT_SECRET}
+      JWT__Issuer: ${JWT_ISSUER:-PodiumAPI}
+      JWT__Audience: ${JWT_AUDIENCE:-PodiumClient}
+      JWT__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
+      # Azure Storage configuration - use production Azure Storage account
+      StorageProvider: Azure
+      AzureStorage__ConnectionString: ${AZURE_STORAGE_CONNECTION_STRING}
+      AzureStorage__ContainerName: ${AZURE_CONTAINER_NAME:-podium-videos}
+      # Video configuration
+      Video__TranscodingSecret: ${VIDEO_TRANSCODING_SECRET}
+      Video__MaxFileSizeMB: ${VIDEO_MAX_FILE_SIZE_MB:-500}
+      # CORS configuration - set production frontend URLs
+      # At least FRONTEND_URL_0 is required; FRONTEND_URL_1 is optional for multiple domains
+      AllowedOrigins__0: ${FRONTEND_URL_0}
+      AllowedOrigins__1: ${FRONTEND_URL_1:-}
+      # Frontend URL for callbacks
+      App__ClientUrl: ${CLIENT_URL}
+      # SendGrid configuration (if using email)
+      SendGrid__ApiKey: ${SENDGRID_API_KEY}
+      # AWS configuration (if using AWS S3)
+      AWS__Region: ${AWS_REGION}
+      AWS__BucketName: ${AWS_BUCKET_NAME}
+      AWS__AccessKey: ${AWS_ACCESS_KEY}
+      AWS__SecretKey: ${AWS_SECRET_KEY}
+    ports:
+      - "${BACKEND_PORT:-5044}:5044"
+    networks:
+      - podium-network
+    healthcheck:
+      test: curl --fail http://localhost:5044/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    # Optional: Resource limits to prevent container from consuming too many resources
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # Frontend Angular Application
+  # ============================================
+  frontend:
+    build:
+      context: ./Frontend/podium-frontend
+      dockerfile: Dockerfile
+    container_name: podium-frontend-prod
+    restart: unless-stopped
+    environment:
+      # Production API URL
+      API_URL: ${API_URL}
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - podium-network
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Optional: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  podium-network:
+    driver: bridge
+    name: podium-network-prod

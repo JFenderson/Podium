@@ -179,6 +179,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Health check endpoint for container orchestration
+// Placed after middleware configuration to ensure proper handling
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }))
+    .AllowAnonymous();
+
 // Apply Migrations
 using (var scope = app.Services.CreateScope())
 {

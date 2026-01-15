@@ -23,11 +23,28 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  azurite:
+      image: mcr.microsoft.com/azure-storage/azurite
+      container_name: podium-azurite
+      command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+      ports:
+        # Blob service port
+        - "10000:10000"
+        # Queue service port
+        - "10001:10001"
+        # Table service port
+        - "10002:10002"
+      volumes:
+        # Persist Azurite data
+        - azurite-data:/data
+      networks:
+        - podium-network
+
   # Backend API
   backend:
     build:
-      context: ./Backend
-      dockerfile: Dockerfile
+      context: ./Backend/Podium
+      dockerfile: Podium.API/Dockerfile
     container_name: podium-backend
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
@@ -60,6 +77,13 @@ services:
       - SecurityHeaders__EnableCSP=${SecurityHeaders__EnableCSP:-true}
       - Serilog__MinimumLevel__Default=${Serilog__MinimumLevel__Default:-Information}
       - Serilog__MinimumLevel__Override__Microsoft=${Serilog__MinimumLevel__Override__Microsoft:-Warning}
+      - ASPNETCORE_ENVIRONMENT_DEV: Development
+      # API URLs configuration
+      - ASPNETCORE_URLS: http://+:5044
+      # Database connection string
+      # Using sqlserver service name as hostname
+      - ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=PodiumDb;User Id=sa;Password=${SQL_SA_PASSWORD:-YourStrong!Passw0rd};TrustServerCertificate=True;MultipleActiveResultSets=true"
+      
     ports:
       - "5000:5000"
     volumes:
@@ -116,9 +140,17 @@ services:
 networks:
   podium-network:
     driver: bridge
+    name: podium-network
+      # SQL Server database files
+  sqlserver-data:
+    driver: local
+  # Azurite storage files
+  azurite-data:
+    driver: local
 
 volumes:
   podium-db-data:
     driver: local
   podium-backend-logs:
     driver: local
+

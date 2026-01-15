@@ -370,3 +370,10 @@ FodyWeavers.xsd
 # Application logs
 logs/
 *.log
+
+# Docker environment files (may contain secrets)
+.env
+.env.local
+.env.prod
+.env.production
+.env.*.local
