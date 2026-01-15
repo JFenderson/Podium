@@ -4,6 +4,12 @@ import { test, expect } from '@playwright/test';
  * E2E tests for Student Registration Flow
  * Tests the complete user journey from registration to dashboard access
  */
+
+// Test configuration
+const TEST_CONFIG = {
+  existingUserEmail: 'student@gmail.com', // From seeded test data
+};
+
 test.describe('Student Registration Flow', () => {
   // Generate unique email for each test run
   const timestamp = Date.now();
@@ -161,7 +167,7 @@ test.describe('Student Registration Flow', () => {
   test('should prevent duplicate email registration', async ({ page }) => {
     // This test assumes a user already exists with this email
     // Use a known test user email from seeded data
-    const existingEmail = 'student@gmail.com';
+    const existingEmail = TEST_CONFIG.existingUserEmail;
 
     // Select Student role
     await page.click('text=Student');

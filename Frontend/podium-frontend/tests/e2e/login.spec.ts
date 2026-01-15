@@ -1,5 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+// Test configuration - should be moved to environment variables or config file
+const TEST_CONFIG = {
+  testUser: {
+    email: process.env.TEST_USER_EMAIL || 'student@gmail.com',
+    password: process.env.TEST_USER_PASSWORD || 'Password123!',
+  },
+};
+
 test.describe('Login Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to login page before each test
@@ -41,9 +49,9 @@ test.describe('Login Flow', () => {
 
   test('should successfully login with valid credentials', async ({ page }) => {
     // Note: This test requires seeded test data in the backend
-    // Use test credentials that exist in your test database
-    await page.fill('input[type="email"]', 'student@gmail.com');
-    await page.fill('input[type="password"]', 'Password123!');
+    // Use test credentials from configuration
+    await page.fill('input[type="email"]', TEST_CONFIG.testUser.email);
+    await page.fill('input[type="password"]', TEST_CONFIG.testUser.password);
 
     // Submit form
     await page.click('button[type="submit"]');

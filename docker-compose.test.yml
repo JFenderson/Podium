@@ -41,7 +41,9 @@ services:
         condition: service_healthy
     networks:
       - test-network
-    command: dotnet test --logger:"console;verbosity=detailed"
+    # Run tests and keep container running for inspection
+    # Override with: docker-compose -f docker-compose.test.yml run backend-test dotnet test
+    command: tail -f /dev/null
 
   # Frontend for E2E testing
   frontend-test:

@@ -206,8 +206,24 @@ jobs:
           dotnet restore
           dotnet build --no-restore
           nohup dotnet run --project Podium.API/Podium.API.csproj --no-build > backend.log 2>&1 &
-          sleep 30
-          curl -f http://localhost:5000/health || (cat backend.log && exit 1)
+          
+          # Wait for backend with retry and health check
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:5000/health 2>/dev/null; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Backend not ready yet, waiting..."
+            sleep 2
+          done
+          
+          # Final health check
+          if ! curl -f http://localhost:5000/health; then
+            echo "Backend failed to start. Logs:"
+            cat backend.log
+            exit 1
+          fi
 
       - name: Install frontend dependencies
         working-directory: ./Frontend/podium-frontend
@@ -297,7 +313,16 @@ jobs:
           dotnet restore
           dotnet build --no-restore
           nohup dotnet run --project Podium.API/Podium.API.csproj --no-build > backend.log 2>&1 &
-          sleep 30
+          
+          # Wait for backend with retry
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:5000/health 2>/dev/null; then
+              echo "Backend is ready!"
+              break
+            fi
+            sleep 2
+          done
 
       - name: Install K6
         run: |

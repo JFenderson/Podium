@@ -88,7 +88,8 @@ export default function () {
     [`${test.name} - has data`]: (r) => {
       try {
         const body = JSON.parse(r.body);
-        return Array.isArray(body) || body.students !== undefined;
+        // API returns an object with a students property
+        return body && (Array.isArray(body.students) && body.students.length >= 0);
       } catch (e) {
         return false;
       }
