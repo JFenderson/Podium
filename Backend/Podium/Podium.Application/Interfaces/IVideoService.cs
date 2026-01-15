@@ -1,5 +1,6 @@
 ﻿using Google.Api.Ads.AdWords.v201809;
 using Podium.Application.DTOs.Video;
+using Podium.Application.Services;
 using Podium.Core.Entities;
 using System;
 using System.Collections.Generic;
@@ -23,5 +24,6 @@ namespace Podium.Application.Interfaces
         Task<VideoRatingResponse> RateVideoAsync(int videoId, int recruiterId, RateVideoRequest request);
         Task<VideoRatingResponse> UpdateRatingAsync(int videoId, int recruiterId, RateVideoRequest request);
         Task<bool> UpdateTranscodingStatusAsync(string uploadId, TranscodingWebhookRequest request);
+        Task<ServiceResult<PagedResult<VideoThumbnailDto>>> GetStudentVideoThumbnailsAsync(int studentId, int page, int pageSize);
     }
 }

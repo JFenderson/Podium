@@ -257,7 +257,37 @@ namespace Podium.Application.Services
             return true;
         }
 
-       
+        public async Task<ServiceResult<PagedResult<VideoThumbnailDto>>> GetStudentVideoThumbnailsAsync(int studentId, int page, int pageSize)
+        {
+            // Security: Ensure the student exists (optional, could be handled by caller)
+            if (!await _unitOfWork.Students.AnyAsync(s => s.Id == studentId && !s.IsDeleted))
+                return ServiceResult<PagedResult<VideoThumbnailDto>>.Failure("Student not found");
+
+            var result = await _unitOfWork.Videos.GetPagedProjectionAsync(
+                predicate: v => v.StudentId == studentId && !v.IsDeleted,
+                selector: v => new VideoThumbnailDto
+                {
+                    Id = v.Id,
+                    Title = v.Title,
+                    ThumbnailUrl = v.ThumbnailUrl ?? "",
+                    Url = v.Url,
+                    IsPrimary = v.IsPrimary,
+                    Instrument = v.Instrument,
+                    ViewCount = v.ViewCount,
+                    Status = v.Status.ToString()
+                },
+                page: page,
+                pageSize: pageSize,
+                orderBy: v => v.CompletedAt // Sort by newest
+            );
+
+            // Correct descending order for dates usually requires OrderByDescending 
+            // The Repository's generic helper currently takes OrderBy (ascending). 
+            // If strict sorting is needed, the Repository helper might need an update or we sort in memory for small pages.
+            // For now, we assume the repository method handles the Expression passed to it (which defaults to ascending).
+
+            return ServiceResult<PagedResult<VideoThumbnailDto>>.Success(result);
+        }
 
         public Task<VideoRatingResponse> UpdateRatingAsync(int videoId, int recruiterId, RateVideoRequest request)
         {

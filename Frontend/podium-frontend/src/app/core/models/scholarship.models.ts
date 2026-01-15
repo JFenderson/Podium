@@ -95,3 +95,14 @@ export interface ScholarshipSummaryDto {
   expiresAt?: Date;
 }
 
+export interface OfferSummary {
+  id: number;
+  bandName: string;
+  universityName?: string;
+  location: string;
+  amount: number;
+  status: string;
+  offerType: string;
+  expirationDate: string; // Date comes as string from JSON
+}
+

@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.API.Jobs;
 using Podium.Application.DTOs.Offer;
+using Podium.Application.DTOs.ScholarshipOffer;
 using Podium.Application.Interfaces;
+using Podium.Application.Services;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
@@ -284,5 +286,25 @@ namespace Podium.API.Controllers
 
             return Ok(offers);
         }
+
+        [HttpGet("student/{studentId}/summaries")]
+        public async Task<ActionResult<PagedResult<OfferSummaryDto>>> GetStudentOfferSummaries(
+            int studentId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            // Optional: Add IsStudentOwnerAsync check
+
+            var result = await _service.GetStudentOfferSummariesAsync(studentId, page, pageSize);
+
+            if (result.IsSuccess) return Ok(result.Data);
+
+            return result.ResultType switch
+            {
+                ServiceResultType.NotFound => NotFound(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
+        }
+
     }
 }

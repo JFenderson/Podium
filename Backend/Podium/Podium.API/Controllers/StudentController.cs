@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Podium.Application.Authorization;
+using Podium.Application.DTOs;
 using Podium.Application.DTOs.BandStaff;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
@@ -9,6 +10,7 @@ using Podium.Application.DTOs.Video; // Required for CreateVideoRequest
 using Podium.Application.Interfaces;
 using Podium.Application.Services;
 using Podium.Core.Constants;
+using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 
 namespace Podium.API.Controllers
@@ -346,6 +348,29 @@ namespace Podium.API.Controllers
                 _logger.LogError(ex, "Error searching students");
                 return StatusCode(500, "An error occurred while searching students");
             }
+        }
+
+
+        /// <summary>
+        /// Optimized endpoint for fetching student cards using database projection
+        /// </summary>
+        [HttpGet("cards")]
+        [Authorize(Policy = "BandStaffOnly")] // Or generic view policy
+        public async Task<ActionResult<PagedResult<StudentCardDto>>> GetStudentCards(
+            [FromQuery] string? instrument,
+            [FromQuery] double? minGpa,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var result = await _studentService.GetStudentCardsAsync(instrument, minGpa, page, pageSize);
+
+            if (result.IsSuccess) return Ok(result.Data);
+
+            return result.ResultType switch
+            {
+                ServiceResultType.Forbidden => Forbid(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
         }
 
         /// <summary>

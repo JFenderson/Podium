@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Podium.Application.Authorization;
 using Podium.Application.DTOs.Video;
 using Podium.Application.Interfaces;
+using Podium.Application.Services;
 using Podium.Core.Constants;
+using Podium.Core.Entities;
 using Podium.Core.Interfaces;
 using System.Security.Claims;
-using Microsoft.Extensions.Configuration;
 
 namespace Podium.API.Controllers
 {
@@ -268,5 +270,25 @@ namespace Podium.API.Controllers
                 return Forbid(ex.Message);
             }
         }
+
+        [HttpGet("student/{studentId}/thumbnails")]
+        public async Task<ActionResult<PagedResult<VideoThumbnailDto>>> GetStudentThumbnails(
+            int studentId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12)
+        {
+            // Optional: Add IsStudentOwnerAsync check here if strict privacy is required
+
+            var result = await _videoService.GetStudentVideoThumbnailsAsync(studentId, page, pageSize);
+
+            if (result.IsSuccess) return Ok(result.Data);
+
+            return result.ResultType switch
+            {
+                ServiceResultType.NotFound => NotFound(result.ErrorMessage),
+                _ => BadRequest(result.ErrorMessage)
+            };
+        }
+
     }
 }

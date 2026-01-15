@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Podium.Core.Entities;
+using System.Linq.Expressions;
 
 namespace Podium.Core.Interfaces;
 
@@ -16,4 +17,15 @@ public interface IRepository<T> where T : class
     void Update(T entity);
     void Remove(T entity);
     void RemoveRange(IEnumerable<T> entities);
+
+    Task<IEnumerable<TResult>> ProjectToAsync<TResult>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TResult>> selector);
+
+    Task<PagedResult<TResult>> GetPagedProjectionAsync<TResult>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TResult>> selector,
+        int page,
+        int pageSize,
+        Expression<Func<T, object>>? orderBy = null);
 }

@@ -8,9 +8,11 @@ import {
   RespondToScholarshipOfferDto,
   GuardianApprovalDto,
   ScholarshipFilterDto,
-  ScholarshipSummaryDto
+  ScholarshipSummaryDto,
+  OfferSummary
 } from '../../../core/models/scholarship.models';
 import { PagedResult } from '../../../core/models/student.models';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -106,6 +108,14 @@ export class ScholarshipService {
 
   rescindOffer(id: number, reason: string): Observable<any> {
     return this.api.put(`${this.endpoint}/${id}/rescind`, { reason });
+  }
+
+  getStudentOfferSummaries(studentId: number, page: number = 1, pageSize: number = 10): Observable<PagedResult<OfferSummary>> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    return this.api.get<PagedResult<OfferSummary>>(`${this.endpoint}/student/${studentId}/summaries`, { params });
   }
   
 }

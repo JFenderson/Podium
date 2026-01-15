@@ -100,6 +100,18 @@ export interface StudentSummaryDto {
   ratingCount?: number;
 }
 
+export interface StudentCard {
+  id: number;
+  firstName: string;
+  lastName: string;
+  instrument: string;
+  state: string;
+  gpa: number | null;
+  graduationYear: number;
+  videoCount: number;
+  profilePhotoUrl?: string;
+}
+
 // Matches Backend Podium.Application.DTOs.Student.InterestDto
 export interface InterestDto {
   studentId: number;

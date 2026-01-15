@@ -4,6 +4,7 @@ using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.Rating;
 using Podium.Application.DTOs.Student;
 using Podium.Application.Services;
+using Podium.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,5 +24,7 @@ namespace Podium.Application.Interfaces
         Task<ServiceResult<bool>> ShowInterestAsync(int studentId, int bandId);
         Task<ServiceResult<bool>> RateStudentAsync(int studentId, RatingDto dto);
         Task<ServiceResult<StudentDashboardDto>> GetStudentDashboardAsync();
+        Task<ServiceResult<PagedResult<StudentCardDto>>> GetStudentCardsAsync(string? instrument, double? minGpa, int page, int pageSize);
+
     }
 }

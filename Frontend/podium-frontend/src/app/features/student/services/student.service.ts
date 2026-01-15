@@ -9,9 +9,11 @@ import {
   PagedResult,
   StudentFilterDto,
   StudentDashboardDto,
+  StudentCard,
 } from '../../../core/models/student.models';
 import { RatingDto, ServiceResult } from '../../../core/models/common.models';
 import { map } from 'rxjs/operators';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root',
@@ -102,4 +104,21 @@ getDashboard(): Observable<StudentDashboardDto> {
       })
     );
   }
+
+getStudentCards(
+    instrument?: string, 
+    minGpa?: number, 
+    page: number = 1, 
+    pageSize: number = 20
+  ): Observable<PagedResult<StudentCard>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+
+    if (instrument) params = params.set('instrument', instrument);
+    if (minGpa) params = params.set('minGpa', minGpa.toString());
+
+    return this.api.get<PagedResult<StudentCard>>(`${this.endpoint}/cards`, { params });
+  }
+
 }

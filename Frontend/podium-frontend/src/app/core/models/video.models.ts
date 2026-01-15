@@ -121,6 +121,17 @@ export interface VideoSummaryDto {
   viewCount: number;
 }
 
+export interface VideoThumbnail {
+  id: number;
+  title: string;
+  thumbnailUrl: string;
+  url: string;
+  isPrimary: boolean;
+  instrument: string;
+  viewCount: number;
+  status: string;
+}
+
 export interface VideoAnalyticsDto {
   videoId: number;
   totalViews: number;

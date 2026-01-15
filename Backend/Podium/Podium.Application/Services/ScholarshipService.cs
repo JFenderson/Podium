@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Podium.Application.DTOs.Offer;
+using Podium.Application.DTOs.ScholarshipOffer;
 using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
@@ -12,7 +14,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Podium.Application.Services
 {
@@ -530,6 +531,28 @@ namespace Podium.Application.Services
             };
         }
 
+        public async Task<ServiceResult<PagedResult<OfferSummaryDto>>> GetStudentOfferSummariesAsync(int studentId, int page, int pageSize)
+        {
+            var result = await _unitOfWork.ScholarshipOffers.GetPagedProjectionAsync(
+                predicate: o => o.StudentId == studentId && !o.IsDeleted,
+                selector: o => new OfferSummaryDto
+                {
+                    Id = o.Id,
+                    BandName = o.Band != null ? o.Band.BandName : "Unknown Band",
+                    UniversityName = o.Band != null ? o.Band.UniversityName : null,
+                    Location = o.Band != null ? o.Band.City + ", " + o.Band.State : "",
+                    Amount = o.ScholarshipAmount,
+                    Status = o.Status.ToString(),
+                    OfferType = o.OfferType,
+                    ExpirationDate = o.ExpirationDate
+                },
+                page: page,
+                pageSize: pageSize,
+                orderBy: o => o.ExpirationDate
+            );
+
+            return ServiceResult<PagedResult<OfferSummaryDto>>.Success(result);
+        }
 
         public async Task CheckExpirationsAsync()
         {

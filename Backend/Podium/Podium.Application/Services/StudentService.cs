@@ -7,6 +7,7 @@ using Podium.Application.Interfaces;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
 using Podium.Core.Interfaces;
+using System.Linq.Expressions;
 
 namespace Podium.Application.Services;
 
@@ -281,6 +282,63 @@ public class StudentService : IStudentService
     }
 
 
+
+
+    /// <summary>
+    /// New optimized method using Projections for list views
+    /// </summary>
+    public async Task<ServiceResult<PagedResult<StudentCardDto>>> GetStudentCardsAsync(
+         string? instrument,
+         double? minGpa,
+         int page,
+         int pageSize)
+    {
+        if (!await _permissionService.HasPermissionAsync(Permissions.ViewStudents))
+            return ServiceResult<PagedResult<StudentCardDto>>.Forbidden("No permission to view students");
+
+        // Use direct lambda construction to avoid "Invoke" expression errors
+        Expression<Func<Student, bool>> predicate;
+
+        if (!string.IsNullOrEmpty(instrument) && minGpa.HasValue)
+        {
+            predicate = s => !s.IsDeleted && s.PrimaryInstrument == instrument && s.GPA >= (decimal)minGpa.Value;
+        }
+        else if (!string.IsNullOrEmpty(instrument))
+        {
+            predicate = s => !s.IsDeleted && s.PrimaryInstrument == instrument;
+        }
+        else if (minGpa.HasValue)
+        {
+            predicate = s => !s.IsDeleted && s.GPA >= (decimal)minGpa.Value;
+        }
+        else
+        {
+            predicate = s => !s.IsDeleted;
+        }
+
+        var result = await _unitOfWork.Students.GetPagedProjectionAsync(
+            predicate,
+            s => new StudentCardDto
+            {
+                Id = s.Id,
+                FirstName = s.FirstName,
+                LastName = s.LastName,
+                Instrument = s.PrimaryInstrument ?? "Unknown",
+                State = s.State,
+                GPA = s.GPA,
+                GraduationYear = s.GraduationYear,
+                VideoCount = s.Videos.Count(v => !v.IsDeleted),
+                // ApplicationUser does not have ProfilePhotoUrl, set to null
+                ProfilePhotoUrl = null
+            },
+            page,
+            pageSize,
+            s => s.LastName
+        );
+
+        return ServiceResult<PagedResult<StudentCardDto>>.Success(result);
+    }
+
     /// <summary>
     /// Get all students the current user can access
     /// </summary>
@@ -313,7 +371,7 @@ public class StudentService : IStudentService
                     {
                         Items = new List<StudentDetailsDto>(),
                         TotalCount = 0,
-                        PageNumber = page,
+                        Page = page,
                         PageSize = pageSize
                     });
                 }
@@ -347,7 +405,7 @@ public class StudentService : IStudentService
         {
             Items = dtos,
             TotalCount = totalCount,
-            PageNumber = page,
+            Page = page,
             PageSize = pageSize
         };
 

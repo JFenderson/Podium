@@ -1,4 +1,7 @@
 ﻿using Podium.Application.DTOs.Offer;
+using Podium.Application.DTOs.ScholarshipOffer;
+using Podium.Application.Services;
+using Podium.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,5 +21,6 @@ namespace Podium.Application.Interfaces
         Task CheckExpirationsAsync(); // To be called by a background job
         Task<ScholarshipOverviewDto> GetScholarshipsAsync(string userId, ScholarshipFilterDto filters);
         Task<ScholarshipOfferDto> GetOfferByIdAsync(int id);
+        Task<ServiceResult<PagedResult<OfferSummaryDto>>> GetStudentOfferSummariesAsync(int studentId, int page, int pageSize);
     }
 }

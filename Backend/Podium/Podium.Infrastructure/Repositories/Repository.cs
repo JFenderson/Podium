@@ -3,6 +3,7 @@ using Podium.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Podium.Core.Entities;
 
 namespace Podium.Infrastructure.Repositories;
 
@@ -98,5 +99,48 @@ public class Repository<T> : IRepository<T> where T : class
         {
             _dbSet.RemoveRange(entities);
         }
+    }
+
+    public async Task<IEnumerable<TResult>> ProjectToAsync<TResult>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TResult>> selector)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .Where(predicate)
+            .Select(selector)
+            .ToListAsync();
+    }
+
+    public async Task<PagedResult<TResult>> GetPagedProjectionAsync<TResult>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TResult>> selector,
+        int page,
+        int pageSize,
+        Expression<Func<T, object>>? orderBy = null)
+    {
+        var query = _dbSet.AsNoTracking().Where(predicate);
+
+        // Optimization: Count only the filtered records before projection
+        var totalCount = await query.CountAsync();
+
+        if (orderBy != null)
+        {
+            query = query.OrderBy(orderBy);
+        }
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(selector)
+            .ToListAsync();
+
+        return new PagedResult<TResult>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 }
