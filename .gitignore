@@ -385,7 +385,13 @@ dist/
 # Test results and coverage
 TestResults/
 coverage/
+coverage-report/
 code-coverage-results.md
+playwright-report/
+test-results/
+*.cobertura.xml
+*.opencover.xml
+load-tests/results/
 
 # GitHub Actions artifacts
 deployment/
