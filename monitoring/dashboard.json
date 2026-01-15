@@ -1,0 +1,417 @@
+{
+  "properties": {
+    "lenses": {
+      "0": {
+        "order": 0,
+        "parts": {
+          "0": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "requests/count",
+                          "aggregationType": 7,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Server requests",
+                            "color": "#47BDF5"
+                          }
+                        }
+                      ],
+                      "title": "Request Rate (requests/minute)",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "1": {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "requests/duration",
+                          "aggregationType": 4,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Server response time",
+                            "color": "#F2C811"
+                          }
+                        }
+                      ],
+                      "title": "Response Time (P95)",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "2": {
+            "position": {
+              "x": 0,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "requests/failed",
+                          "aggregationType": 7,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Failed requests",
+                            "color": "#EC008C"
+                          }
+                        }
+                      ],
+                      "title": "Error Rate (5xx errors)",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "3": {
+            "position": {
+              "x": 6,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "availabilityResults/availabilityPercentage",
+                          "aggregationType": 4,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Availability",
+                            "color": "#7FBA00"
+                          }
+                        }
+                      ],
+                      "title": "Application Availability",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "4": {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.web/sites"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Web/sites/podium-backend-production"
+                          },
+                          "name": "CpuPercentage",
+                          "aggregationType": 4,
+                          "namespace": "microsoft.web/sites",
+                          "metricVisualization": {
+                            "displayName": "CPU Percentage",
+                            "color": "#0078D4"
+                          }
+                        }
+                      ],
+                      "title": "Backend CPU Usage",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "5": {
+            "position": {
+              "x": 6,
+              "y": 8,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.web/sites"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Web/sites/podium-backend-production"
+                          },
+                          "name": "MemoryPercentage",
+                          "aggregationType": 4,
+                          "namespace": "microsoft.web/sites",
+                          "metricVisualization": {
+                            "displayName": "Memory Percentage",
+                            "color": "#E81123"
+                          }
+                        }
+                      ],
+                      "title": "Backend Memory Usage",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "6": {
+            "position": {
+              "x": 0,
+              "y": 12,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.sql/servers/databases"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Sql/servers/podium-sql-production/databases/PodiumDb"
+                          },
+                          "name": "dtu_consumption_percent",
+                          "aggregationType": 4,
+                          "namespace": "microsoft.sql/servers/databases",
+                          "metricVisualization": {
+                            "displayName": "DTU Percentage",
+                            "color": "#B4009E"
+                          }
+                        }
+                      ],
+                      "title": "Database DTU Usage",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "7": {
+            "position": {
+              "x": 6,
+              "y": 12,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "exceptions/count",
+                          "aggregationType": 7,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Exceptions",
+                            "color": "#FF5733"
+                          }
+                        }
+                      ],
+                      "title": "Exception Count",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          },
+          "8": {
+            "position": {
+              "x": 0,
+              "y": 16,
+              "colSpan": 12,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceType",
+                  "value": "microsoft.insights/components"
+                },
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/podium-production-rg/providers/Microsoft.Insights/components/podium-insights-production"
+                          },
+                          "name": "users/count",
+                          "aggregationType": 5,
+                          "namespace": "microsoft.insights/components",
+                          "metricVisualization": {
+                            "displayName": "Users",
+                            "color": "#00BCF2"
+                          }
+                        }
+                      ],
+                      "title": "Active Users",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart"
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "model": {
+        "timeRange": {
+          "value": {
+            "relative": {
+              "duration": 24,
+              "timeUnit": 1
+            }
+          },
+          "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+        }
+      }
+    }
+  },
+  "name": "Podium Production Dashboard",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "eastus",
+  "tags": {
+    "hidden-title": "Podium Production Monitoring"
+  }
+}
