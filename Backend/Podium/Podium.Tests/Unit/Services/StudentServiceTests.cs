@@ -253,6 +253,7 @@ namespace Podium.Tests.Unit.Services
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeTrue();
             _mockStudentInterestRepo.Verify(r => r.AddAsync(It.IsAny<StudentInterest>()), Times.Once);
+            // Service notifies band staff twice: once at line 140 and again at line 177 in StudentService
             MockNotificationService.Verify(n => n.NotifyBandStaffAsync(
                 1, "NewInterest", "New Student Interest", 
                 It.IsAny<string>(), "1", It.IsAny<NotificationPriority>()), Times.Exactly(2));
@@ -355,6 +356,7 @@ namespace Podium.Tests.Unit.Services
             // Assert
             result.Should().NotBeNull();
             result.IsSuccess.Should().BeTrue();
+            // Service notifies guardians twice: once at line 150-169 and again at line 210-231 in StudentService
             MockNotificationService.Verify(n => n.NotifyUserAsync(
                 "guardian-1", "StudentActivity", "Student Interest Updated", 
                 It.IsAny<string>(), "1", It.IsAny<NotificationPriority>(), It.IsAny<DateTime?>()), Times.Exactly(2));
