@@ -18,8 +18,9 @@ namespace Podium.Application.Validation
 
             var email = value.ToString()!;
 
-            // Basic email validation
-            if (!email.Contains("@"))
+            // Basic email validation - must have exactly one @ and at least one character before and after
+            var atIndex = email.IndexOf('@');
+            if (atIndex <= 0 || atIndex == email.Length - 1 || email.IndexOf('@', atIndex + 1) != -1)
             {
                 return new ValidationResult(
                     ErrorMessage ?? $"The field {validationContext.DisplayName} must be a valid email address."

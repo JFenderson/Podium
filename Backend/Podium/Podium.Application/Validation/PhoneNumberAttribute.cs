@@ -9,7 +9,7 @@ namespace Podium.Application.Validation
     public class PhoneNumberAttribute : ValidationAttribute
     {
         private static readonly Regex PhonePattern = new Regex(
-            @"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$",
+            @"^(\+1)?[-\s\.]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4}$",
             RegexOptions.Compiled
         );
 

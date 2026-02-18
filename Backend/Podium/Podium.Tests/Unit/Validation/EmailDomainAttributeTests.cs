@@ -102,12 +102,16 @@ namespace Podium.Tests.Unit.Validation
             result.Should().NotBe(ValidationResult.Success);
         }
 
-        [Fact]
-        public void IsValid_WithInvalidEmailFormat_ReturnsError()
+        [Theory]
+        [InlineData("notanemail")]
+        [InlineData("@@")]
+        [InlineData("@test")]
+        [InlineData("test@")]
+        [InlineData("test@@example.com")]
+        public void IsValid_WithInvalidEmailFormat_ReturnsError(string value)
         {
             // Arrange
             var attribute = new EmailDomainAttribute();
-            var value = "notanemail";
             var context = new ValidationContext(new object()) { DisplayName = "Email" };
 
             // Act

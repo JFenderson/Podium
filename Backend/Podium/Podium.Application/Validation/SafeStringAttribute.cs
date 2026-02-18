@@ -9,7 +9,7 @@ namespace Podium.Application.Validation
     public class SafeStringAttribute : ValidationAttribute
     {
         private static readonly Regex HtmlTagPattern = new Regex(
-            @"<[^>]*>|javascript:|onerror=|onclick=|onload=",
+            @"<[^>]*>|javascript:|vbscript:|data:|on\w+\s*=",
             RegexOptions.IgnoreCase | RegexOptions.Compiled
         );
 

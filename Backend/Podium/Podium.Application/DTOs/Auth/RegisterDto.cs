@@ -34,7 +34,7 @@ namespace Podium.Application.DTOs.Auth
 
         // --- Role Selection ---
         [Required(ErrorMessage = "Role is required")]
-        [RegularExpression("^(Student|Guardian|Recruiter|Director)$", ErrorMessage = "Role must be Student, Guardian, Recruiter, or Director")]
+        [ValidRole]
         public string Role { get; set; } = string.Empty;
 
         // --- Student Specific Fields ---

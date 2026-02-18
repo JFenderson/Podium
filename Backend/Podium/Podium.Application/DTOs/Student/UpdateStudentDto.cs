@@ -62,7 +62,7 @@ namespace Podium.Application.DTOs.Student
 
         // Location
         [StringLength(2, MinimumLength = 2, ErrorMessage = "State must be a 2-letter code")]
-        [RegularExpression("^[A-Z]{2}$", ErrorMessage = "State must be a valid 2-letter US state code")]
+        [RegularExpression("^[A-Za-z]{2}$", ErrorMessage = "State must be a valid 2-letter US state code")]
         public string? State { get; set; }
 
         [StringLength(100, ErrorMessage = "City name cannot exceed 100 characters")]
