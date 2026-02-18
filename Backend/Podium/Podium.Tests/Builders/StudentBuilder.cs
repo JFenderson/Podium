@@ -13,15 +13,15 @@ namespace Podium.Tests.Builders
             FirstName = "Test",
             LastName = "Student",
             Email = "test.student@example.com",
-            Instrument = "Trumpet",
-            School = "Test University",
+            PrimaryInstrument = "Trumpet",
+            HighSchool = "Test University",
             GraduationYear = 2025,
             Bio = "Test bio",
             PhoneNumber = "+1234567890",
             State = "CA",
             City = "Los Angeles",
-            IsProfilePublic = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            ApplicationUserId = "test-user-id"
         };
 
         public StudentBuilder WithId(int id)
@@ -45,13 +45,13 @@ namespace Podium.Tests.Builders
 
         public StudentBuilder WithInstrument(string instrument)
         {
-            _student.Instrument = instrument;
+            _student.PrimaryInstrument = instrument;
             return this;
         }
 
         public StudentBuilder WithSchool(string school)
         {
-            _student.School = school;
+            _student.HighSchool = school;
             return this;
         }
 
@@ -82,7 +82,7 @@ namespace Podium.Tests.Builders
 
         public StudentBuilder WithProfileVisibility(bool isPublic)
         {
-            _student.IsProfilePublic = isPublic;
+            // _student.IsProfilePublic = isPublic; // Property not in entity
             return this;
         }
 
@@ -94,7 +94,7 @@ namespace Podium.Tests.Builders
 
         public StudentBuilder WithUserId(string userId)
         {
-            _student.UserId = userId;
+            _student.ApplicationUserId = userId;
             return this;
         }
 

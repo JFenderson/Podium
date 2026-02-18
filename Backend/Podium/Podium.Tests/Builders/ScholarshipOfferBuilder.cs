@@ -1,4 +1,5 @@
 using Podium.Core.Entities;
+using Podium.Core.Constants;
 
 namespace Podium.Tests.Builders
 {
@@ -9,14 +10,13 @@ namespace Podium.Tests.Builders
     {
         private ScholarshipOffer _offer = new ScholarshipOffer
         {
-            Amount = 10000,
-            ScholarshipType = "Merit-Based",
+            ScholarshipAmount = 10000,
+            OfferType = "Merit-Based",
             Description = "Test scholarship offer",
             Requirements = "Maintain 3.0 GPA",
-            Status = "Pending",
-            Deadline = DateTime.UtcNow.AddDays(30),
-            SentAt = DateTime.UtcNow,
-            IsActive = true
+            Status = ScholarshipStatus.Sent,
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
+            CreatedAt = DateTime.UtcNow
         };
 
         public ScholarshipOfferBuilder WithId(int id)
@@ -27,13 +27,13 @@ namespace Podium.Tests.Builders
 
         public ScholarshipOfferBuilder WithAmount(decimal amount)
         {
-            _offer.Amount = amount;
+            _offer.ScholarshipAmount = amount;
             return this;
         }
 
         public ScholarshipOfferBuilder WithType(string type)
         {
-            _offer.ScholarshipType = type;
+            _offer.OfferType = type;
             return this;
         }
 
@@ -49,15 +49,15 @@ namespace Podium.Tests.Builders
             return this;
         }
 
-        public ScholarshipOfferBuilder WithStatus(string status)
+        public ScholarshipOfferBuilder WithStatus(ScholarshipStatus status)
         {
             _offer.Status = status;
             return this;
         }
 
-        public ScholarshipOfferBuilder WithDeadline(DateTime deadline)
+        public ScholarshipOfferBuilder WithExpirationDate(DateTime deadline)
         {
-            _offer.Deadline = deadline;
+            _offer.ExpirationDate = deadline;
             return this;
         }
 
@@ -73,48 +73,48 @@ namespace Podium.Tests.Builders
             return this;
         }
 
-        public ScholarshipOfferBuilder SentBy(string userId)
+        public ScholarshipOfferBuilder CreatedBy(string userId)
         {
-            _offer.SentByUserId = userId;
+            _offer.CreatedByUserId = userId;
             return this;
         }
 
-        public ScholarshipOfferBuilder WithSentAt(DateTime sentAt)
+        public ScholarshipOfferBuilder WithCreatedAt(DateTime createdAt)
         {
-            _offer.SentAt = sentAt;
+            _offer.CreatedAt = createdAt;
             return this;
         }
 
-        public ScholarshipOfferBuilder AsActive(bool isActive = true)
+        public ScholarshipOfferBuilder AsActive(bool isDeleted = false)
         {
-            _offer.IsActive = isActive;
+            _offer.IsDeleted = isDeleted;
             return this;
         }
 
         public ScholarshipOfferBuilder AsPending()
         {
-            _offer.Status = "Pending";
+            _offer.Status = ScholarshipStatus.PendingApproval;
             return this;
         }
 
         public ScholarshipOfferBuilder AsAccepted()
         {
-            _offer.Status = "Accepted";
-            _offer.RespondedAt = DateTime.UtcNow;
+            _offer.Status = ScholarshipStatus.Accepted;
+            _offer.ResponseDate = DateTime.UtcNow;
             return this;
         }
 
-        public ScholarshipOfferBuilder AsRejected()
+        public ScholarshipOfferBuilder AsDeclined()
         {
-            _offer.Status = "Rejected";
-            _offer.RespondedAt = DateTime.UtcNow;
+            _offer.Status = ScholarshipStatus.Declined;
+            _offer.ResponseDate = DateTime.UtcNow;
             return this;
         }
 
         public ScholarshipOfferBuilder AsExpired()
         {
-            _offer.Status = "Expired";
-            _offer.Deadline = DateTime.UtcNow.AddDays(-1);
+            _offer.Status = ScholarshipStatus.Expired;
+            _offer.ExpirationDate = DateTime.UtcNow.AddDays(-1);
             return this;
         }
 
