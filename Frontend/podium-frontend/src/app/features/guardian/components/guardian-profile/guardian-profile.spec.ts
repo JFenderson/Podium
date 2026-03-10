@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Guardian } from './guardian-profile.component';
+import { GuardianProfileComponent } from './guardian-profile.component';
 
-describe('Guardian', () => {
-  let component: Guardian;
-  let fixture: ComponentFixture<Guardian>;
+describe('GuardianProfileComponent', () => {
+  let component: GuardianProfileComponent;
+  let fixture: ComponentFixture<GuardianProfileComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Guardian]
+      imports: [GuardianProfileComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Guardian);
+    fixture = TestBed.createComponent(GuardianProfileComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
