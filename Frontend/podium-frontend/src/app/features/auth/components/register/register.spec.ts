@@ -1,18 +1,33 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { RegisterComponent } from './register.component';
+import { AuthService } from '../../services/auth.service';
+import { of } from 'rxjs';
 
-import { Register } from './register/register';
+describe('RegisterComponent', () => {
+  let component: RegisterComponent;
+  let fixture: ComponentFixture<RegisterComponent>;
 
-describe('Register', () => {
-  let component: Register;
-  let fixture: ComponentFixture<Register>;
+  const mockAuthService = {
+    getRegistrationOptions: () => of({ bands: [], roles: [] }),
+    isAuthenticated: () => false,
+    currentUserValue: null,
+    currentUser$: of(null),
+    register: () => of({}),
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Register]
-    })
-    .compileComponents();
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        { provide: AuthService, useValue: mockAuthService },
+      ],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Register);
+    fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

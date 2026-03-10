@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Band } from './band';
+import { Band } from './band.component';
 
 describe('Band', () => {
   let component: Band;
