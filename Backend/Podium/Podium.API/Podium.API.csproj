@@ -6,7 +6,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
-		<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.15" />
+		<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.24" />
 		<PackageReference Include="AWSSDK.S3" Version="4.0.14.1" />
 		<PackageReference Include="Hangfire" Version="1.8.22" />
 		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.22" />
