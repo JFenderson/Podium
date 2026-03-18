@@ -1,6 +1,7 @@
-﻿using Amazon.S3;
+﻿using Amazon.Runtime;
+using Amazon.S3;
 using Hangfire;
-using Hangfire.SqlServer;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -74,11 +75,11 @@ namespace Podium.API.Extensions
             return services;
         }
 
-        public static IServiceCollection AddPodiumIdentity(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddPodiumIdentity(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
         {
             // Configure Database
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
             // Configure Identity
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -104,7 +105,7 @@ namespace Podium.API.Extensions
             })
             .AddJwtBearer(options =>
             {
-                options.RequireHttpsMetadata = false;
+                options.RequireHttpsMetadata = !environment.IsDevelopment();
                 options.SaveToken = true;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -192,7 +193,7 @@ namespace Podium.API.Extensions
 
         public static IServiceCollection AddPodiumCoreServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
         {
-            // SignalR
+            // SignalR — in-process for single-instance deployments (Railway pilot)
             services.AddSignalR();
 
             // Hangfire
@@ -200,15 +201,7 @@ namespace Podium.API.Extensions
                   .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
                   .UseSimpleAssemblyNameTypeSerializer()
                   .UseRecommendedSerializerSettings()
-                  .UseSqlServerStorage(configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
-                  {
-                      CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                      SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                      QueuePollInterval = TimeSpan.Zero,
-                      UseRecommendedIsolationLevel = true,
-                      DisableGlobalLocks = true,
-                      PrepareSchemaIfNecessary = true // <--- ADD THIS LINE to fix the crash
-                  }));
+                  .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(configuration.GetConnectionString("DefaultConnection"))));
             services.AddHangfireServer();
 
             // Background Jobs
@@ -223,9 +216,7 @@ namespace Podium.API.Extensions
             // Infrastructure Services
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // Note: IAuthService registered twice in original, keeping both interfaces mapping to AuthService
-            services.AddScoped<Podium.Application.Interfaces.IAuthService, AuthService>();
-            services.AddScoped<IAuthService, Podium.Infrastructure.Services.AuthService>(); // Assuming this interface is available in Infra
+            services.AddScoped<IAuthService, AuthService>();
 
             services.AddScoped<IStudentService, StudentService>();
             services.AddScoped<IAuditService, AuditService>();
@@ -250,57 +241,47 @@ namespace Podium.API.Extensions
             }
 
             // CORS
+            var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>()
+                ?? new[] { "http://localhost:4200", "https://localhost:4200" };
+
             services.AddCors(options =>
             {
-                options.AddPolicy("AllowAngularApp", policy =>
+                options.AddPolicy("AllowAngularDev", policy =>
                 {
-                    policy.WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:4200" })
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
+                    policy.WithOrigins(allowedOrigins)
+                          .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                          .WithHeaders("Authorization", "Content-Type", "Accept", "X-Requested-With")
                           .AllowCredentials();
                 });
             });
 
-            // CORS
-            services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAngularApp", policy =>
-                {
-                    policy.WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:4200" })
-                          .AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials();
-                });
-            });
+            // Storage Configuration — Cloudflare R2 (S3-compatible)
+            var accountId = configuration["CloudflareR2:AccountId"];
+            var accessKeyId = configuration["CloudflareR2:AccessKeyId"];
+            var secretAccessKey = configuration["CloudflareR2:SecretAccessKey"];
 
-            // Storage Configuration
-            var storageProvider = configuration["StorageProvider"];
-
-            if (storageProvider == "AWS")
+            if (!string.IsNullOrWhiteSpace(accountId) && !string.IsNullOrWhiteSpace(accessKeyId))
             {
+                services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+                    new BasicAWSCredentials(accessKeyId, secretAccessKey),
+                    new AmazonS3Config
+                    {
+                        ServiceURL = $"https://{accountId}.r2.cloudflarestorage.com",
+                        ForcePathStyle = true
+                    }));
+                Console.WriteLine("Cloudflare R2 storage configured.");
+            }
+            else
+            {
+                // Fallback: standard AWS SDK config (reads from appsettings AWS section)
                 var awsOptions = configuration.GetAWSOptions();
                 services.AddDefaultAWSOptions(awsOptions);
                 services.AddAWSService<IAmazonS3>();
-                services.AddScoped<IVideoStorageService, AwsVideoStorageService>();
-                Console.WriteLine("Using AWS S3 for video storage.");
-            }
-            else
-            {
-                services.AddScoped<IVideoStorageService, AzureVideoStorageService>();
-                Console.WriteLine("Using Azure Blob Storage for video storage.");
+                Console.WriteLine("Using AWS S3 for storage (no R2 config found).");
             }
 
-            var storageConnectionString = configuration["AzureStorage:ConnectionString"];
-            if (!string.IsNullOrEmpty(storageConnectionString))
-            {
-                services.AddScoped<IStorageService, AzureBlobStorageService>();
-                services.AddScoped<Podium.Core.Interfaces.IStorageService, AzureBlobStorageService>();
-                Console.WriteLine("Azure Blob Storage configured successfully.");
-            }
-            else
-            {
-                Console.WriteLine("Azure Storage connection string not configured. Storage service disabled.");
-            }
+            services.AddScoped<IVideoStorageService, AwsVideoStorageService>();
+            services.AddScoped<IStorageService, AwsStorageService>();
 
             return services;
         }

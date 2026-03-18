@@ -21,11 +21,13 @@ namespace Podium.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<DirectorService> _logger;
+        private readonly INotificationService _notificationService;
 
-        public DirectorService(IUnitOfWork unitOfWork, ILogger<DirectorService> logger)
+        public DirectorService(IUnitOfWork unitOfWork, ILogger<DirectorService> logger, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<DirectorDashboardDto?> GetDashboardAsync(string userId)
@@ -1081,8 +1083,16 @@ namespace Podium.Application.Services
 
             _logger.LogInformation("Offer {OfferId} approved by director {DirectorId}", approvalId, director.Id);
 
-            // TODO: Send notification to staff member
-            // TODO: Trigger SignalR update
+            // Notify the staff member who created the offer
+            if (!string.IsNullOrEmpty(offer.CreatedByUserId))
+            {
+                await _notificationService.NotifyUserAsync(
+                    offer.CreatedByUserId,
+                    "OfferApproved",
+                    "Scholarship Offer Approved",
+                    $"Your scholarship offer #{approvalId} has been approved by a director and sent to the student.",
+                    approvalId.ToString());
+            }
 
             return true;
         }
@@ -1111,8 +1121,16 @@ namespace Podium.Application.Services
             _logger.LogInformation("Offer {OfferId} denied by director {DirectorId}. Reason: {Reason}",
                 approvalId, director.Id, reason);
 
-            // TODO: Send notification to staff member
-            // TODO: Trigger SignalR update
+            // Notify the staff member who created the offer
+            if (!string.IsNullOrEmpty(offer.CreatedByUserId))
+            {
+                await _notificationService.NotifyUserAsync(
+                    offer.CreatedByUserId,
+                    "OfferDenied",
+                    "Scholarship Offer Denied",
+                    $"Your scholarship offer #{approvalId} was denied by a director. Reason: {reason}",
+                    approvalId.ToString());
+            }
 
             return true;
         }

@@ -2,7 +2,7 @@
 # Deletes bin, obj, and .vs folders to force a complete rebuild
 
 param(
-    [string]$SolutionPath = "C:\Users\josep\source\DocumentManagementSystem\Backend\Podium"
+    [string]$SolutionPath = "C:\Users\josep\source\Podium\Backend\Podium"
 )
 
 Write-Host "Cleaning solution at: $SolutionPath" -ForegroundColor Cyan

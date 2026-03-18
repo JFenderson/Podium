@@ -81,13 +81,36 @@ namespace Podium.Application.Services
             return response;
         }
 
+        private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "video/mp4",
+            "video/quicktime",   // .mov
+            "video/x-msvideo",   // .avi
+            "video/webm",
+            "video/x-matroska",  // .mkv
+            "video/mpeg",
+        };
+
+        private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mp4", ".mov", ".avi", ".webm", ".mkv", ".mpeg", ".mpg"
+        };
+
+        public (bool success, string message) ValidateVideoFileType(string fileName, string contentType)
+        {
+            if (!AllowedContentTypes.Contains(contentType))
+                return (false, $"Content type '{contentType}' is not allowed. Accepted types: mp4, mov, avi, webm, mkv.");
+
+            var extension = Path.GetExtension(fileName);
+            if (string.IsNullOrEmpty(extension) || !AllowedExtensions.Contains(extension))
+                return (false, $"File extension '{extension}' is not allowed. Accepted extensions: .mp4, .mov, .avi, .webm, .mkv.");
+
+            return (true, "File type accepted");
+        }
+
         public async Task<(bool success, string message)> ValidateVideoUploadAsync(int studentId, long fileSizeBytes)
         {
-            // Retrieve max size from config, default to 500 if missing (or throw if you prefer strict)
             int maxFileSizeMB = _configuration.GetValue<int>("Video:MaxFileSizeMB");
-
-            // If the config value is 0 (missing), you might want to handle it. 
-            // Here we assume it's set correctly in appsettings.
             if (maxFileSizeMB == 0) maxFileSizeMB = 500;
 
             long maxFileSizeBytes = maxFileSizeMB * 1024L * 1024L;

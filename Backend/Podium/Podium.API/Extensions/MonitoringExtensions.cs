@@ -110,7 +110,7 @@ public static class MonitoringExtensions
             setup.MaximumHistoryEntriesPerEndpoint(50);
             setup.AddHealthCheckEndpoint("Podium API", "/health");
         })
-        .AddSqlServerStorage(configuration.GetConnectionString("DefaultConnection")!); // Use SQL Server storage
+        .AddPostgreSqlStorage(configuration.GetConnectionString("DefaultConnection")!); // Use PostgreSQL storage
 
         return services;
     }

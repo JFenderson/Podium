@@ -8,6 +8,7 @@ using Podium.Application.DTOs.Offer;
 using Podium.Application.DTOs.ScholarshipOffer;
 using Podium.Core.Entities;
 using Podium.Core.Constants;
+using Podium.Core.Interfaces;
 using Podium.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -27,6 +28,7 @@ namespace Podium.Tests.Unit.Services
         private readonly Mock<Podium.Core.Interfaces.IRepository<StudentInterest>> _mockStudentInterestRepo;
         private readonly Mock<Podium.Core.Interfaces.IRepository<ContactRequest>> _mockContactRequestRepo;
         private readonly Mock<Podium.Core.Interfaces.IRepository<BandEvent>> _mockBandEventRepo;
+        private readonly Mock<INotificationService> _mockNotificationService;
 
         public DirectorServiceTests()
         {
@@ -36,6 +38,7 @@ namespace Podium.Tests.Unit.Services
             _mockStudentInterestRepo = new Mock<Podium.Core.Interfaces.IRepository<StudentInterest>>();
             _mockContactRequestRepo = new Mock<Podium.Core.Interfaces.IRepository<ContactRequest>>();
             _mockBandEventRepo = new Mock<Podium.Core.Interfaces.IRepository<BandEvent>>();
+            _mockNotificationService = new Mock<INotificationService>();
 
             MockUnitOfWork.Setup(u => u.Bands).Returns(_mockBandRepo.Object);
             MockUnitOfWork.Setup(u => u.BandStaff).Returns(_mockBandStaffRepo.Object);
@@ -46,7 +49,8 @@ namespace Podium.Tests.Unit.Services
 
             _service = new DirectorService(
                 MockUnitOfWork.Object,
-                MockLogger<DirectorService>().Object
+                MockLogger<DirectorService>().Object,
+                _mockNotificationService.Object
             );
         }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Podium.Core.Constants;
 using Podium.Core.Entities;
@@ -11,11 +12,19 @@ namespace Podium.Infrastructure.Services
     {
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IEmailService _emailService;
 
-        public NotificationService(IHubContext<NotificationHub> hubContext, IUnitOfWork unitOfWork)
+        public NotificationService(
+            IHubContext<NotificationHub> hubContext,
+            IUnitOfWork unitOfWork,
+            UserManager<ApplicationUser> userManager,
+            IEmailService emailService)
         {
             _hubContext = hubContext;
             _unitOfWork = unitOfWork;
+            _userManager = userManager;
+            _emailService = emailService;
         }
 
         public async Task NotifyUserAsync(string userId, string type, string title, string message,
@@ -32,16 +41,33 @@ namespace Podium.Infrastructure.Services
                 RelatedEntityId = relatedId,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false,
-                Priority = priority,   // Set Priority
-                ExpiresAt = expiresAt  // Set Expiration
+                Priority = priority,
+                ExpiresAt = expiresAt
             };
 
             await _unitOfWork.Notifications.AddAsync(notification);
             await _unitOfWork.SaveChangesAsync();
 
-            // Send Full Object via SignalR including Priority
+            // Send real-time via SignalR
             await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", notification);
             await _hubContext.Clients.User(userId).SendAsync("UpdateUnreadCount", 1);
+
+            // Email fallback for High priority notifications
+            if (priority == NotificationPriority.High)
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user?.Email != null)
+                {
+                    try
+                    {
+                        await _emailService.SendEmailAsync(user.Email, title, message);
+                    }
+                    catch
+                    {
+                        // Email failure should never prevent the notification from being stored
+                    }
+                }
+            }
         }
 
         // Updated for Band Staff

@@ -49,12 +49,15 @@ namespace Podium.API.Controllers
             if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
                 return Unauthorized();
 
-            // 1. Validate quotas/sizes
+            // 1a. Validate file type and extension
+            var typeValidation = _videoService.ValidateVideoFileType(request.FileName, request.ContentType);
+            if (!typeValidation.success)
+                return BadRequest(typeValidation.message);
+
+            // 1b. Validate file size quota
             var validation = await _videoService.ValidateVideoUploadAsync(userId, request.FileSizeBytes);
             if (!validation.success)
-            {
                 return BadRequest(validation.message);
-            }
 
             // 2. Generate a unique storage path: {studentId}/{guid}_{filename}
             var storageFileName = $"{userId}/{Guid.NewGuid()}_{request.FileName}";

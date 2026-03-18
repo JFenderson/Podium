@@ -2,7 +2,7 @@
 echo Cleaning Visual Studio cache folders...
 echo.
 
-cd /d "C:\Users\josep\source\DocumentManagementSystem\Backend\Podium"
+cd /d "C:\Users\josep\source\Podium\Backend\Podium"
 
 echo Deleting .vs folder...
 if exist ".vs" (

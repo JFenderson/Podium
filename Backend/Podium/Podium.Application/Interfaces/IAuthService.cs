@@ -12,6 +12,7 @@ public interface IAuthService
     Task<AuthResult> RefreshTokenAsync(RefreshTokenRequestDto dto);
     Task<bool> RevokeTokenAsync(RefreshTokenRequestDto dto);
     Task<bool> ChangePasswordAsync(string userId, ChangePasswordDto dto);
+    Task<bool> ForgotPasswordAsync(ForgotPasswordDto dto, string resetBaseUrl);
     Task<bool> ResetPasswordAsync(ResetPasswordConfirmDto dto);
     Task<ApplicationUser?> GetUserByIdAsync(string userId);
     Task<AuthResult> ConfirmEmailAsync(string userId, string token);

@@ -13,8 +13,9 @@ namespace Podium.Infrastructure.Services
         public AwsVideoStorageService(IAmazonS3 s3Client, IConfiguration configuration)
         {
             _s3Client = s3Client;
-            _bucketName = configuration["AWS:BucketName"]
-                ?? throw new InvalidOperationException("AWS BucketName missing.");
+            _bucketName = configuration["CloudflareR2:BucketName"]
+                ?? configuration["AWS:BucketName"]
+                ?? throw new InvalidOperationException("Video storage bucket name not configured (CloudflareR2:BucketName).");
         }
 
         public Task<string> GenerateUploadUrlAsync(string fileName, string contentType, int expirationMinutes = 60)

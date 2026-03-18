@@ -298,7 +298,9 @@ namespace Podium.Application.Services
                 );
             }
 
-            // TODO: Update Budget Committed Amount
+            // Note: Budget committed/available amounts are computed dynamically in GetBudgetStatsAsync
+            // by querying offer statuses. AllocatedAmount was decremented on decline above; no further
+            // budget update needed here for the accept path (funds stay allocated until accepted/expired/rescinded).
         }
 
         public async Task GuardianFinalizeOfferAsync(int offerId, string guardianUserId, bool accept)

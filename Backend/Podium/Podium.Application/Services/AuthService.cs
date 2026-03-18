@@ -327,12 +327,34 @@ public class AuthService : IAuthService
         return result.Succeeded;
     }
 
+    public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto dto, string resetBaseUrl)
+    {
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+
+        // Always return true to prevent email enumeration
+        if (user == null) return true;
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var encodedToken = HttpUtility.UrlEncode(token);
+        var resetLink = $"{resetBaseUrl}?email={HttpUtility.UrlEncode(dto.Email)}&token={encodedToken}";
+
+        await _emailService.SendEmailAsync(
+            dto.Email,
+            "Reset Your Podium Password",
+            $"<p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href=\"{resetLink}\">Reset Password</a></p>");
+
+        return true;
+    }
+
     public async Task<bool> ResetPasswordAsync(ResetPasswordConfirmDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
+
+        // Always return true to prevent email enumeration
         if (user == null) return true;
-        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-        return true;
+
+        var result = await _userManager.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
+        return result.Succeeded;
     }
 
     private string GenerateRefreshToken()

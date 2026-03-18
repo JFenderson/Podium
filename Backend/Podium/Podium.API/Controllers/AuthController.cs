@@ -141,6 +141,33 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Logged out successfully" });
     }
 
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var resetBaseUrl = $"{Request.Scheme}://{Request.Host}/reset-password";
+        await _authService.ForgotPasswordAsync(dto, resetBaseUrl);
+
+        // Always return OK to prevent email enumeration
+        return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordConfirmDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var result = await _authService.ResetPasswordAsync(dto);
+
+        if (!result)
+            return BadRequest(new { error = "Password reset failed. The token may be invalid or expired." });
+
+        return Ok(new { message = "Password reset successful. You may now login with your new password." });
+    }
+
     [Authorize]
     [HttpGet("me")]
     public async Task<IActionResult> GetCurrentUser()

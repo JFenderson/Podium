@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Podium.API.Extensions;
+using Podium.API.Filters;
 using Podium.API.Jobs;
 using Podium.API.Middleware;
 using Podium.Core.Entities;
@@ -52,26 +53,13 @@ try
     builder.Services.AddInMemoryRateLimiting();
     builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-    // Configure CORS with environment variable support
-    var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-        ?? new[] { "http://localhost:4200", "https://localhost:4200" };
-
-    builder.Services.AddCors(options =>
-    {
-        options.AddPolicy("AllowAngularDev", policy =>
-        {
-            policy.WithOrigins(allowedOrigins)
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
-        });
-    });
+    // CORS is configured in AddPodiumCoreServices (ServiceExtensions.cs)
 
     // ---------------------------------------------------------
     // REFACTORED: Custom Extension Methods
     // ---------------------------------------------------------
     builder.Services.AddPodiumSwagger();
-    builder.Services.AddPodiumIdentity(builder.Configuration);
+    builder.Services.AddPodiumIdentity(builder.Configuration, builder.Environment);
     builder.Services.AddPodiumCoreServices(builder.Configuration, builder.Environment);
     
     // ---------------------------------------------------------
@@ -81,6 +69,10 @@ try
     builder.Services.AddPodiumTelemetryServices(builder.Configuration);
     builder.Services.AddPodiumHealthChecks(builder.Configuration);
     // ---------------------------------------------------------
+
+    // Validate required configuration on startup (skip in Testing environment)
+    if (!builder.Environment.IsEnvironment("Testing"))
+        ValidateRequiredConfiguration(builder.Configuration, builder.Environment);
 
     var app = builder.Build();
 
@@ -114,7 +106,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
-    // Optional: Add authorization filter to restrict dashboard access to Admins
+    Authorization = new[] { new HangfireDashboardAuthFilter() }
 });
 
 using (var scope = app.Services.CreateScope())
@@ -223,25 +215,6 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 // Health Checks UI endpoint (optional, for dashboard)
 app.MapHealthChecksUI(options => options.UIPath = "/healthchecks-ui");
 
-// Apply Migrations - Skip in Testing environment
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        try
-        {
-            var context = services.GetRequiredService<ApplicationDbContext>();
-            await context.Database.MigrateAsync();
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while migrating the database.");
-        }
-    }
-}
-
 app.Run();
 }
 catch (Exception ex)
@@ -251,6 +224,46 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static void ValidateRequiredConfiguration(IConfiguration configuration, IWebHostEnvironment environment)
+{
+    var errors = new List<string>();
+
+    // JWT
+    if (string.IsNullOrWhiteSpace(configuration["JWT:Secret"]))
+        errors.Add("JWT:Secret is required.");
+    if (string.IsNullOrWhiteSpace(configuration["JWT:Issuer"]))
+        errors.Add("JWT:Issuer is required.");
+    if (string.IsNullOrWhiteSpace(configuration["JWT:Audience"]))
+        errors.Add("JWT:Audience is required.");
+
+    // Database
+    if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("DefaultConnection")))
+        errors.Add("ConnectionStrings:DefaultConnection is required.");
+
+    // Email (only required in non-Development environments)
+    if (!environment.IsDevelopment() && string.IsNullOrWhiteSpace(configuration["SendGrid:ApiKey"]))
+        errors.Add("SendGrid:ApiKey is required in non-Development environments.");
+
+    // Storage (Cloudflare R2)
+    if (!environment.IsDevelopment())
+    {
+        if (string.IsNullOrWhiteSpace(configuration["CloudflareR2:AccountId"]))
+            errors.Add("CloudflareR2:AccountId is required in non-Development environments.");
+        if (string.IsNullOrWhiteSpace(configuration["CloudflareR2:AccessKeyId"]))
+            errors.Add("CloudflareR2:AccessKeyId is required in non-Development environments.");
+        if (string.IsNullOrWhiteSpace(configuration["CloudflareR2:SecretAccessKey"]))
+            errors.Add("CloudflareR2:SecretAccessKey is required in non-Development environments.");
+        if (string.IsNullOrWhiteSpace(configuration["CloudflareR2:BucketName"]))
+            errors.Add("CloudflareR2:BucketName is required in non-Development environments.");
+    }
+
+    if (errors.Count > 0)
+    {
+        throw new InvalidOperationException(
+            $"Application configuration is invalid:{Environment.NewLine}{string.Join(Environment.NewLine, errors.Select(e => $"  - {e}"))}");
+    }
 }
 
 public partial class Program { }
