@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { VideoManagement } from './video-management';
+import { VideoManagementComponent } from './video-management.component';
 
-describe('VideoManagement', () => {
-  let component: VideoManagement;
-  let fixture: ComponentFixture<VideoManagement>;
+describe('VideoManagementComponent', () => {
+  let component: VideoManagementComponent;
+  let fixture: ComponentFixture<VideoManagementComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [VideoManagement]
+      imports: [VideoManagementComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(VideoManagement);
+    fixture = TestBed.createComponent(VideoManagementComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

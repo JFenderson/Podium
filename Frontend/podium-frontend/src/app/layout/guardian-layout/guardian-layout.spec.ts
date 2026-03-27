@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { GuardianLayout } from './guardian-layout';
+import { GuardianLayoutComponent } from './guardian-layout';
 
-describe('GuardianLayout', () => {
-  let component: GuardianLayout;
-  let fixture: ComponentFixture<GuardianLayout>;
+describe('GuardianLayoutComponent', () => {
+  let component: GuardianLayoutComponent;
+  let fixture: ComponentFixture<GuardianLayoutComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GuardianLayout]
+      imports: [GuardianLayoutComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(GuardianLayout);
+    fixture = TestBed.createComponent(GuardianLayoutComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
